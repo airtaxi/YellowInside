@@ -1,0 +1,139 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<Page
+    x:Class="YellowInside.Pages.Manage.SubscriptionsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:YellowInside.Controls"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="using:YellowInside.Pages.Manage"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:vm="using:YellowInside.ViewModels"
+    xmlns:wct="using:CommunityToolkit.WinUI.Controls"
+    NavigationCacheMode="Required"
+    mc:Ignorable="d">
+
+    <Grid RowSpacing="4">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0">
+            <TextBlock
+                Margin="12,0,0,0"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Bottom"
+                Style="{ThemeResource SubtitleTextBlockStyle}"
+                Text="구독한 패키지 목록" />
+            <ToggleSwitch
+                x:Name="ReorderToggleSwitch"
+                MinWidth="0"
+                Margin="0,-8,12,-8"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Top"
+                OffContent="목록 보기"
+                OnContent="순서 변경"
+                Toggled="OnReorderToggleSwitchToggled" />
+        </Grid>
+
+        <ScrollViewer Grid.Row="1" Visibility="{x:Bind ReorderToggleSwitch.IsOn, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=True}">
+            <ItemsRepeater Margin="8" ItemsSource="{x:Bind SubscriptionList}">
+                <ItemsRepeater.Layout>
+                    <wct:StaggeredLayout
+                        ColumnSpacing="8"
+                        DesiredColumnWidth="260"
+                        ItemsStretch="Fill"
+                        RowSpacing="8" />
+                </ItemsRepeater.Layout>
+                <ItemsRepeater.ItemTemplate>
+                    <DataTemplate x:DataType="vm:SubscriptionViewModel">
+                        <Button
+                            Padding="0"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Stretch"
+                            VerticalContentAlignment="Stretch"
+                            Background="Transparent"
+                            BorderBrush="Transparent"
+                            Click="{x:Bind OnClicked}"
+                            CornerRadius="8">
+                            <controls:CardControl
+                                Title="{x:Bind Title}"
+                                Description="{x:Bind SellerName}"
+                                Tags="{x:Bind Tags, Mode=OneWay}"
+                                ThumbnailSource="{x:Bind ThumbnailSource, Mode=OneWay}" />
+                        </Button>
+                    </DataTemplate>
+                </ItemsRepeater.ItemTemplate>
+            </ItemsRepeater>
+        </ScrollViewer>
+
+        <ListView
+            x:Name="ReorderListView"
+            Grid.Row="1"
+            AllowDrop="True"
+            CanDragItems="True"
+            CanReorderItems="True"
+            DragItemsCompleted="OnReorderListViewDragItemsCompleted"
+            ItemsSource="{x:Bind SubscriptionList}"
+            SelectionMode="None"
+            Visibility="{x:Bind ReorderToggleSwitch.IsOn, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+            <ListView.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel Spacing="10" />
+                </ItemsPanelTemplate>
+            </ListView.ItemsPanel>
+            <ListView.ItemTemplate>
+                <DataTemplate x:DataType="vm:SubscriptionViewModel">
+                    <Grid Height="56" ColumnSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="56" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <FontIcon
+                            Grid.Column="0"
+                            VerticalAlignment="Center"
+                            FontSize="16"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Glyph="&#xE700;" />
+                        <Border
+                            Grid.Column="1"
+                            Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                            CornerRadius="4">
+                            <Image
+                                HorizontalAlignment="Stretch"
+                                VerticalAlignment="Stretch"
+                                Source="{x:Bind ThumbnailSource, Mode=OneWay}"
+                                Stretch="Uniform" />
+                        </Border>
+                        <StackPanel
+                            Grid.Column="2"
+                            VerticalAlignment="Center"
+                            Spacing="2">
+                            <TextBlock
+                                FontWeight="SemiBold"
+                                Style="{ThemeResource BodyStrongTextBlockStyle}"
+                                Text="{x:Bind Title}"
+                                TextTrimming="CharacterEllipsis" />
+                            <TextBlock
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Style="{ThemeResource CaptionTextBlockStyle}"
+                                Text="{x:Bind SellerName}"
+                                TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+
+        <TextBlock
+            x:Name="NoSubscriptionsTextBlock"
+            Grid.Row="1"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+            Style="{ThemeResource BodyTextBlockStyle}"
+            Text="구독한 패키지가 없습니다."
+            Visibility="Collapsed" />
+    </Grid>
+</Page>

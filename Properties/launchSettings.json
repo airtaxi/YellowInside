@@ -1,0 +1,10 @@
+﻿{
+  "profiles": {
+    "YellowInside (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "YellowInside (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

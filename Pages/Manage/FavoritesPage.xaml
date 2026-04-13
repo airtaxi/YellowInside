@@ -1,0 +1,69 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<Page
+    x:Class="YellowInside.Pages.Manage.FavoritesPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:YellowInside.Controls"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="using:YellowInside.Pages.Manage"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:vm="using:YellowInside.ViewModels"
+    xmlns:wct="using:CommunityToolkit.WinUI.Controls"
+    NavigationCacheMode="Required"
+    mc:Ignorable="d">
+
+
+    <Grid RowSpacing="4">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <TextBlock
+            Grid.Row="0"
+            Margin="12,0,0,0"
+            HorizontalAlignment="Left"
+            VerticalAlignment="Bottom"
+            Style="{ThemeResource SubtitleTextBlockStyle}"
+            Text="즐거찾기한 스티커가 있는 패키지 목록" />
+        <ScrollViewer Grid.Row="1">
+            <ItemsRepeater Margin="8" ItemsSource="{x:Bind FavoriteList}">
+                <ItemsRepeater.Layout>
+                    <wct:StaggeredLayout
+                        ColumnSpacing="8"
+                        DesiredColumnWidth="260"
+                        ItemsStretch="Fill"
+                        RowSpacing="8" />
+                </ItemsRepeater.Layout>
+                <ItemsRepeater.ItemTemplate>
+                    <DataTemplate x:DataType="vm:FavoriteViewModel">
+                        <Button
+                            Padding="0"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Stretch"
+                            VerticalContentAlignment="Stretch"
+                            Background="Transparent"
+                            BorderBrush="Transparent"
+                            Click="{x:Bind OnClicked}"
+                            CornerRadius="8">
+                            <controls:CardControl
+                                Title="{x:Bind Title}"
+                                Description="{x:Bind SellerName}"
+                                Tags="{x:Bind Tags, Mode=OneWay}"
+                                ThumbnailSource="{x:Bind ThumbnailSource, Mode=OneWay}" />
+                        </Button>
+                    </DataTemplate>
+                </ItemsRepeater.ItemTemplate>
+            </ItemsRepeater>
+        </ScrollViewer>
+
+        <TextBlock
+            x:Name="NoFavoritesTextBlock"
+            Grid.Row="1"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+            Style="{ThemeResource BodyTextBlockStyle}"
+            Text="즐겨찾기한 스티커가 있는 패키지가 없습니다."
+            Visibility="Collapsed" />
+    </Grid>
+</Page>
