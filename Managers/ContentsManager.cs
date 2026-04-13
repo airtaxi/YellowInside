@@ -454,7 +454,13 @@ public static class ContentsManager
 			PackagesChanged?.Invoke();
 			FavoritesChanged?.Invoke();
 
-			foreach (var package in importedData.DownloadedPackages) WeakReferenceMessenger.Default.Send(new FavoritesOrPackagesChangedMessage(package.Source, package.PackageIndex));
+			ManageWindow.Instance.DispatcherQueue.TryEnqueue(() =>
+			{
+				foreach (var package in importedData.DownloadedPackages)
+				{
+					WeakReferenceMessenger.Default.Send(new FavoritesOrPackagesChangedMessage(package.Source, package.PackageIndex));
+				}
+			});
         }
 		finally
 		{
