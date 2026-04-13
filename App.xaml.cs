@@ -19,12 +19,12 @@ public partial class App : Application
     {
         get
         {
-            var startupTask = Task.Run(async () => await StartupTask.GetAsync("YellowInsideSaverStartup")).GetAwaiter().GetResult();
+            var startupTask = Task.Run(async () => await StartupTask.GetAsync("YellowInsideStartup")).GetAwaiter().GetResult();
             return startupTask.State is StartupTaskState.Enabled or StartupTaskState.EnabledByPolicy;
         }
         set
         {
-            var startupTask = Task.Run(async () => await StartupTask.GetAsync("YellowInsideSaverStartup")).GetAwaiter().GetResult();
+            var startupTask = Task.Run(async () => await StartupTask.GetAsync("YellowInsideStartup")).GetAwaiter().GetResult();
             if (value) Task.Run(async () => await startupTask.RequestEnableAsync()).GetAwaiter().GetResult();
             else startupTask.Disable();
         }
