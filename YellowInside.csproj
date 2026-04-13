@@ -17,6 +17,10 @@
 		<DefineConstants>DISABLE_XAML_GENERATED_MAIN</DefineConstants>
 		<DefaultLanguage>ko-KR</DefaultLanguage>
 		<ApplicationIcon>Assets\Icon.ico</ApplicationIcon>
+		<AppxPackageSigningEnabled>true</AppxPackageSigningEnabled>
+		<PackageCertificateKeyFile>YellowInsideCert.pfx</PackageCertificateKeyFile>
+		<PackageCertificateThumbprint>9A268C77C99F098D54FD76517ACE5C151CBD743A</PackageCertificateThumbprint>
+		<PackageCertificatePassword></PackageCertificatePassword>
 	</PropertyGroup>
 	<ItemGroup>
 	  <None Remove="Pages\Manage\SubscriptionsPage.xaml" />
