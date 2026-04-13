@@ -43,7 +43,7 @@ public partial class SubscriptionViewModel : ObservableObject
         Title = package.Title;
         SellerName = package.SellerName;
         Tags = [.. package.Tags];
-        ThumbnailSource = new BitmapImage(new Uri(ContentsManager.GetMainImagePath(Source, PackageIndex, package.MainImageFileName)));
+        ThumbnailSource = new BitmapImage(new Uri(ContentsManager.GetMainImagePath(Source, PackageIndex, package.MainImageFileName))) { AutoPlay = SettingsManager.GifPlaybackEnabled };
     }
 
     public void OnClicked(object _, RoutedEventArgs __) => ManageWindow.Navigate(typeof(DetailPage), (Source, PackageIndex));

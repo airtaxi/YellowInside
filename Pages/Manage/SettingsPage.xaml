@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Page
+    x:Class="YellowInside.Pages.Manage.SettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    NavigationCacheMode="Required"
+    mc:Ignorable="d">
+
+    <ScrollViewer Padding="24,16,24,24">
+        <StackPanel MaxWidth="800" Spacing="4">
+
+            <!-- 외관 -->
+            <TextBlock
+                Margin="4,0,0,4"
+                Style="{ThemeResource BodyStrongTextBlockStyle}"
+                Text="외관" />
+            <Border
+                Padding="16"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                CornerRadius="8">
+                <Grid ColumnSpacing="16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2">
+                        <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="테마" />
+                        <TextBlock
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Style="{ThemeResource CaptionTextBlockStyle}"
+                            Text="앱의 색상 테마를 설정합니다." />
+                    </StackPanel>
+                    <ComboBox
+                        x:Name="ThemeComboBox"
+                        Grid.Column="1"
+                        MinWidth="160"
+                        VerticalAlignment="Center"
+                        SelectionChanged="OnThemeComboBoxSelectionChanged">
+                        <ComboBoxItem Content="시스템 테마" Tag="System" />
+                        <ComboBoxItem Content="라이트 모드" Tag="Light" />
+                        <ComboBoxItem Content="다크 모드" Tag="Dark" />
+                    </ComboBox>
+                </Grid>
+            </Border>
+
+            <!-- 재생 -->
+            <TextBlock
+                Margin="4,20,0,4"
+                Style="{ThemeResource BodyStrongTextBlockStyle}"
+                Text="재생" />
+            <Border
+                Padding="16"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                CornerRadius="8">
+                <Grid ColumnSpacing="16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2">
+                        <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="GIF 재생" />
+                        <TextBlock
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Style="{ThemeResource CaptionTextBlockStyle}"
+                            Text="스티커 미리보기에서 GIF 애니메이션을 재생합니다." />
+                        <InfoBar
+                            x:Name="GifWarningInfoBar"
+                            Margin="0,8,0,0"
+                            IsClosable="False"
+                            IsOpen="False"
+                            Message="GIF 재생을 활성화하면 CPU 사용량이 매우 높아질 수 있습니다."
+                            Severity="Warning" />
+                    </StackPanel>
+                    <ToggleSwitch
+                        x:Name="GifPlaybackToggleSwitch"
+                        Grid.Column="1"
+                        VerticalAlignment="Top"
+                        Toggled="OnGifPlaybackToggleSwitchToggled" />
+                </Grid>
+            </Border>
+
+            <!-- 데이터 관리 -->
+            <TextBlock
+                Margin="4,20,0,4"
+                Style="{ThemeResource BodyStrongTextBlockStyle}"
+                Text="데이터 관리" />
+            <Border
+                Padding="16"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                CornerRadius="8">
+                <StackPanel Spacing="16">
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2">
+                            <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="패키지 내보내기" />
+                            <TextBlock
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Style="{ThemeResource CaptionTextBlockStyle}"
+                                Text="다운로드된 패키지와 즐겨찾기를 .yip 파일로 내보냅니다." />
+                        </StackPanel>
+                        <Button
+                            Grid.Column="1"
+                            MinWidth="120"
+                            VerticalAlignment="Center"
+                            Click="OnExportButtonClicked"
+                            Content="내보내기" />
+                    </Grid>
+
+                    <Border
+                        Height="1"
+                        Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2">
+                            <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="패키지 불러오기" />
+                            <TextBlock
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Style="{ThemeResource CaptionTextBlockStyle}"
+                                Text=".yip 파일에서 패키지와 즐겨찾기를 불러옵니다." />
+                        </StackPanel>
+                        <Button
+                            Grid.Column="1"
+                            MinWidth="120"
+                            VerticalAlignment="Center"
+                            Click="OnImportButtonClicked"
+                            Content="불러오기" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</Page>

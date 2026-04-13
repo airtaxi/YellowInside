@@ -31,7 +31,8 @@ public static class DialogHelper
             Title = title,
             PrimaryButtonText = "확인",
             DefaultButton = ContentDialogButton.Primary,
-            XamlRoot = element.XamlRoot
+            XamlRoot = element.XamlRoot,
+            RequestedTheme = SettingsManager.GetElementTheme(),
         };
         var textBox = new TextBox();
         if (numberOnly) textBox.BeforeTextChanging += (_, e) => e.Cancel = e.NewText.Any(c => !char.IsDigit(c));
@@ -70,7 +71,8 @@ public static class DialogHelper
             Content = description,
             PrimaryButtonText = primaryButtonText,
             XamlRoot = xamlRoot,
-            DefaultButton = ContentDialogButton.Primary
+            DefaultButton = ContentDialogButton.Primary,
+            RequestedTheme = SettingsManager.GetElementTheme(),
         };
 
         if (!string.IsNullOrEmpty(secondaryButtonText)) dialog.SecondaryButtonText = secondaryButtonText;

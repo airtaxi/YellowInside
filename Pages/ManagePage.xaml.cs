@@ -26,5 +26,6 @@ public sealed partial class ManagePage : Page
         else if (sender.SelectedItem == SearchSelectorBarItem) ContentFrame.Navigate(typeof(SearchPage));
         else if (sender.SelectedItem == SubscriptionsSelectorBarItem) ContentFrame.Navigate(typeof(SubscriptionsPage));
         else if (sender.SelectedItem == SelectorBarItemFavorites) ContentFrame.Navigate(typeof(FavoritesPage));
+        else if (sender.SelectedItem == SelectorBarItemSettings) ContentFrame.Navigate(typeof(SettingsPage));
     }
 }

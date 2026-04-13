@@ -93,7 +93,7 @@ public partial class PopupViewModel : ObservableObject
 
             ImageSource thumbnailSource = null;
             if (!string.IsNullOrEmpty(mainImagePath) && File.Exists(mainImagePath))
-                thumbnailSource = new BitmapImage(new Uri(mainImagePath)) { AutoPlay = false };
+                thumbnailSource = new BitmapImage(new Uri(mainImagePath)) { AutoPlay = SettingsManager.GifPlaybackEnabled };
 
             Categories.Add(new PopupCategoryViewModel
             {
@@ -176,7 +176,7 @@ public partial class PopupViewModel : ObservableObject
 
             Stickers.Add(new PopupStickerViewModel
             {
-                ImageSource = new BitmapImage(new Uri(imagePath)) { AutoPlay = false },
+                ImageSource = new BitmapImage(new Uri(imagePath)) { AutoPlay = SettingsManager.GifPlaybackEnabled },
                 LocalFilePath = imagePath,
                 Title = sticker.Title,
                 Source = favorite.Source,
@@ -199,7 +199,7 @@ public partial class PopupViewModel : ObservableObject
 
             Stickers.Add(new PopupStickerViewModel
             {
-                ImageSource = new BitmapImage(new Uri(imagePath)) { AutoPlay = false },
+                ImageSource = new BitmapImage(new Uri(imagePath)) { AutoPlay = SettingsManager.GifPlaybackEnabled },
                 LocalFilePath = imagePath,
                 Title = sticker.Title,
                 Source = package.Source,

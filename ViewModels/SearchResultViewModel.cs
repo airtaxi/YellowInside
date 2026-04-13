@@ -63,7 +63,7 @@ public partial class SearchResultViewModel : ObservableObject
 
                 cancellationToken.ThrowIfCancellationRequested();
 
-                var bitmapImage = new BitmapImage();
+                var bitmapImage = new BitmapImage() { AutoPlay = SettingsManager.GifPlaybackEnabled };
                 using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
                 await bitmapImage.SetSourceAsync(stream.AsRandomAccessStream());
                 ThumbnailSource = bitmapImage;

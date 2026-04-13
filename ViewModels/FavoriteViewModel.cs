@@ -42,7 +42,7 @@ public partial class FavoriteViewModel : ObservableObject
         PackageIndex = package.PackageIndex;
         Title = package.Title;
         SellerName = package.SellerName;
-        ThumbnailSource = new BitmapImage(new Uri(ContentsManager.GetMainImagePath(Source, PackageIndex, package.MainImageFileName)));
+        ThumbnailSource = new BitmapImage(new Uri(ContentsManager.GetMainImagePath(Source, PackageIndex, package.MainImageFileName))) { AutoPlay = SettingsManager.GifPlaybackEnabled };
         UpdateTags();
 
         WeakReferenceMessenger.Default.Register<FavoritesOrPackagesChangedMessage>(this, OnFavoritesOrPackagesChangedMessageReceived);

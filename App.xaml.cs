@@ -63,5 +63,8 @@ public partial class App : Application
         await ContentsManager.InitializeAsync();
 
         s_manageWindow = new ManageWindow();
+
+        if (s_manageWindow.Content is FrameworkElement rootElement)
+            rootElement.RequestedTheme = SettingsManager.GetElementTheme();
     }
 }

@@ -38,6 +38,11 @@
                     <FontIcon Glyph="&#xE728;" />
                 </SelectorBarItem.Icon>
             </SelectorBarItem>
+            <SelectorBarItem x:Name="SelectorBarItemSettings" Text="설정">
+                <SelectorBarItem.Icon>
+                    <SymbolIcon Symbol="Setting" />
+                </SelectorBarItem.Icon>
+            </SelectorBarItem>
         </SelectorBar>
 
         <Frame x:Name="ContentFrame" Grid.Row="1" />

@@ -103,7 +103,7 @@ public partial class DetailViewModel : ObservableObject
                 var packages = ContentsManager.GetDownloadedPackages(source);
                 var package = packages.FirstOrDefault(x => x.PackageIndex == packageIndex);
                 if (package == null) await DownloadMainImageSourceAsync();
-                else MainImageSource = new BitmapImage(new Uri(ContentsManager.GetMainImagePath(source, packageIndex, package.MainImageFileName)));
+                else MainImageSource = new BitmapImage(new Uri(ContentsManager.GetMainImagePath(source, packageIndex, package.MainImageFileName))) { AutoPlay = SettingsManager.GifPlaybackEnabled };
             }
 
             Stickers = [.. detail.Stickers.Select(sticker => new StickerViewModel(packageIndex, sticker))];

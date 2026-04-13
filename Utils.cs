@@ -38,7 +38,7 @@ public static class Utils
                 var taskCompletionSource = new TaskCompletionSource<ImageSource>();
                 dispatcherQueue.TryEnqueue(async () =>
                 {
-                    var bitmapImage = new BitmapImage { AutoPlay = false };
+                    var bitmapImage = new BitmapImage { AutoPlay = SettingsManager.GifPlaybackEnabled };
                     await bitmapImage.SetSourceAsync(stream.AsRandomAccessStream());
                     taskCompletionSource.SetResult(bitmapImage);
                 });
