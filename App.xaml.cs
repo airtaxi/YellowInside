@@ -1,17 +1,19 @@
 ﻿using dccon.NET;
 using YellowInsideLib;
 using Microsoft.UI.Xaml;
+using Microsoft.Windows.AppLifecycle;
 using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using Windows.ApplicationModel;
+using AppInstance = Microsoft.Windows.AppLifecycle.AppInstance;
 
 namespace YellowInside;
 
 public partial class App : Application
 {
-    private static Window s_manageWindow;
+    private static ManageWindow s_manageWindow;
     private static PopupWindow s_dcconPopupWindow;
     public static DcconClient DcconClient { get; } = new DcconClient();
 
@@ -42,7 +44,14 @@ public partial class App : Application
         manager.Start(buttonIconPath);
     }
 
-    public static void ShowManageWindow() => s_manageWindow.Activate();
+    public static void ShowManageWindow()
+    {
+        s_manageWindow.DispatcherQueue.TryEnqueue(() =>
+        {
+            s_manageWindow.Activate();
+            s_manageWindow.BringToFront();
+        });
+    }
 
     private static void OnDcconButtonClicked(SessionInfo info)
     {
@@ -58,7 +67,7 @@ public partial class App : Application
         });
     }
 
-    protected override async void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
+    protected override async void OnLaunched(LaunchActivatedEventArgs args)
     {
         await ContentsManager.InitializeAsync();
 
@@ -66,5 +75,9 @@ public partial class App : Application
 
         if (s_manageWindow.Content is FrameworkElement rootElement)
             rootElement.RequestedTheme = SettingsManager.GetElementTheme();
+
+        var activationArguments = AppInstance.GetCurrent().GetActivatedEventArgs();
+        if (activationArguments.Kind != ExtendedActivationKind.StartupTask)
+            s_manageWindow.Activate();
     }
 }
