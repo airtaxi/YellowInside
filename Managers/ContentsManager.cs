@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.IO.Compression;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
@@ -318,6 +319,170 @@ public static class ContentsManager
 		await response.Content.CopyToAsync(fileStream, cancellationToken);
 
 		return mainImageFileName;
+	}
+
+	/// <summary>
+	/// 현재 다운로드된 패키지와 설정을 .yip 파일로 내보냅니다.
+	/// </summary>
+	public static async Task ExportAsync(string destinationFilePath, CancellationToken cancellationToken = default)
+	{
+		if (File.Exists(destinationFilePath))
+			File.Delete(destinationFilePath);
+
+		var temporaryDirectory = Path.Combine(Path.GetTempPath(), $"YellowInside_Export_{Guid.NewGuid():N}");
+		try
+		{
+			Directory.CreateDirectory(temporaryDirectory);
+
+			string dataJson;
+			List<StickerPackage> packages;
+			lock (s_lock)
+			{
+				dataJson = JsonSerializer.Serialize(s_data, ContentsManagerJsonContext.Default.ContentsManagerData);
+				packages = [.. s_data.DownloadedPackages];
+			}
+
+			await File.WriteAllTextAsync(
+				Path.Combine(temporaryDirectory, "contents.json"), dataJson, cancellationToken);
+
+			foreach (var package in packages)
+			{
+				cancellationToken.ThrowIfCancellationRequested();
+
+				var sourceDirectory = GetPackageDirectory(package.Source, package.PackageIndex);
+				if (!Directory.Exists(sourceDirectory)) continue;
+
+				var relativeDirectory = Path.Combine(package.Source.ToString(), package.PackageIndex.ToString());
+				var targetDirectory = Path.Combine(temporaryDirectory, relativeDirectory);
+
+				CopyDirectoryRecursive(sourceDirectory, targetDirectory);
+			}
+
+			ZipFile.CreateFromDirectory(temporaryDirectory, destinationFilePath, CompressionLevel.Optimal, includeBaseDirectory: false);
+		}
+		finally
+		{
+			if (Directory.Exists(temporaryDirectory))
+				Directory.Delete(temporaryDirectory, recursive: true);
+		}
+	}
+
+	/// <summary>
+	/// .yip 파일을 불러옵니다.
+	/// </summary>
+	/// <param name="sourceFilePath">불러올 .yip 파일 경로</param>
+	/// <param name="replaceAll">true이면 기존 데이터를 모두 삭제하고 새로 시작, false이면 기존 데이터에 추가만 합니다.</param>
+	/// <param name="cancellationToken">취소 토큰</param>
+	public static async Task ImportAsync(string sourceFilePath, bool replaceAll, CancellationToken cancellationToken = default)
+	{
+		var temporaryDirectory = Path.Combine(Path.GetTempPath(), $"YellowInside_Import_{Guid.NewGuid():N}");
+		try
+		{
+			ZipFile.ExtractToDirectory(sourceFilePath, temporaryDirectory);
+
+			var importedDataFilePath = Path.Combine(temporaryDirectory, "contents.json");
+			if (!File.Exists(importedDataFilePath))
+				throw new InvalidOperationException("유효하지 않은 .yip 파일입니다. contents.json이 존재하지 않습니다.");
+
+			var importedJson = await File.ReadAllTextAsync(importedDataFilePath, cancellationToken);
+			var importedData = JsonSerializer.Deserialize(
+				importedJson, ContentsManagerJsonContext.Default.ContentsManagerData);
+			if (importedData is null)
+				throw new InvalidOperationException("유효하지 않은 .yip 파일입니다. contents.json을 역직렬화할 수 없습니다.");
+
+			if (replaceAll)
+			{
+				lock (s_lock)
+				{
+					foreach (var package in s_data.DownloadedPackages)
+					{
+						var directory = GetPackageDirectory(package.Source, package.PackageIndex);
+						if (Directory.Exists(directory))
+							Directory.Delete(directory, recursive: true);
+					}
+
+					s_data = importedData;
+				}
+
+				foreach (var package in importedData.DownloadedPackages)
+				{
+					cancellationToken.ThrowIfCancellationRequested();
+
+					var importedPackageDirectory = Path.Combine(
+						temporaryDirectory, package.Source.ToString(), package.PackageIndex.ToString());
+					if (!Directory.Exists(importedPackageDirectory)) continue;
+
+					var targetDirectory = GetPackageDirectory(package.Source, package.PackageIndex);
+					CopyDirectoryRecursive(importedPackageDirectory, targetDirectory);
+				}
+			}
+			else
+			{
+				lock (s_lock)
+				{
+					var existingKeys = s_data.DownloadedPackages
+						.Select(package => (package.Source, package.PackageIndex))
+						.ToHashSet();
+
+					foreach (var package in importedData.DownloadedPackages)
+					{
+						if (existingKeys.Contains((package.Source, package.PackageIndex))) continue;
+						s_data.DownloadedPackages.Add(package);
+					}
+
+					var existingFavoriteKeys = s_data.Favorites
+						.Select(favorite => (favorite.Source, favorite.PackageIndex, favorite.StickerPath))
+						.ToHashSet();
+
+					foreach (var favorite in importedData.Favorites)
+					{
+						if (existingFavoriteKeys.Contains((favorite.Source, favorite.PackageIndex, favorite.StickerPath))) continue;
+						s_data.Favorites.Add(favorite);
+					}
+				}
+
+				foreach (var package in importedData.DownloadedPackages)
+				{
+					cancellationToken.ThrowIfCancellationRequested();
+
+					var targetDirectory = GetPackageDirectory(package.Source, package.PackageIndex);
+					if (Directory.Exists(targetDirectory)) continue;
+
+					var importedPackageDirectory = Path.Combine(
+						temporaryDirectory, package.Source.ToString(), package.PackageIndex.ToString());
+					if (!Directory.Exists(importedPackageDirectory)) continue;
+
+					CopyDirectoryRecursive(importedPackageDirectory, targetDirectory);
+				}
+			}
+
+			await SaveAsync();
+
+			PackagesChanged?.Invoke();
+			FavoritesChanged?.Invoke();
+		}
+		finally
+		{
+			if (Directory.Exists(temporaryDirectory))
+				Directory.Delete(temporaryDirectory, recursive: true);
+		}
+	}
+
+	private static void CopyDirectoryRecursive(string sourceDirectory, string targetDirectory)
+	{
+		Directory.CreateDirectory(targetDirectory);
+
+		foreach (var file in Directory.GetFiles(sourceDirectory))
+		{
+			var destinationFile = Path.Combine(targetDirectory, Path.GetFileName(file));
+			File.Copy(file, destinationFile, overwrite: true);
+		}
+
+		foreach (var subdirectory in Directory.GetDirectories(sourceDirectory))
+		{
+			var destinationSubdirectory = Path.Combine(targetDirectory, Path.GetFileName(subdirectory));
+			CopyDirectoryRecursive(subdirectory, destinationSubdirectory);
+		}
 	}
 
 	private static async Task SaveAsync()
