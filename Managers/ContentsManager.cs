@@ -381,24 +381,20 @@ public static class ContentsManager
 			ZipFile.ExtractToDirectory(sourceFilePath, temporaryDirectory);
 
 			var importedDataFilePath = Path.Combine(temporaryDirectory, "contents.json");
-			if (!File.Exists(importedDataFilePath))
-				throw new InvalidOperationException("유효하지 않은 .yip 파일입니다. contents.json이 존재하지 않습니다.");
+			if (!File.Exists(importedDataFilePath)) throw new InvalidOperationException("유효하지 않은 .yip 파일입니다. contents.json이 존재하지 않습니다.");
 
 			var importedJson = await File.ReadAllTextAsync(importedDataFilePath, cancellationToken);
-			var importedData = JsonSerializer.Deserialize(
-				importedJson, ContentsManagerJsonContext.Default.ContentsManagerData);
-			if (importedData is null)
-				throw new InvalidOperationException("유효하지 않은 .yip 파일입니다. contents.json을 역직렬화할 수 없습니다.");
+            var importedData = JsonSerializer.Deserialize(importedJson, ContentsManagerJsonContext.Default.ContentsManagerData)
+				?? throw new InvalidOperationException("유효하지 않은 .yip 파일입니다. contents.json을 역직렬화할 수 없습니다.");
 
-			if (replaceAll)
+            if (replaceAll)
 			{
 				lock (s_lock)
 				{
 					foreach (var package in s_data.DownloadedPackages)
 					{
 						var directory = GetPackageDirectory(package.Source, package.PackageIndex);
-						if (Directory.Exists(directory))
-							Directory.Delete(directory, recursive: true);
+						if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
 					}
 
 					s_data = importedData;
@@ -408,8 +404,7 @@ public static class ContentsManager
 				{
 					cancellationToken.ThrowIfCancellationRequested();
 
-					var importedPackageDirectory = Path.Combine(
-						temporaryDirectory, package.Source.ToString(), package.PackageIndex.ToString());
+					var importedPackageDirectory = Path.Combine(temporaryDirectory, package.Source.ToString(), package.PackageIndex.ToString());
 					if (!Directory.Exists(importedPackageDirectory)) continue;
 
 					var targetDirectory = GetPackageDirectory(package.Source, package.PackageIndex);
@@ -420,9 +415,7 @@ public static class ContentsManager
 			{
 				lock (s_lock)
 				{
-					var existingKeys = s_data.DownloadedPackages
-						.Select(package => (package.Source, package.PackageIndex))
-						.ToHashSet();
+					var existingKeys = s_data.DownloadedPackages.Select(package => (package.Source, package.PackageIndex)).ToHashSet();
 
 					foreach (var package in importedData.DownloadedPackages)
 					{
@@ -460,11 +453,15 @@ public static class ContentsManager
 
 			PackagesChanged?.Invoke();
 			FavoritesChanged?.Invoke();
-		}
+
+			foreach (var package in importedData.DownloadedPackages) WeakReferenceMessenger.Default.Send(new FavoritesOrPackagesChangedMessage(package.Source, package.PackageIndex));
+        }
 		finally
 		{
 			if (Directory.Exists(temporaryDirectory))
+			{
 				Directory.Delete(temporaryDirectory, recursive: true);
+			}
 		}
 	}
 
@@ -488,10 +485,7 @@ public static class ContentsManager
 	private static async Task SaveAsync()
 	{
 		string json;
-		lock (s_lock)
-		{
-			json = JsonSerializer.Serialize(s_data, ContentsManagerJsonContext.Default.ContentsManagerData);
-		}
+		lock (s_lock) json = JsonSerializer.Serialize(s_data, ContentsManagerJsonContext.Default.ContentsManagerData);
 
 		var directory = Path.GetDirectoryName(s_dataFilePath);
 		if (directory is not null) Directory.CreateDirectory(directory);
