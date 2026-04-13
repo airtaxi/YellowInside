@@ -12,15 +12,19 @@
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<UseWinUI>true</UseWinUI>
 		<EnableMsixTooling>true</EnableMsixTooling>
-		<WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
 		<PublishAot>true</PublishAot>
 		<DefineConstants>DISABLE_XAML_GENERATED_MAIN</DefineConstants>
 		<DefaultLanguage>ko-KR</DefaultLanguage>
 		<ApplicationIcon>Assets\Icon.ico</ApplicationIcon>
 		<AppxPackageSigningEnabled>true</AppxPackageSigningEnabled>
 		<PackageCertificateKeyFile>YellowInsideCert.pfx</PackageCertificateKeyFile>
-		<PackageCertificateThumbprint>9A268C77C99F098D54FD76517ACE5C151CBD743A</PackageCertificateThumbprint>
 		<PackageCertificatePassword></PackageCertificatePassword>
+		<GenerateAppInstallerFile>False</GenerateAppInstallerFile>
+		<AppxPackageSigningTimestampDigestAlgorithm>SHA256</AppxPackageSigningTimestampDigestAlgorithm>
+		<AppxAutoIncrementPackageRevision>True</AppxAutoIncrementPackageRevision>
+		<GenerateTestArtifacts>True</GenerateTestArtifacts>
+		<AppxBundle>Never</AppxBundle>
+		<HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
 	</PropertyGroup>
 	<ItemGroup>
 	  <None Remove="Pages\Manage\SubscriptionsPage.xaml" />
@@ -44,9 +48,7 @@
 		<PackageReference Include="CommunityToolkit.WinUI.Controls.Primitives" Version="8.2.251219" />
 		<PackageReference Include="CommunityToolkit.WinUI.Converters" Version="8.2.251219" />
 		<PackageReference Include="dccon.NET" Version="0.4.0" />
-		<!--<PackageReference Include="dccon.NET" Version="0.3.1" />-->
 		<PackageReference Include="H.NotifyIcon.WinUI" Version="2.4.1" />
-		<!--<PackageReference Include="YellowInsideLib" Version="1.0.4" />-->
 		<PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.1721" />
 		<PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260317003" />
 		<PackageReference Include="WinUIEx" Version="2.9.0" />
