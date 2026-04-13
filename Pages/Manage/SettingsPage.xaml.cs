@@ -6,6 +6,7 @@ using System;
 using Windows.Storage.Pickers;
 using WinRT.Interop;
 using WinUIEx;
+using System.Threading.Tasks;
 
 namespace YellowInside.Pages.Manage;
 
@@ -79,7 +80,7 @@ public sealed partial class SettingsPage : Page
         try
         {
             ManageWindow.ShowLoading("패키지를 내보내는 중...");
-            await ContentsManager.ExportAsync(file.Path);
+            await Task.Run(async () => ContentsManager.ExportAsync(file.Path));
             ManageWindow.HideLoading();
 
             await this.ShowDialogAsync("내보내기 완료", "패키지를 성공적으로 내보냈습니다.");
@@ -115,7 +116,7 @@ public sealed partial class SettingsPage : Page
         try
         {
             ManageWindow.ShowLoading("패키지를 불러오는 중...");
-            await ContentsManager.ImportAsync(file.Path, replaceAll);
+            await Task.Run(async () => await ContentsManager.ImportAsync(file.Path, replaceAll));
             ManageWindow.HideLoading();
 
             await this.ShowDialogAsync("불러오기 완료", "패키지를 성공적으로 불러왔습니다.");
