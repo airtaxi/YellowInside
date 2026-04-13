@@ -9,7 +9,7 @@ namespace YellowInside;
 public static class Program
 {
     [STAThread]
-    public static void Main(string[] arguments)
+    public static void Main()
     {
         WinRT.ComWrappersSupport.InitializeComWrappers();
 
