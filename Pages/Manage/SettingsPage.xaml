@@ -9,9 +9,9 @@
     mc:Ignorable="d">
 
     <ScrollViewer Padding="24,16,24,24">
-        <StackPanel MaxWidth="800" Spacing="4">
+        <StackPanel Spacing="4">
 
-            <!-- 외관 -->
+            <!--  외관  -->
             <TextBlock
                 Margin="4,0,0,4"
                 Style="{ThemeResource BodyStrongTextBlockStyle}"
@@ -27,7 +27,10 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2">
+                    <StackPanel
+                        Grid.Column="0"
+                        VerticalAlignment="Center"
+                        Spacing="2">
                         <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="테마" />
                         <TextBlock
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
@@ -47,7 +50,7 @@
                 </Grid>
             </Border>
 
-            <!-- 재생 -->
+            <!--  재생  -->
             <TextBlock
                 Margin="4,20,0,4"
                 Style="{ThemeResource BodyStrongTextBlockStyle}"
@@ -63,7 +66,10 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2">
+                    <StackPanel
+                        Grid.Column="0"
+                        VerticalAlignment="Center"
+                        Spacing="2">
                         <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="GIF 재생" />
                         <TextBlock
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
@@ -72,20 +78,24 @@
                         <InfoBar
                             x:Name="GifWarningInfoBar"
                             Margin="0,8,0,0"
+                            CornerRadius="8"
                             IsClosable="False"
                             IsOpen="False"
-                            Message="GIF 재생을 활성화하면 CPU 사용량이 매우 높아질 수 있습니다."
+                            Message="GIF 재생을 활성화하면 GIF를 재생하는 동안 CPU 사용량이 매우 높아질 수 있습니다."
                             Severity="Warning" />
                     </StackPanel>
                     <ToggleSwitch
                         x:Name="GifPlaybackToggleSwitch"
                         Grid.Column="1"
+                        MinWidth="0"
                         VerticalAlignment="Top"
+                        OffContent="끔"
+                        OnContent="켬"
                         Toggled="OnGifPlaybackToggleSwitchToggled" />
                 </Grid>
             </Border>
 
-            <!-- 데이터 관리 -->
+            <!--  데이터 관리  -->
             <TextBlock
                 Margin="4,20,0,4"
                 Style="{ThemeResource BodyStrongTextBlockStyle}"
@@ -102,7 +112,10 @@
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2">
+                        <StackPanel
+                            Grid.Column="0"
+                            VerticalAlignment="Center"
+                            Spacing="2">
                             <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="패키지 내보내기" />
                             <TextBlock
                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"
@@ -117,16 +130,17 @@
                             Content="내보내기" />
                     </Grid>
 
-                    <Border
-                        Height="1"
-                        Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+                    <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
 
                     <Grid ColumnSpacing="16">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2">
+                        <StackPanel
+                            Grid.Column="0"
+                            VerticalAlignment="Center"
+                            Spacing="2">
                             <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="패키지 불러오기" />
                             <TextBlock
                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"
