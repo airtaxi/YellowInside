@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using WinUIEx;
 using Windows.Storage;
+using Windows.System;
 
 namespace YellowInside;
 
@@ -175,6 +176,12 @@ public sealed partial class PopupWindow : WindowEx
     }
 
     private void OnCloseButtonClicked(object sender, RoutedEventArgs e) => Close();
+
+    private void OnEscapeKeyAcceleratorInvoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+    {
+        args.Handled = true;
+        Close();
+    }
 
     private void OnCategoryGridViewSelectionChanged(object sender, SelectionChangedEventArgs e)
     {

@@ -16,6 +16,9 @@
     </Window.SystemBackdrop>
 
     <Grid Padding="12" RowSpacing="8">
+        <Grid.KeyboardAccelerators>
+            <KeyboardAccelerator Key="Escape" Invoked="OnEscapeKeyAcceleratorInvoked" />
+        </Grid.KeyboardAccelerators>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
