@@ -204,12 +204,14 @@ public sealed partial class PopupWindow : WindowEx
             var filePaths = ViewModel.GetPendingFilePaths();
             if (filePaths.Count == 0) return;
 
+            ViewModel.RecordPendingHistory();
             await SessionManager.Instance.SendMultipleDcconsAsync(ViewModel.ChatHwnd, filePaths);
             ViewModel.ClearPending();
             Close();
             return;
         }
 
+        HistoryManager.Record(sticker.Source, sticker.PackageIndex, sticker.StickerPath);
         await SessionManager.Instance.SendDcconAsync(ViewModel.ChatHwnd, sticker.LocalFilePath);
         Close();
     }
@@ -219,6 +221,7 @@ public sealed partial class PopupWindow : WindowEx
         var filePaths = ViewModel.GetPendingFilePaths();
         if (filePaths.Count == 0) return;
 
+        ViewModel.RecordPendingHistory();
         await SessionManager.Instance.SendMultipleDcconsAsync(ViewModel.ChatHwnd, filePaths);
         ViewModel.ClearPending();
         Close();

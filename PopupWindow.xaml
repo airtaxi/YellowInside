@@ -71,6 +71,10 @@
                             FontSize="18"
                             Glyph="&#xE734;"
                             Visibility="{x:Bind FavoriteIconVisibility}" />
+                        <FontIcon
+                            FontSize="18"
+                            Glyph="&#xE81C;"
+                            Visibility="{x:Bind HistoryIconVisibility}" />
                         <Image
                             Source="{x:Bind ThumbnailSource}"
                             Stretch="Uniform"

@@ -1,4 +1,5 @@
 ﻿using dccon.NET;
+using YellowInside.Managers;
 using YellowInsideLib;
 using Microsoft.UI.Xaml;
 using Microsoft.Windows.AppLifecycle;
@@ -76,6 +77,7 @@ public partial class App : Application
     protected override async void OnLaunched(LaunchActivatedEventArgs args)
     {
         await ContentsManager.InitializeAsync();
+        HistoryManager.Initialize();
 
         s_manageWindow = new ManageWindow();
 

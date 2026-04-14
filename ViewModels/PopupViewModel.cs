@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using YellowInside.Managers;
 using YellowInside.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Input;
@@ -20,11 +21,13 @@ namespace YellowInside.ViewModels;
 public class PopupCategoryViewModel
 {
     public bool IsFavorite { get; init; }
+    public bool IsHistory { get; init; }
     public string Title { get; init; } = string.Empty;
     public ImageSource ThumbnailSource { get; init; }
     public StickerPackage Package { get; init; }
     public Visibility FavoriteIconVisibility => IsFavorite ? Visibility.Visible : Visibility.Collapsed;
-    public Visibility ThumbnailVisibility => IsFavorite ? Visibility.Collapsed : Visibility.Visible;
+    public Visibility HistoryIconVisibility => IsHistory ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility ThumbnailVisibility => !IsFavorite && !IsHistory ? Visibility.Visible : Visibility.Collapsed;
 }
 
 public partial class PopupStickerViewModel : ObservableObject
@@ -64,6 +67,9 @@ public partial class PendingStickerViewModel
     public string LocalFilePath { get; init; } = string.Empty;
     public ImageSource ImageSource { get; init; }
     public string Title { get; init; } = string.Empty;
+    public ContentSource Source { get; init; }
+    public int PackageIndex { get; init; }
+    public string StickerPath { get; init; } = string.Empty;
     public Action<PendingStickerViewModel> RemoveAction { get; init; }
 
     [RelayCommand]
@@ -74,6 +80,7 @@ public partial class PopupViewModel : ObservableObject
 {
     private const string SettingsKeySource = "PopupLastSource";
     private const string SettingsKeyPackageIndex = "PopupLastPackageIndex";
+    private const string SettingsKeySpecialTab = "PopupLastSpecialTab";
 
     private readonly List<StickerPackage> _packages;
     private readonly Action<PopupStickerViewModel> _stickerClicked;
@@ -121,6 +128,9 @@ public partial class PopupViewModel : ObservableObject
             LocalFilePath = sticker.LocalFilePath,
             ImageSource = new BitmapImage(new Uri(sticker.LocalFilePath)) { AutoPlay = SettingsManager.GifPlaybackEnabled },
             Title = sticker.Title,
+            Source = sticker.Source,
+            PackageIndex = sticker.PackageIndex,
+            StickerPath = sticker.StickerPath,
             RemoveAction = RemoveFromPending,
         });
         return true;
@@ -139,6 +149,12 @@ public partial class PopupViewModel : ObservableObject
         {
             IsFavorite = true,
             Title = "즐겨찾기",
+        });
+
+        Categories.Add(new PopupCategoryViewModel
+        {
+            IsHistory = true,
+            Title = "최근 사용",
         });
 
         foreach (var package in _packages)
@@ -168,7 +184,7 @@ public partial class PopupViewModel : ObservableObject
             settings.Values.TryGetValue(SettingsKeyPackageIndex, out var packageIndexObject) &&
             sourceObject is int source && packageIndexObject is int packageIndex)
         {
-            for (int i = 1; i < Categories.Count; i++)
+            for (int i = 2; i < Categories.Count; i++)
             {
                 var category = Categories[i];
                 if (category.Package is not null &&
@@ -177,6 +193,10 @@ public partial class PopupViewModel : ObservableObject
                     return i;
             }
         }
+
+        if (settings.Values.TryGetValue(SettingsKeySpecialTab, out var specialTabObject) &&
+            specialTabObject is int specialTab && specialTab >= 0 && specialTab <= 1)
+            return specialTab;
 
         return 0;
     }
@@ -193,6 +213,8 @@ public partial class PopupViewModel : ObservableObject
 
         if (index == 0)
             LoadFavoriteStickers();
+        else if (index == 1)
+            LoadHistoryStickers();
         else
             LoadPackageStickers(Categories[index].Package);
     }
@@ -201,15 +223,17 @@ public partial class PopupViewModel : ObservableObject
     {
         var settings = ApplicationData.Current.LocalSettings;
 
-        if (index > 0 && index < Categories.Count && Categories[index].Package is { } package)
+        if (index > 1 && index < Categories.Count && Categories[index].Package is { } package)
         {
             settings.Values[SettingsKeySource] = (int)package.Source;
             settings.Values[SettingsKeyPackageIndex] = package.PackageIndex;
+            settings.Values.Remove(SettingsKeySpecialTab);
         }
         else
         {
             settings.Values.Remove(SettingsKeySource);
             settings.Values.Remove(SettingsKeyPackageIndex);
+            settings.Values[SettingsKeySpecialTab] = index;
         }
     }
 
@@ -244,6 +268,37 @@ public partial class PopupViewModel : ObservableObject
         }
     }
 
+    private void LoadHistoryStickers()
+    {
+        var historyEntries = HistoryManager.GetEntries();
+        foreach (var entry in historyEntries)
+        {
+            var package = _packages.FirstOrDefault(
+                package => package.Source == entry.Source && package.PackageIndex == entry.PackageIndex);
+            if (package is null) continue;
+
+            var sticker = package.Stickers.FirstOrDefault(sticker => sticker.Path == entry.StickerPath);
+            if (sticker is null) continue;
+
+            var imagePath = ContentsManager.GetStickerImagePath(
+                entry.Source, entry.PackageIndex, package.LocalDirectoryName, sticker.FileName);
+            if (!File.Exists(imagePath)) continue;
+
+            Stickers.Add(new PopupStickerViewModel
+            {
+                ImageSource = new BitmapImage(new Uri(imagePath)) { AutoPlay = SettingsManager.GifPlaybackEnabled },
+                LocalFilePath = imagePath,
+                Title = sticker.Title,
+                Source = entry.Source,
+                PackageIndex = entry.PackageIndex,
+                StickerPath = entry.StickerPath,
+                IsFavorite = ContentsManager.IsFavorite(entry.Source, entry.PackageIndex, entry.StickerPath),
+                FavoriteToggled = OnFavoriteToggled,
+                StickerClicked = _stickerClicked,
+            });
+        }
+    }
+
     private void LoadPackageStickers(StickerPackage package)
     {
         foreach (var sticker in package.Stickers)
@@ -272,6 +327,15 @@ public partial class PopupViewModel : ObservableObject
         // 즐겨찾기 탭에서 즐겨찾기 해제하면 목록에서 제거
         if (_currentCategoryIndex == 0 && !item.IsFavorite)
             Stickers.Remove(item);
+    }
+
+    public void RecordPendingHistory()
+    {
+        for (int i = PendingStickers.Count - 1; i >= 0; i--)
+        {
+            var pendingSticker = PendingStickers[i];
+            HistoryManager.Record(pendingSticker.Source, pendingSticker.PackageIndex, pendingSticker.StickerPath);
+        }
     }
 
     public void Cleanup()

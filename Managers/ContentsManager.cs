@@ -256,6 +256,8 @@ public static class ContentsManager
 
 		if (!packageRemoved) return;
 
+		Managers.HistoryManager.RemoveByPackage(source, packageIndex);
+
 		var packageDirectory = GetPackageDirectory(source, packageIndex);
 		if (Directory.Exists(packageDirectory))
 			Directory.Delete(packageDirectory, recursive: true);
