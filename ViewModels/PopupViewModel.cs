@@ -82,6 +82,7 @@ public partial class PopupViewModel : ObservableObject
     public ObservableCollection<PopupStickerViewModel> Stickers { get; } = [];
     public ObservableCollection<PendingStickerViewModel> PendingStickers { get; } = [];
     public nint ChatHwnd { get; }
+    public bool HasPackages => _packages.Count > 0;
 
     public const int MaxPendingCount = 30;
     public Visibility PendingBarVisibility => PendingStickers.Count > 0 ? Visibility.Visible : Visibility.Collapsed;

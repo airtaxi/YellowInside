@@ -105,6 +105,14 @@
                     PreferredPlacement="Top"
                     Subtitle="스티커를 우클릭하면 대기열에 추가할 수 있어요. 최대 30장까지 모아서 한번에 보낼 수 있습니다."
                     Target="{x:Bind StickerGridView}" />
+                <TeachingTip
+                    x:Name="EmptyPackagesTeachingTip"
+                    Title="디시콘이 없어요"
+                    ActionButtonClick="OnEmptyPackagesTeachingTipActionButtonClicked"
+                    ActionButtonContent="디시콘 추가하기"
+                    PreferredPlacement="Center"
+                    Subtitle="아직 추가된 디시콘이 없습니다. 디시콘을 추가해 보세요!"
+                    Target="{x:Bind StickerGridView}" />
             </GridView.Resources>
             <GridView.ItemContainerStyle>
                 <Style TargetType="GridViewItem">
@@ -255,8 +263,8 @@
                     Text="전송 방법" />
                 <ToggleSwitch
                     x:Name="SendMethodToggleSwitch"
-                    HorizontalAlignment="Right"
                     MinWidth="0"
+                    HorizontalAlignment="Right"
                     OffContent="자동"
                     OnContent="호환성"
                     Toggled="OnSendMethodToggleSwitchToggled" />

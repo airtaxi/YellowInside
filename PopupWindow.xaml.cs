@@ -116,6 +116,12 @@ public sealed partial class PopupWindow : WindowEx
 
     private void OnStickerGridViewLoaded(object sender, RoutedEventArgs e)
     {
+        if (!ViewModel.HasPackages)
+        {
+            EmptyPackagesTeachingTip.IsOpen = true;
+            return;
+        }
+
         var settings = ApplicationData.Current.LocalSettings;
         if (settings.Values.ContainsKey(SettingsKeyRightClickTipDismissed)) return;
         RightClickTeachingTip.IsOpen = true;
@@ -125,6 +131,13 @@ public sealed partial class PopupWindow : WindowEx
     {
         ApplicationData.Current.LocalSettings.Values[SettingsKeyRightClickTipDismissed] = true;
         RightClickTeachingTip.IsOpen = false;
+    }
+
+    private void OnEmptyPackagesTeachingTipActionButtonClicked(TeachingTip sender, object args)
+    {
+        EmptyPackagesTeachingTip.IsOpen = false;
+        App.ShowManageWindow();
+        Close();
     }
 
     private static string ResolveApplicationTitle(SessionInfo sessionInfo)
