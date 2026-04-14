@@ -14,7 +14,7 @@
 		<EnableMsixTooling>true</EnableMsixTooling>
 		<PublishAot>true</PublishAot>
 		<DefineConstants>DISABLE_XAML_GENERATED_MAIN</DefineConstants>
-		<DefaultLanguage>ko-KR</DefaultLanguage>
+		<DefaultLanguage>en</DefaultLanguage>
 		<ApplicationIcon>Assets\Icon.ico</ApplicationIcon>
 		<AppxPackageSigningEnabled>true</AppxPackageSigningEnabled>
 		<PackageCertificateKeyFile>YellowInsideCert.pfx</PackageCertificateKeyFile>
