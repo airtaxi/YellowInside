@@ -132,6 +132,43 @@
             </Grid>
         </Border>
 
+        <!--  업데이트  -->
+            <TextBlock
+                Margin="4,20,0,4"
+                Style="{ThemeResource BodyStrongTextBlockStyle}"
+                Text="업데이트" />
+            <Border
+                Padding="16"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                CornerRadius="8">
+                <Grid ColumnSpacing="16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel
+                        Grid.Column="0"
+                        VerticalAlignment="Center"
+                        Spacing="2">
+                        <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="업데이트 확인" />
+                        <TextBlock
+                            x:Name="UpdateStatusTextBlock"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Style="{ThemeResource CaptionTextBlockStyle}"
+                            Text="Microsoft Store에서 업데이트를 확인합니다." />
+                    </StackPanel>
+                    <Button
+                        x:Name="CheckUpdateButton"
+                        Grid.Column="1"
+                        MinWidth="120"
+                        VerticalAlignment="Center"
+                        Click="OnCheckUpdateButtonClicked"
+                        Content="확인하기" />
+                </Grid>
+            </Border>
+
         <!--  데이터 관리  -->
             <TextBlock
                 Margin="4,20,0,4"

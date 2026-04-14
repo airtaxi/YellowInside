@@ -5,7 +5,9 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 using System;
+using Windows.Services.Store;
 using Windows.Storage.Pickers;
+using Windows.System;
 using WinRT.Interop;
 using WinUIEx;
 using System.Threading.Tasks;
@@ -86,6 +88,46 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
 
         App.LaunchOnStartup = LaunchOnStartupToggleSwitch.IsOn;
         WeakReferenceMessenger.Default.Send(new LaunchOnStartupChangedMessage(LaunchOnStartupToggleSwitch.IsOn));
+    }
+
+    private async void OnCheckUpdateButtonClicked(object sender, RoutedEventArgs e)
+    {
+        CheckUpdateButton.IsEnabled = false;
+        UpdateStatusTextBlock.Text = "업데이트를 확인하는 중...";
+
+        try
+        {
+            var storeContext = StoreContext.GetDefault();
+            var updates = await storeContext.GetAppAndOptionalStorePackageUpdatesAsync();
+
+            if (updates.Count > 0)
+            {
+                UpdateStatusTextBlock.Text = "새로운 업데이트가 있습니다.";
+                var result = await this.ShowDialogAsync(
+                    "업데이트 확인",
+                    "새로운 버전이 출시되었습니다. Microsoft Store에서 업데이트하시겠습니까?",
+                    primaryButtonText: "업데이트",
+                    secondaryButtonText: "나중에");
+
+                if (result == ContentDialogResult.Primary)
+                {
+                    var packageFamilyName = Windows.ApplicationModel.Package.Current.Id.FamilyName;
+                    await Launcher.LaunchUriAsync(new Uri($"ms-windows-store://pdp/?PFN={packageFamilyName}"));
+                }
+            }
+            else
+            {
+                UpdateStatusTextBlock.Text = "현재 최신 버전입니다.";
+            }
+        }
+        catch
+        {
+            UpdateStatusTextBlock.Text = "업데이트 확인에 실패했습니다.";
+        }
+        finally
+        {
+            CheckUpdateButton.IsEnabled = true;
+        }
     }
 
     private async void OnExportButtonClicked(object sender, RoutedEventArgs e)
