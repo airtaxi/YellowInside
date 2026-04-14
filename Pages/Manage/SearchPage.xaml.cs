@@ -53,18 +53,15 @@ public sealed partial class SearchPage : Page
         ManageWindow.ShowLoading("검색 중...");
         try
         {
-            var selectedSearchType = (SearchTypeComboBox.SelectedItem as ComboBoxItem)?.Tag as string;
-            var selectedSearchSort = (SearchSortComboBox.SelectedItem as ComboBoxItem)?.Tag as string;
-
-            var searchType = selectedSearchType switch
+            var searchType = SearchTypeComboBox.SelectedIndex switch
             {
-                "NickName" => SearchType.NickName,
-                "Tags" => SearchType.Tags,
+                1 => SearchType.NickName,
+                2 => SearchType.Tags,
                 _ => SearchType.Title,
             };
-            var searchSort = selectedSearchSort switch
+            var searchSort = SearchSortComboBox.SelectedIndex switch
             {
-                "New" => SearchSort.New,
+                1 => SearchSort.New,
                 _ => SearchSort.Hot,
             };
 
