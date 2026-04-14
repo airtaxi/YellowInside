@@ -1,4 +1,6 @@
-﻿using YellowInside.Pages;
+﻿using YellowInside.Messages;
+using YellowInside.Pages;
+using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
@@ -20,7 +22,7 @@ using TitleBar = Microsoft.UI.Xaml.Controls.TitleBar;
 
 namespace YellowInside;
 
-public sealed partial class ManageWindow : WindowEx
+public sealed partial class ManageWindow : WindowEx, IRecipient<LaunchOnStartupChangedMessage>
 {
     public static ManageWindow Instance { get; private set; }
 
@@ -36,7 +38,14 @@ public sealed partial class ManageWindow : WindowEx
 
         UpdateLaunchOnStartupMenuFlyoutItemText();
 
+        WeakReferenceMessenger.Default.Register(this);
+
         AppFrame.Navigate(typeof(ManagePage));
+    }
+
+    public void Receive(LaunchOnStartupChangedMessage message)
+    {
+        DispatcherQueue.TryEnqueue(UpdateLaunchOnStartupMenuFlyoutItemText);
     }
 
     public static void ShowLoading(string message)
@@ -77,6 +86,7 @@ public sealed partial class ManageWindow : WindowEx
     {
         App.LaunchOnStartup = !App.LaunchOnStartup;
         UpdateLaunchOnStartupMenuFlyoutItemText();
+        WeakReferenceMessenger.Default.Send(new LaunchOnStartupChangedMessage(App.LaunchOnStartup));
     }
 
     private void OnAppTitleBarBackRequested(TitleBar sender, object args)

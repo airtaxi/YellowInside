@@ -1,4 +1,6 @@
 using YellowInside.Helpers;
+using YellowInside.Messages;
+using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
@@ -10,13 +12,24 @@ using System.Threading.Tasks;
 
 namespace YellowInside.Pages.Manage;
 
-public sealed partial class SettingsPage : Page
+public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChangedMessage>
 {
     private bool _isInitializing = true;
 
     public SettingsPage()
     {
         InitializeComponent();
+        WeakReferenceMessenger.Default.Register(this);
+    }
+
+    public void Receive(LaunchOnStartupChangedMessage message)
+    {
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            _isInitializing = true;
+            LaunchOnStartupToggleSwitch.IsOn = message.Value;
+            _isInitializing = false;
+        });
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -29,6 +42,8 @@ public sealed partial class SettingsPage : Page
 
         GifPlaybackToggleSwitch.IsOn = SettingsManager.GifPlaybackEnabled;
         GifWarningInfoBar.IsOpen = SettingsManager.GifPlaybackEnabled;
+
+        LaunchOnStartupToggleSwitch.IsOn = App.LaunchOnStartup;
 
         _isInitializing = false;
     }
@@ -63,6 +78,14 @@ public sealed partial class SettingsPage : Page
 
         SettingsManager.GifPlaybackEnabled = GifPlaybackToggleSwitch.IsOn;
         GifWarningInfoBar.IsOpen = GifPlaybackToggleSwitch.IsOn;
+    }
+
+    private void OnLaunchOnStartupToggleSwitchToggled(object sender, RoutedEventArgs e)
+    {
+        if (_isInitializing) return;
+
+        App.LaunchOnStartup = LaunchOnStartupToggleSwitch.IsOn;
+        WeakReferenceMessenger.Default.Send(new LaunchOnStartupChangedMessage(LaunchOnStartupToggleSwitch.IsOn));
     }
 
     private async void OnExportButtonClicked(object sender, RoutedEventArgs e)
