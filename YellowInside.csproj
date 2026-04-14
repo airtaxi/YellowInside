@@ -48,14 +48,20 @@
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
 		<PackageReference Include="CommunityToolkit.WinUI.Controls.Primitives" Version="8.2.251219" />
 		<PackageReference Include="CommunityToolkit.WinUI.Converters" Version="8.2.251219" />
-		<PackageReference Include="dccon.NET" Version="0.4.0" />
+		<PackageReference Include="DevWinUI.Controls" Version="9.9.3" />
+		<!--<PackageReference Include="dccon.NET" Version="0.4.2" />-->
 		<PackageReference Include="H.NotifyIcon.WinUI" Version="2.4.1" />
 		<PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.1721" />
 		<PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260317003" />
 		<PackageReference Include="WinUIEx" Version="2.9.0" />
-		<PackageReference Include="YellowInsideLib" Version="1.0.4" />
+		<!--<PackageReference Include="YellowInsideLib" Version="1.0.6" />-->
 	</ItemGroup>
 	
+	<ItemGroup>
+	  <ProjectReference Include="..\dccon.NET\src\dccon.NET\dccon.NET.csproj" />
+	  <ProjectReference Include="..\YellowInsideLib\YellowInsideLib.csproj" />
+	</ItemGroup>
+
 	<!--
     Defining the "HasPackageAndPublishMenuAddedByProject" property here allows the Solution
     Explorer "Package and Publish" context menu entry to be enabled for this project even if
