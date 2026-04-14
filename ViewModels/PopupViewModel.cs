@@ -8,6 +8,7 @@ using Microsoft.UI.Xaml.Media.Imaging;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -58,6 +59,17 @@ public partial class PopupStickerViewModel : ObservableObject
     public void Send() => StickerClicked?.Invoke(this);
 }
 
+public partial class PendingStickerViewModel
+{
+    public string LocalFilePath { get; init; } = string.Empty;
+    public ImageSource ImageSource { get; init; }
+    public string Title { get; init; } = string.Empty;
+    public Action<PendingStickerViewModel> RemoveAction { get; init; }
+
+    [RelayCommand]
+    private void Remove() => RemoveAction?.Invoke(this);
+}
+
 public partial class PopupViewModel : ObservableObject
 {
     private const string SettingsKeySource = "PopupLastSource";
@@ -68,15 +80,57 @@ public partial class PopupViewModel : ObservableObject
 
     public List<PopupCategoryViewModel> Categories { get; } = [];
     public ObservableCollection<PopupStickerViewModel> Stickers { get; } = [];
+    public ObservableCollection<PendingStickerViewModel> PendingStickers { get; } = [];
     public nint ChatHwnd { get; }
+
+    public const int MaxPendingCount = 30;
+    public Visibility PendingBarVisibility => PendingStickers.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+    public string PendingCountText => $"{PendingStickers.Count}/{MaxPendingCount}";
 
     public PopupViewModel(nint chatHwnd, Action<PopupStickerViewModel> stickerClicked)
     {
         ChatHwnd = chatHwnd;
         _stickerClicked = stickerClicked;
         _packages = [.. ContentsManager.GetDownloadedPackages()];
+        PendingStickers.CollectionChanged += OnPendingStickersCollectionChanged;
         BuildCategories();
     }
+
+    private void OnPendingStickersCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+    {
+        OnPropertyChanged(nameof(PendingBarVisibility));
+        OnPropertyChanged(nameof(PendingCountText));
+    }
+
+    public bool TogglePending(PopupStickerViewModel sticker)
+    {
+        var existing = PendingStickers.FirstOrDefault(
+            pendingSticker => pendingSticker.LocalFilePath == sticker.LocalFilePath);
+
+        if (existing is not null)
+        {
+            PendingStickers.Remove(existing);
+            return false;
+        }
+
+        if (PendingStickers.Count >= MaxPendingCount) return false;
+
+        PendingStickers.Add(new PendingStickerViewModel
+        {
+            LocalFilePath = sticker.LocalFilePath,
+            ImageSource = new BitmapImage(new Uri(sticker.LocalFilePath)) { AutoPlay = SettingsManager.GifPlaybackEnabled },
+            Title = sticker.Title,
+            RemoveAction = RemoveFromPending,
+        });
+        return true;
+    }
+
+    public void RemoveFromPending(PendingStickerViewModel item) => PendingStickers.Remove(item);
+
+    public void ClearPending() => PendingStickers.Clear();
+
+    public IReadOnlyList<string> GetPendingFilePaths() =>
+        PendingStickers.Select(pendingSticker => pendingSticker.LocalFilePath).ToList();
 
     private void BuildCategories()
     {
@@ -221,6 +275,15 @@ public partial class PopupViewModel : ObservableObject
 
     public void Cleanup()
     {
+        PendingStickers.CollectionChanged -= OnPendingStickersCollectionChanged;
+
+        foreach (var pendingSticker in PendingStickers)
+        {
+            if (pendingSticker.ImageSource is BitmapImage pendingBitmap)
+                pendingBitmap.UriSource = null;
+        }
+        PendingStickers.Clear();
+
         foreach (var sticker in Stickers)
         {
             sticker.ImageSource = null;

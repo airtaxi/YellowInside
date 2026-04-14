@@ -21,6 +21,7 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <!--  헤더  -->
@@ -46,7 +47,6 @@
             x:Name="CategoryGridView"
             Grid.Row="1"
             MaxHeight="60"
-            HorizontalAlignment="Center"
             IsItemClickEnabled="False"
             ItemsSource="{x:Bind ViewModel.Categories}"
             ScrollViewer.VerticalScrollBarVisibility="Hidden"
@@ -89,11 +89,22 @@
         <GridView
             x:Name="StickerGridView"
             Grid.Row="3"
-            HorizontalAlignment="Center"
             IsItemClickEnabled="False"
             ItemsSource="{x:Bind ViewModel.Stickers, Mode=OneWay}"
+            RightTapped="OnStickerGridViewRightTapped"
             ScrollViewer.VerticalScrollBarVisibility="Hidden"
             SelectionMode="None">
+
+            <GridView.Resources>
+                <TeachingTip
+                    x:Name="RightClickTeachingTip"
+                    Title="우클릭으로 여러 장 보내기"
+                    ActionButtonClick="OnRightClickTeachingTipActionButtonClicked"
+                    ActionButtonContent="확인"
+                    PreferredPlacement="Top"
+                    Subtitle="스티커를 우클릭하면 대기열에 추가할 수 있어요. 최대 30장까지 모아서 한번에 보낼 수 있습니다."
+                    Target="{x:Bind StickerGridView}" />
+            </GridView.Resources>
             <GridView.ItemContainerStyle>
                 <Style TargetType="GridViewItem">
                     <Setter Property="Margin" Value="4" />
@@ -154,5 +165,78 @@
                 </DataTemplate>
             </GridView.ItemTemplate>
         </GridView>
+
+        <!--  대기열 바  -->
+        <Border
+            Grid.Row="4"
+            Padding="8"
+            Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+            CornerRadius="4"
+            Visibility="{x:Bind ViewModel.PendingBarVisibility, Mode=OneWay}">
+            <Grid ColumnSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <ScrollViewer
+                    HorizontalScrollBarVisibility="Auto"
+                    HorizontalScrollMode="Enabled"
+                    VerticalScrollBarVisibility="Disabled"
+                    VerticalScrollMode="Disabled">
+                    <ItemsRepeater ItemsSource="{x:Bind ViewModel.PendingStickers}">
+                        <ItemsRepeater.Layout>
+                            <StackLayout Orientation="Horizontal" Spacing="4" />
+                        </ItemsRepeater.Layout>
+                        <ItemsRepeater.ItemTemplate>
+                            <DataTemplate x:DataType="vm:PendingStickerViewModel">
+                                <Grid
+                                    Width="36"
+                                    Height="36"
+                                    ToolTipService.ToolTip="{x:Bind Title}">
+                                    <Image
+                                        Width="32"
+                                        Height="32"
+                                        Source="{x:Bind ImageSource}"
+                                        Stretch="Uniform" />
+                                    <Button
+                                        Width="14"
+                                        Height="14"
+                                        MinWidth="0"
+                                        MinHeight="0"
+                                        Padding="0"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Top"
+                                        Background="#C42B1C"
+                                        Command="{x:Bind RemoveCommand}"
+                                        CornerRadius="7">
+                                        <FontIcon
+                                            FontSize="8"
+                                            Foreground="White"
+                                            Glyph="&#xE711;" />
+                                    </Button>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsRepeater.ItemTemplate>
+                    </ItemsRepeater>
+                </ScrollViewer>
+
+                <StackPanel
+                    Grid.Column="1"
+                    VerticalAlignment="Center"
+                    Orientation="Horizontal"
+                    Spacing="4">
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        Style="{ThemeResource CaptionTextBlockStyle}"
+                        Text="{x:Bind ViewModel.PendingCountText, Mode=OneWay}" />
+                    <Button
+                        Click="OnSendPendingButtonClicked"
+                        Content="전송"
+                        Style="{ThemeResource AccentButtonStyle}" />
+                    <Button Click="OnClearPendingButtonClicked" Content="초기화" />
+                </StackPanel>
+            </Grid>
+        </Border>
     </Grid>
 </winuiex:WindowEx>

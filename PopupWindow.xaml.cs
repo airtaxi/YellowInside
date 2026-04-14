@@ -3,16 +3,19 @@ using YellowInsideLib;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
 using System;
 using System.Runtime.InteropServices;
 using WinUIEx;
+using Windows.Storage;
 
 namespace YellowInside;
 
 public sealed partial class PopupWindow : WindowEx
 {
     private const int PopupWidth = 400;
-    private const int PopupHeight = 520;
+    private const int PopupHeight = 560;
 
     public PopupViewModel ViewModel { get; }
 
@@ -29,6 +32,8 @@ public sealed partial class PopupWindow : WindowEx
         public int Left, Top, Right, Bottom;
     }
 
+    private const string SettingsKeyRightClickTipDismissed = "PopupRightClickTipDismissed";
+
     public PopupWindow(SessionInfo sessionInfo)
     {
         InitializeComponent();
@@ -42,6 +47,7 @@ public sealed partial class PopupWindow : WindowEx
 
         Activated += OnActivated;
         CategoryGridView.Loaded += OnCategoryGridViewLoaded;
+        StickerGridView.Loaded += OnStickerGridViewLoaded;
     }
 
     private void ConfigureWindow()
@@ -96,6 +102,19 @@ public sealed partial class PopupWindow : WindowEx
         CategoryGridView.SelectedIndex = ViewModel.GetInitialCategoryIndex();
     }
 
+    private void OnStickerGridViewLoaded(object sender, RoutedEventArgs e)
+    {
+        var settings = ApplicationData.Current.LocalSettings;
+        if (settings.Values.ContainsKey(SettingsKeyRightClickTipDismissed)) return;
+        RightClickTeachingTip.IsOpen = true;
+    }
+
+    private void OnRightClickTeachingTipActionButtonClicked(TeachingTip sender, object args)
+    {
+        ApplicationData.Current.LocalSettings.Values[SettingsKeyRightClickTipDismissed] = true;
+        RightClickTeachingTip.IsOpen = false;
+    }
+
     private void OnCloseButtonClicked(object sender, RoutedEventArgs e) => Close();
 
     private void OnCategoryGridViewSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -104,16 +123,55 @@ public sealed partial class PopupWindow : WindowEx
             ViewModel.SelectCategory(CategoryGridView.SelectedIndex);
     }
 
+    private void OnStickerGridViewRightTapped(object sender, RightTappedRoutedEventArgs e)
+    {
+        var element = e.OriginalSource as FrameworkElement;
+        while (element is not null)
+        {
+            if (element.DataContext is PopupStickerViewModel sticker)
+            {
+                ViewModel.TogglePending(sticker);
+                return;
+            }
+            element = VisualTreeHelper.GetParent(element) as FrameworkElement;
+        }
+    }
+
     private async void OnStickerClicked(PopupStickerViewModel sticker)
     {
+        if (ViewModel.PendingStickers.Count > 0)
+        {
+            ViewModel.TogglePending(sticker);
+            var filePaths = ViewModel.GetPendingFilePaths();
+            if (filePaths.Count == 0) return;
+
+            await SessionManager.Instance.SendMultipleDcconsAsync(ViewModel.ChatHwnd, filePaths);
+            ViewModel.ClearPending();
+            Close();
+            return;
+        }
+
         await SessionManager.Instance.SendDcconAsync(ViewModel.ChatHwnd, sticker.LocalFilePath);
         Close();
     }
+
+    private async void OnSendPendingButtonClicked(object sender, RoutedEventArgs e)
+    {
+        var filePaths = ViewModel.GetPendingFilePaths();
+        if (filePaths.Count == 0) return;
+
+        await SessionManager.Instance.SendMultipleDcconsAsync(ViewModel.ChatHwnd, filePaths);
+        ViewModel.ClearPending();
+        Close();
+    }
+
+    private void OnClearPendingButtonClicked(object sender, RoutedEventArgs e) => ViewModel.ClearPending();
 
     private void OnClosed(object sender, WindowEventArgs args)
     {
         Activated -= OnActivated;
         CategoryGridView.Loaded -= OnCategoryGridViewLoaded;
+        StickerGridView.Loaded -= OnStickerGridViewLoaded;
 
         ViewModel.Cleanup();
     }
