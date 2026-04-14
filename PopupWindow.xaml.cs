@@ -85,7 +85,13 @@ public sealed partial class PopupWindow : WindowEx
         if (!GetWindowRect(chatHwnd, out var chatRect)) return;
 
         var windowSize = AppWindow.Size;
-        var displayArea = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Nearest);
+
+        // 채팅창 중심 좌표 기준으로 해당 모니터의 DisplayArea를 찾음
+        var chatCenterX = (chatRect.Left + chatRect.Right) / 2;
+        var chatCenterY = (chatRect.Top + chatRect.Bottom) / 2;
+        var displayArea = DisplayArea.GetFromPoint(
+            new Windows.Graphics.PointInt32(chatCenterX, chatCenterY),
+            DisplayAreaFallback.Nearest);
         var workArea = displayArea.WorkArea;
 
         // 채팅창 오른쪽에, 하단 정렬
