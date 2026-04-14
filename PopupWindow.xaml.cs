@@ -11,7 +11,7 @@ namespace YellowInside;
 
 public sealed partial class PopupWindow : WindowEx
 {
-    private const int PopupWidth = 390;
+    private const int PopupWidth = 400;
     private const int PopupHeight = 520;
 
     public PopupViewModel ViewModel { get; }

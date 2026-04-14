@@ -5,10 +5,10 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-Closed="OnClosed"
     xmlns:vm="using:YellowInside.ViewModels"
     xmlns:winuiex="using:WinUIEx"
     Title="이모티콘 선택"
+    Closed="OnClosed"
     mc:Ignorable="d">
 
     <Window.SystemBackdrop>
@@ -45,9 +45,11 @@ Closed="OnClosed"
         <GridView
             x:Name="CategoryGridView"
             Grid.Row="1"
-            MaxHeight="84"
+            MaxHeight="60"
+            HorizontalAlignment="Center"
             IsItemClickEnabled="False"
             ItemsSource="{x:Bind ViewModel.Categories}"
+            ScrollViewer.VerticalScrollBarVisibility="Hidden"
             SelectionChanged="OnCategoryGridViewSelectionChanged"
             SelectionMode="Single">
             <GridView.ItemContainerStyle>
@@ -87,8 +89,10 @@ Closed="OnClosed"
         <GridView
             x:Name="StickerGridView"
             Grid.Row="3"
+            HorizontalAlignment="Center"
             IsItemClickEnabled="False"
             ItemsSource="{x:Bind ViewModel.Stickers, Mode=OneWay}"
+            ScrollViewer.VerticalScrollBarVisibility="Hidden"
             SelectionMode="None">
             <GridView.ItemContainerStyle>
                 <Style TargetType="GridViewItem">
