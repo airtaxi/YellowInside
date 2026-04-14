@@ -95,6 +95,72 @@
                 </Grid>
             </Border>
 
+            <!--  단축키  -->
+            <TextBlock
+                Margin="4,20,0,4"
+                Style="{ThemeResource BodyStrongTextBlockStyle}"
+                Text="단축키" />
+            <Border
+                Padding="16"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                CornerRadius="8">
+                <StackPanel Spacing="16">
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel
+                            Grid.Column="0"
+                            VerticalAlignment="Center"
+                            Spacing="2">
+                            <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="빠른 실행 단축키" />
+                            <TextBlock
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Style="{ThemeResource CaptionTextBlockStyle}"
+                                Text="단축키를 눌러 활성 창에 디시콘 팝업을 엽니다." />
+                        </StackPanel>
+                        <ToggleSwitch
+                            x:Name="HotkeyToggleSwitch"
+                            Grid.Column="1"
+                            MinWidth="0"
+                            VerticalAlignment="Center"
+                            OffContent="끔"
+                            OnContent="켬"
+                            Toggled="OnHotkeyToggleSwitchToggled" />
+                    </Grid>
+                    <Border
+                        x:Name="HotkeyDivider"
+                        Height="1"
+                        Background="{ThemeResource DividerStrokeColorDefaultBrush}"
+                        Visibility="Collapsed" />
+                    <Grid
+                        x:Name="HotkeySettingGrid"
+                        ColumnSpacing="16"
+                        Visibility="Collapsed">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel
+                            x:Name="HotkeyDisplayPanel"
+                            Grid.Column="0"
+                            VerticalAlignment="Center"
+                            Orientation="Horizontal"
+                            Spacing="4" />
+                        <Button
+                            x:Name="ChangeHotkeyButton"
+                            Grid.Column="1"
+                            MinWidth="80"
+                            VerticalAlignment="Center"
+                            Click="OnChangeHotkeyButtonClicked"
+                            Content="변경" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+
             <!--  시스템  -->
         <TextBlock
             Margin="4,20,0,4"

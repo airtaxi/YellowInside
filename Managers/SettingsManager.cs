@@ -14,6 +14,9 @@ public static class SettingsManager
 {
     private const string GifPlaybackKey = "GifPlaybackEnabled";
     private const string ThemeKey = "AppTheme";
+    private const string HotkeyEnabledKey = "HotkeyEnabled";
+    private const string HotkeyModifiersKey = "HotkeyModifiers";
+    private const string HotkeyKeyKey = "HotkeyKey";
 
     private static readonly ApplicationDataContainer s_localSettings =
         ApplicationData.Current.LocalSettings;
@@ -36,4 +39,26 @@ public static class SettingsManager
         AppThemeSetting.Dark => ElementTheme.Dark,
         _ => ElementTheme.Default,
     };
+
+    public static bool HotkeyEnabled
+    {
+        get => s_localSettings.Values[HotkeyEnabledKey] is bool value && value;
+        set => s_localSettings.Values[HotkeyEnabledKey] = value;
+    }
+
+    // Default: Ctrl+Shift (0x0002 | 0x0004 = 0x0006)
+    public static uint HotkeyModifiers
+    {
+        get => s_localSettings.Values[HotkeyModifiersKey] is int value
+            ? (uint)value
+            : HotkeyManager.ModifierControl | HotkeyManager.ModifierShift;
+        set => s_localSettings.Values[HotkeyModifiersKey] = (int)value;
+    }
+
+    // Default: 0x44 (D)
+    public static uint HotkeyKey
+    {
+        get => s_localSettings.Values[HotkeyKeyKey] is int value ? (uint)value : 0x44;
+        set => s_localSettings.Values[HotkeyKeyKey] = (int)value;
+    }
 }

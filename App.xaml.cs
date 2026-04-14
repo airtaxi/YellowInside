@@ -16,6 +16,7 @@ public partial class App : Application
     private static ManageWindow s_manageWindow;
     private static PopupWindow s_dcconPopupWindow;
     public static DcconClient DcconClient { get; } = new DcconClient();
+    public static HotkeyManager HotkeyManager { get; } = new();
 
     public static bool LaunchOnStartup
     {
@@ -53,7 +54,12 @@ public partial class App : Application
         });
     }
 
-    private static void OnDcconButtonClicked(SessionInfo info)
+    private static void OnDcconButtonClicked(SessionInfo info) => OpenDcconPopup(info);
+
+    private static void OnHotkeyPressed(nint foregroundWindowHandle) =>
+        OpenDcconPopup(new SessionInfo(foregroundWindowHandle, "", false));
+
+    private static void OpenDcconPopup(SessionInfo sessionInfo)
     {
         ManageWindow.Instance?.DispatcherQueue.TryEnqueue(() =>
         {
@@ -61,7 +67,7 @@ public partial class App : Application
             catch { }
             s_dcconPopupWindow = null;
 
-            s_dcconPopupWindow = new PopupWindow(info);
+            s_dcconPopupWindow = new PopupWindow(sessionInfo);
             s_dcconPopupWindow.Closed += (_, _) => s_dcconPopupWindow = null;
             s_dcconPopupWindow.Activate();
         });
@@ -81,5 +87,9 @@ public partial class App : Application
             s_manageWindow.Activate();
 
         UpdateCheckManager.Start();
+
+        HotkeyManager.HotkeyPressed += OnHotkeyPressed;
+        if (SettingsManager.HotkeyEnabled)
+            HotkeyManager.Start(SettingsManager.HotkeyModifiers, SettingsManager.HotkeyKey);
     }
 }

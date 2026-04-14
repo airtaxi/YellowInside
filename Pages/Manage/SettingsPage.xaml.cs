@@ -1,6 +1,8 @@
 using YellowInside.Helpers;
 using YellowInside.Messages;
 using CommunityToolkit.Mvvm.Messaging;
+using DevWinUI;
+using Microsoft.UI.Input;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
@@ -8,6 +10,7 @@ using System;
 using Windows.Services.Store;
 using Windows.Storage.Pickers;
 using Windows.System;
+using Windows.UI.Core;
 using WinRT.Interop;
 using WinUIEx;
 using System.Threading.Tasks;
@@ -46,6 +49,11 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         GifWarningInfoBar.IsOpen = SettingsManager.GifPlaybackEnabled;
 
         LaunchOnStartupToggleSwitch.IsOn = App.LaunchOnStartup;
+
+        HotkeyToggleSwitch.IsOn = SettingsManager.HotkeyEnabled;
+        UpdateHotkeyVisibility();
+        PopulateHotkeyKeyVisuals(HotkeyDisplayPanel, SettingsManager.HotkeyModifiers, SettingsManager.HotkeyKey);
+
 
         _isInitializing = false;
     }
@@ -183,4 +191,156 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
             await this.ShowDialogAsync("불러오기 실패", exception.Message);
         }
     }
+
+    private void OnHotkeyToggleSwitchToggled(object sender, RoutedEventArgs e)
+    {
+        if (_isInitializing) return;
+
+        SettingsManager.HotkeyEnabled = HotkeyToggleSwitch.IsOn;
+        UpdateHotkeyVisibility();
+
+        if (HotkeyToggleSwitch.IsOn)
+            App.HotkeyManager.Start(SettingsManager.HotkeyModifiers, SettingsManager.HotkeyKey);
+        else
+            App.HotkeyManager.Stop();
+    }
+
+    private void UpdateHotkeyVisibility()
+    {
+        var visibility = HotkeyToggleSwitch.IsOn ? Visibility.Visible : Visibility.Collapsed;
+        HotkeyDivider.Visibility = visibility;
+        HotkeySettingGrid.Visibility = visibility;
+    }
+
+    private async void OnChangeHotkeyButtonClicked(object sender, RoutedEventArgs e)
+    {
+        uint capturedModifiers = 0;
+        uint capturedKey = 0;
+
+        var instructionText = new TextBlock
+        {
+            Text = "새 단축키를 입력하세요...\n(Ctrl, Shift, Alt 중 하나 이상 + 키)",
+            TextWrapping = TextWrapping.Wrap,
+        };
+        var keyDisplayPanel = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 4,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            MinHeight = 36,
+        };
+        var contentPanel = new StackPanel { Spacing = 16 };
+        contentPanel.Children.Add(instructionText);
+        contentPanel.Children.Add(keyDisplayPanel);
+
+        var dialog = new ContentDialog
+        {
+            Title = "단축키 변경",
+            Content = contentPanel,
+            PrimaryButtonText = "확인",
+            CloseButtonText = "취소",
+            XamlRoot = XamlRoot,
+            DefaultButton = ContentDialogButton.Close,
+            IsPrimaryButtonEnabled = false,
+            RequestedTheme = SettingsManager.GetElementTheme(),
+        };
+
+        dialog.PreviewKeyDown += (_, arguments) =>
+        {
+            arguments.Handled = true;
+
+            var virtualKey = arguments.Key;
+
+            if (virtualKey is VirtualKey.Control or VirtualKey.LeftControl or VirtualKey.RightControl
+                or VirtualKey.Shift or VirtualKey.LeftShift or VirtualKey.RightShift
+                or VirtualKey.Menu or VirtualKey.LeftMenu or VirtualKey.RightMenu
+                or VirtualKey.LeftWindows or VirtualKey.RightWindows)
+                return;
+
+            capturedModifiers = 0;
+            if (IsVirtualKeyDown(VirtualKey.Control)) capturedModifiers |= HotkeyManager.ModifierControl;
+            if (IsVirtualKeyDown(VirtualKey.Menu)) capturedModifiers |= HotkeyManager.ModifierAlt;
+            if (IsVirtualKeyDown(VirtualKey.Shift)) capturedModifiers |= HotkeyManager.ModifierShift;
+
+            if (capturedModifiers == 0) return;
+
+            capturedKey = (uint)virtualKey;
+            PopulateHotkeyKeyVisuals(keyDisplayPanel, capturedModifiers, capturedKey);
+            instructionText.Text = "이 단축키를 사용하시겠습니까?";
+            dialog.IsPrimaryButtonEnabled = true;
+        };
+
+        var result = await dialog.ShowAsync();
+        if (result != ContentDialogResult.Primary || capturedKey == 0) return;
+
+        SettingsManager.HotkeyModifiers = capturedModifiers;
+        SettingsManager.HotkeyKey = capturedKey;
+        PopulateHotkeyKeyVisuals(HotkeyDisplayPanel, capturedModifiers, capturedKey);
+
+        if (SettingsManager.HotkeyEnabled)
+            App.HotkeyManager.UpdateHotkey(capturedModifiers, capturedKey);
+    }
+
+    private static bool IsVirtualKeyDown(VirtualKey key) =>
+        InputKeyboardSource.GetKeyStateForCurrentThread(key).HasFlag(CoreVirtualKeyStates.Down);
+
+    private static void PopulateHotkeyKeyVisuals(Panel panel, uint modifiers, uint key)
+    {
+        panel.Children.Clear();
+        bool isFirst = true;
+
+        void AddKeyVisual(string name)
+        {
+            if (!isFirst)
+            {
+                panel.Children.Add(new TextBlock
+                {
+                    Text = "+",
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Opacity = 0.6,
+                    Margin = new Thickness(2, 0, 2, 0),
+                });
+            }
+            panel.Children.Add(new KeyVisual
+            {
+                Content = name,
+                VisualType = VisualType.Small,
+            });
+            isFirst = false;
+        }
+
+        if ((modifiers & HotkeyManager.ModifierControl) != 0) AddKeyVisual("Ctrl");
+        if ((modifiers & HotkeyManager.ModifierAlt) != 0) AddKeyVisual("Alt");
+        if ((modifiers & HotkeyManager.ModifierShift) != 0) AddKeyVisual("Shift");
+        if ((modifiers & HotkeyManager.ModifierWin) != 0) AddKeyVisual("Win");
+        AddKeyVisual(GetKeyDisplayName(key));
+    }
+
+    private static string GetKeyDisplayName(uint virtualKey) => virtualKey switch
+    {
+        >= 0x30 and <= 0x39 => ((char)virtualKey).ToString(),
+        >= 0x41 and <= 0x5A => ((char)virtualKey).ToString(),
+        >= 0x70 and <= 0x87 => $"F{virtualKey - 0x6F}",
+        0x20 => "Space",
+        0x09 => "Tab",
+        0x1B => "Esc",
+        0x2E => "Del",
+        0x2D => "Ins",
+        0x24 => "Home",
+        0x23 => "End",
+        0x21 => "PgUp",
+        0x22 => "PgDn",
+        0xC0 => "`",
+        0xBD => "-",
+        0xBB => "=",
+        0xDB => "[",
+        0xDD => "]",
+        0xDC => "\\",
+        0xBA => ";",
+        0xDE => "'",
+        0xBC => ",",
+        0xBE => ".",
+        0xBF => "/",
+        _ => $"0x{virtualKey:X2}",
+    };
 }
