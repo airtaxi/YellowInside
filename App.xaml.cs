@@ -2,7 +2,6 @@
 using YellowInsideLib;
 using Microsoft.UI.Xaml;
 using Microsoft.Windows.AppLifecycle;
-using Microsoft.Windows.AppNotifications;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -70,7 +69,6 @@ public partial class App : Application
 
     protected override async void OnLaunched(LaunchActivatedEventArgs args)
     {
-        AppNotificationManager.Default.Register();
         await ContentsManager.InitializeAsync();
 
         s_manageWindow = new ManageWindow();

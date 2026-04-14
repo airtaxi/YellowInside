@@ -115,19 +115,10 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
                     await Launcher.LaunchUriAsync(new Uri($"ms-windows-store://pdp/?PFN={packageFamilyName}"));
                 }
             }
-            else
-            {
-                UpdateStatusTextBlock.Text = "현재 최신 버전입니다.";
-            }
+            else UpdateStatusTextBlock.Text = "현재 최신 버전입니다.";
         }
-        catch
-        {
-            UpdateStatusTextBlock.Text = "업데이트 확인에 실패했습니다.";
-        }
-        finally
-        {
-            CheckUpdateButton.IsEnabled = true;
-        }
+        catch { UpdateStatusTextBlock.Text = "업데이트 확인에 실패했습니다."; }
+        finally { CheckUpdateButton.IsEnabled = true; }
     }
 
     private async void OnExportButtonClicked(object sender, RoutedEventArgs e)

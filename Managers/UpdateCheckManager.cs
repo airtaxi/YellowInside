@@ -1,10 +1,10 @@
-using Microsoft.Windows.AppNotifications;
-using Microsoft.Windows.AppNotifications.Builder;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Windows.ApplicationModel;
+using Windows.Data.Xml.Dom;
 using Windows.Services.Store;
+using Windows.UI.Notifications;
 
 namespace YellowInside;
 
@@ -54,15 +54,25 @@ public static class UpdateCheckManager
     private static void ShowUpdateNotification()
     {
         var packageFamilyName = Package.Current.Id.FamilyName;
-        var storeUri = new Uri($"ms-windows-store://pdp/?PFN={packageFamilyName}");
+        var storeUri = $"ms-windows-store://pdp/?PFN={packageFamilyName}";
 
-        var notification = new AppNotificationBuilder()
-            .AddText("Yellow Inside 업데이트")
-            .AddText("새로운 버전이 출시되었습니다. Microsoft Store에서 업데이트할 수 있습니다.")
-            .AddButton(new AppNotificationButton("업데이트하기")
-                .SetInvokeUri(storeUri))
-            .BuildNotification();
+        var toastXml = new XmlDocument();
+        toastXml.LoadXml(
+            $"""
+            <toast activationType="protocol" launch="{storeUri}">
+                <visual>
+                    <binding template="ToastGeneric">
+                        <text>Yellow Inside 업데이트</text>
+                        <text>새로운 버전이 출시되었습니다. Microsoft Store에서 업데이트할 수 있습니다.</text>
+                    </binding>
+                </visual>
+                <actions>
+                    <action content="업데이트하기" activationType="protocol" arguments="{storeUri}" />
+                </actions>
+            </toast>
+            """);
 
-        AppNotificationManager.Default.Show(notification);
+        var notification = new ToastNotification(toastXml);
+        ToastNotificationManager.CreateToastNotifier().Show(notification);
     }
 }
