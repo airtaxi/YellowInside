@@ -22,6 +22,7 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <!--  헤더  -->
@@ -236,6 +237,29 @@
                         Style="{ThemeResource AccentButtonStyle}" />
                     <Button Click="OnClearPendingButtonClicked" Content="초기화" />
                 </StackPanel>
+            </Grid>
+        </Border>
+
+        <!--  전송 방법 토글 (단축키로 열린 경우에만 표시)  -->
+        <Border
+            x:Name="SendMethodToggleBorder"
+            Grid.Row="5"
+            Padding="8"
+            Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+            CornerRadius="4"
+            Visibility="Collapsed">
+            <Grid>
+                <TextBlock
+                    VerticalAlignment="Center"
+                    Style="{ThemeResource CaptionTextBlockStyle}"
+                    Text="전송 방법" />
+                <ToggleSwitch
+                    x:Name="SendMethodToggleSwitch"
+                    HorizontalAlignment="Right"
+                    MinWidth="0"
+                    OffContent="자동"
+                    OnContent="호환성"
+                    Toggled="OnSendMethodToggleSwitchToggled" />
             </Grid>
         </Border>
     </Grid>

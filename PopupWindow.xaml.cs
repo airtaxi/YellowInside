@@ -1,4 +1,5 @@
-﻿using YellowInside.ViewModels;
+﻿using YellowInside.Managers;
+using YellowInside.ViewModels;
 using YellowInsideLib;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
@@ -6,6 +7,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using WinUIEx;
 using Windows.Storage;
@@ -26,6 +28,9 @@ public sealed partial class PopupWindow : WindowEx
     [LibraryImport("user32.dll")]
     private static partial uint GetDpiForWindow(nint hwnd);
 
+    [LibraryImport("user32.dll")]
+    private static partial uint GetWindowThreadProcessId(nint hwnd, out uint processId);
+
     [StructLayout(LayoutKind.Sequential)]
     private struct RECT
     {
@@ -34,9 +39,15 @@ public sealed partial class PopupWindow : WindowEx
 
     private const string SettingsKeyRightClickTipDismissed = "PopupRightClickTipDismissed";
 
+    private readonly bool _openedViaHotkey;
+    private readonly string _applicationTitle;
+
     public PopupWindow(SessionInfo sessionInfo)
     {
         InitializeComponent();
+
+        _openedViaHotkey = !sessionInfo.IsButtonAttached;
+        _applicationTitle = ResolveApplicationTitle(sessionInfo);
 
         ViewModel = new PopupViewModel(sessionInfo.ChatHwnd, OnStickerClicked);
 
@@ -44,6 +55,7 @@ public sealed partial class PopupWindow : WindowEx
 
         ConfigureWindow();
         PositionNearChatWindow(sessionInfo.ChatHwnd);
+        ConfigureSendMethodToggle();
 
         Activated += OnActivated;
         CategoryGridView.Loaded += OnCategoryGridViewLoaded;
@@ -113,6 +125,40 @@ public sealed partial class PopupWindow : WindowEx
     {
         ApplicationData.Current.LocalSettings.Values[SettingsKeyRightClickTipDismissed] = true;
         RightClickTeachingTip.IsOpen = false;
+    }
+
+    private static string ResolveApplicationTitle(SessionInfo sessionInfo)
+    {
+        if (!string.IsNullOrEmpty(sessionInfo.Title)) return sessionInfo.Title;
+
+        GetWindowThreadProcessId(sessionInfo.ChatHwnd, out var processId);
+        try { return Process.GetProcessById((int)processId).ProcessName; }
+        catch { return "Unknown"; }
+    }
+
+    private void ConfigureSendMethodToggle()
+    {
+        if (_openedViaHotkey)
+        {
+            SendMethodToggleBorder.Visibility = Visibility.Visible;
+            SendMethodToggleSwitch.IsOn = AppSendMethodManager.GetCompatibilityMode(_applicationTitle);
+        }
+
+        ApplyCurrentSendMethod();
+    }
+
+    private void ApplyCurrentSendMethod()
+    {
+        if (_openedViaHotkey)
+            SessionManager.Instance.SendMethod = SendMethodToggleSwitch.IsOn ? SendMethod.Clipboard : SendMethod.Auto;
+        else
+            SessionManager.Instance.SendMethod = SendMethod.Auto;
+    }
+
+    private void OnSendMethodToggleSwitchToggled(object sender, RoutedEventArgs e)
+    {
+        AppSendMethodManager.SetCompatibilityMode(_applicationTitle, SendMethodToggleSwitch.IsOn);
+        ApplyCurrentSendMethod();
     }
 
     private void OnCloseButtonClicked(object sender, RoutedEventArgs e) => Close();

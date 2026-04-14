@@ -297,6 +297,68 @@
                 </StackPanel>
             </Border>
 
+            <!--  전송 설정 관리  -->
+            <TextBlock
+                Margin="4,20,0,4"
+                Style="{ThemeResource BodyStrongTextBlockStyle}"
+                Text="전송 설정 관리" />
+            <Border
+                Padding="16"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                CornerRadius="8">
+                <StackPanel Spacing="16">
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel
+                            Grid.Column="0"
+                            VerticalAlignment="Center"
+                            Spacing="2">
+                            <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="전송 설정 내보내기" />
+                            <TextBlock
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Style="{ThemeResource CaptionTextBlockStyle}"
+                                Text="앱별 전송 방식 설정을 .yic 파일로 내보냅니다." />
+                        </StackPanel>
+                        <Button
+                            Grid.Column="1"
+                            MinWidth="120"
+                            VerticalAlignment="Center"
+                            Click="OnExportSendMethodButtonClicked"
+                            Content="내보내기" />
+                    </Grid>
+
+                    <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel
+                            Grid.Column="0"
+                            VerticalAlignment="Center"
+                            Spacing="2">
+                            <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="전송 설정 불러오기" />
+                            <TextBlock
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Style="{ThemeResource CaptionTextBlockStyle}"
+                                Text=".yic 파일에서 앱별 전송 방식 설정을 불러옵니다." />
+                        </StackPanel>
+                        <Button
+                            Grid.Column="1"
+                            MinWidth="120"
+                            VerticalAlignment="Center"
+                            Click="OnImportSendMethodButtonClicked"
+                            Content="불러오기" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+
         </StackPanel>
     </ScrollViewer>
 </Page>

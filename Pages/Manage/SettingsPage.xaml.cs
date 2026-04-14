@@ -1,4 +1,5 @@
 using YellowInside.Helpers;
+using YellowInside.Managers;
 using YellowInside.Messages;
 using CommunityToolkit.Mvvm.Messaging;
 using DevWinUI;
@@ -203,6 +204,55 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
             App.HotkeyManager.Start(SettingsManager.HotkeyModifiers, SettingsManager.HotkeyKey);
         else
             App.HotkeyManager.Stop();
+    }
+
+    private async void OnExportSendMethodButtonClicked(object sender, RoutedEventArgs e)
+    {
+        var savePicker = new FileSavePicker();
+        savePicker.FileTypeChoices.Add("YellowInside 전송 설정", [".yic"]);
+        savePicker.SuggestedFileName = "YellowInside_SendMethod";
+        savePicker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
+
+        InitializeWithWindow.Initialize(savePicker, ManageWindow.Instance.GetWindowHandle());
+
+        var file = await savePicker.PickSaveFileAsync();
+        if (file is null) return;
+
+        try
+        {
+            await AppSendMethodManager.ExportAsync(file.Path);
+            await this.ShowDialogAsync("내보내기 완료", "전송 설정을 성공적으로 내보냈습니다.");
+        }
+        catch (Exception exception) { await this.ShowDialogAsync("내보내기 실패", exception.Message); }
+    }
+
+    private async void OnImportSendMethodButtonClicked(object sender, RoutedEventArgs e)
+    {
+        var openPicker = new FileOpenPicker();
+        openPicker.FileTypeFilter.Add(".yic");
+        openPicker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
+
+        InitializeWithWindow.Initialize(openPicker, ManageWindow.Instance.GetWindowHandle());
+
+        var file = await openPicker.PickSingleFileAsync();
+        if (file is null) return;
+
+        var modeResult = await this.ShowDialogAsync(
+            "불러오기 모드 선택",
+            "기존 설정을 모두 삭제하고 불러올까요?\n'대체'를 누르면 기존 설정을 대체합니다.\n'병합'을 누르면 기존 설정에 병합합니다.",
+            primaryButtonText: "대체",
+            secondaryButtonText: "병합");
+
+        if (modeResult == ContentDialogResult.None) return;
+
+        var replaceAll = modeResult == ContentDialogResult.Primary;
+
+        try
+        {
+            await AppSendMethodManager.ImportAsync(file.Path, replaceAll);
+            await this.ShowDialogAsync("불러오기 완료", "전송 설정을 성공적으로 불러왔습니다.");
+        }
+        catch (Exception exception) { await this.ShowDialogAsync("불러오기 실패", exception.Message); }
     }
 
     private void UpdateHotkeyVisibility()
