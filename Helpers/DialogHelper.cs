@@ -17,20 +17,14 @@ public static class DialogHelper
 {
     public static async Task<string> ShowInputDialogAsync(this UIElement element, string title = "입력", string placeholderText = "", bool showCancel = false, bool numberOnly = false, string defaultText = "")
     {
-        var contentDialogs = VisualTreeHelper.GetOpenPopupsForXamlRoot(element.XamlRoot).Where(x => x.Child is ContentDialog).Select(x => x.Child as ContentDialog);
-        if (contentDialogs.Any())
-        {
-            foreach (var contentDialog in contentDialogs)
-            {
-                contentDialog.Hide();
-            }
-        }
+        HideOpenContentDialogs(element);
 
         var dialog = new ContentDialog
         {
             Title = title,
             PrimaryButtonText = "확인",
             DefaultButton = ContentDialogButton.Primary,
+            Style = GetDefaultContentDialogStyle(),
             XamlRoot = element.XamlRoot,
             RequestedTheme = SettingsManager.GetElementTheme(),
         };
@@ -55,14 +49,7 @@ public static class DialogHelper
 
     public static ContentDialog GenerateMessageDialog(this UIElement element, string title, string description, string primaryButtonText = "확인", string secondaryButtonText = null)
     {
-        var contentDialogs = VisualTreeHelper.GetOpenPopupsForXamlRoot(element.XamlRoot).Where(x => x.Child is ContentDialog).Select(x => x.Child as ContentDialog);
-        if (contentDialogs.Any())
-        {
-            foreach (var contentDialog in contentDialogs)
-            {
-                contentDialog.Hide();
-            }
-        }
+        HideOpenContentDialogs(element);
 
         var xamlRoot = element.XamlRoot;
         var dialog = new ContentDialog
@@ -73,6 +60,7 @@ public static class DialogHelper
             XamlRoot = xamlRoot,
             DefaultButton = ContentDialogButton.Primary,
             RequestedTheme = SettingsManager.GetElementTheme(),
+            Style = GetDefaultContentDialogStyle(),
         };
 
         if (!string.IsNullOrEmpty(secondaryButtonText)) dialog.SecondaryButtonText = secondaryButtonText;
@@ -84,4 +72,16 @@ public static class DialogHelper
         var dialog = GenerateMessageDialog(element, title, description, primaryButtonText, secondaryButtonText);
         return await dialog.ShowAsync();
     }
+
+    private static void HideOpenContentDialogs(UIElement element)
+    {
+        var contentDialogs = VisualTreeHelper.GetOpenPopupsForXamlRoot(element.XamlRoot).Where(x => x.Child is ContentDialog).Select(x => x.Child as ContentDialog);
+        if (!contentDialogs.Any()) return;
+
+        foreach (var contentDialog in contentDialogs)
+            contentDialog.Hide();
+    }
+
+    private static Style GetDefaultContentDialogStyle()
+        => Application.Current.Resources.TryGetValue("DefaultContentDialogStyle", out var style) ? style as Style : null;
 }
