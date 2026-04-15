@@ -326,7 +326,16 @@ public static class ContentsManager
 	/// <summary>
 	/// 현재 다운로드된 패키지와 설정을 .yip 파일로 내보냅니다.
 	/// </summary>
-	public static async Task ExportAsync(string destinationFilePath, CancellationToken cancellationToken = default)
+	public static Task ExportAsync(string destinationFilePath, CancellationToken cancellationToken = default)
+		=> ExportAsync(destinationFilePath, selectedPackageKeys: null, cancellationToken);
+
+	/// <summary>
+	/// 선택한 패키지와 관련 즐겨찾기를 .yip 파일로 내보냅니다.
+	/// </summary>
+	public static async Task ExportAsync(
+		string destinationFilePath,
+		IReadOnlyCollection<(ContentSource Source, int PackageIndex)> selectedPackageKeys,
+		CancellationToken cancellationToken = default)
 	{
 		if (File.Exists(destinationFilePath))
 			File.Delete(destinationFilePath);
@@ -338,10 +347,24 @@ public static class ContentsManager
 
 			string dataJson;
 			List<StickerPackage> packages;
+			HashSet<(ContentSource Source, int PackageIndex)> selectedPackageKeySet = null;
 			lock (s_lock)
 			{
-				dataJson = JsonSerializer.Serialize(s_data, ContentsManagerJsonContext.Default.ContentsManagerData);
-				packages = [.. s_data.DownloadedPackages];
+				if (selectedPackageKeys is not null)
+					selectedPackageKeySet = [.. selectedPackageKeys];
+
+				var exportData = new ContentsManagerData
+				{
+					DownloadedPackages = selectedPackageKeySet is null
+						? [.. s_data.DownloadedPackages]
+						: [.. s_data.DownloadedPackages.Where(package => selectedPackageKeySet.Contains((package.Source, package.PackageIndex)))],
+					Favorites = selectedPackageKeySet is null
+						? [.. s_data.Favorites]
+						: [.. s_data.Favorites.Where(favorite => selectedPackageKeySet.Contains((favorite.Source, favorite.PackageIndex)))],
+				};
+
+				dataJson = JsonSerializer.Serialize(exportData, ContentsManagerJsonContext.Default.ContentsManagerData);
+				packages = exportData.DownloadedPackages;
 			}
 
 			await File.WriteAllTextAsync(

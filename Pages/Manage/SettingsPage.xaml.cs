@@ -1,6 +1,8 @@
+using YellowInside.Dialogs;
 using YellowInside.Helpers;
 using YellowInside.Managers;
 using YellowInside.Messages;
+using YellowInside.Models;
 using CommunityToolkit.Mvvm.Messaging;
 using DevWinUI;
 using Microsoft.UI.Input;
@@ -8,13 +10,14 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Windows.Services.Store;
 using Windows.Storage.Pickers;
 using Windows.System;
 using Windows.UI.Core;
 using WinRT.Interop;
 using WinUIEx;
-using System.Threading.Tasks;
 
 namespace YellowInside.Pages.Manage;
 
@@ -132,29 +135,10 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
 
     private async void OnExportButtonClicked(object sender, RoutedEventArgs e)
     {
-        var savePicker = new FileSavePicker();
-        savePicker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
-        savePicker.FileTypeChoices.Add("YellowInside 패키지", [".yip"]);
-        savePicker.SuggestedFileName = "YellowInside_Export";
-
-        InitializeWithWindow.Initialize(savePicker, ManageWindow.Instance.GetWindowHandle());
-
-        var file = await savePicker.PickSaveFileAsync();
+        var file = await PickPackageExportFileAsync("YellowInside_Export");
         if (file is null) return;
 
-        try
-        {
-            ManageWindow.ShowLoading("패키지를 내보내는 중...");
-            await Task.Run(async () => ContentsManager.ExportAsync(file.Path));
-            ManageWindow.HideLoading();
-
-            await this.ShowDialogAsync("내보내기 완료", "패키지를 성공적으로 내보냈습니다.");
-        }
-        catch (Exception exception)
-        {
-            ManageWindow.HideLoading();
-            await this.ShowDialogAsync("내보내기 실패", exception.Message);
-        }
+        await ExportPackagesAsync(file.Path, "패키지를 내보내는 중...");
     }
 
     private async void OnImportButtonClicked(object sender, RoutedEventArgs e)
@@ -191,6 +175,32 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
             ManageWindow.HideLoading();
             await this.ShowDialogAsync("불러오기 실패", exception.Message);
         }
+    }
+
+    private async void OnPartialExportButtonClicked(object sender, RoutedEventArgs e)
+    {
+        var downloadedPackages = ContentsManager.GetDownloadedPackages();
+        if (downloadedPackages.Count == 0)
+        {
+            await this.ShowDialogAsync("부분 내보내기", "내보낼 패키지가 없습니다.");
+            return;
+        }
+
+        var partialPackageExportDialog = new PartialPackageExportDialog(downloadedPackages)
+        {
+            XamlRoot = XamlRoot,
+        };
+
+        var dialogResult = await partialPackageExportDialog.ShowAsync();
+        if (dialogResult != ContentDialogResult.Primary) return;
+
+        var selectedPackageKeys = partialPackageExportDialog.SelectedPackageKeys;
+        if (selectedPackageKeys.Count == 0) return;
+
+        var file = await PickPackageExportFileAsync("YellowInside_PartialExport");
+        if (file is null) return;
+
+        await ExportPackagesAsync(file.Path, "선택한 패키지를 내보내는 중...", selectedPackageKeys);
     }
 
     private void OnHotkeyToggleSwitchToggled(object sender, RoutedEventArgs e)
@@ -393,4 +403,39 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         0xBF => "/",
         _ => $"0x{virtualKey:X2}",
     };
+
+    private async Task<Windows.Storage.StorageFile> PickPackageExportFileAsync(string suggestedFileName)
+    {
+        var savePicker = new FileSavePicker();
+        savePicker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
+        savePicker.FileTypeChoices.Add("YellowInside 패키지", [".yip"]);
+        savePicker.SuggestedFileName = suggestedFileName;
+
+        InitializeWithWindow.Initialize(savePicker, ManageWindow.Instance.GetWindowHandle());
+
+        return await savePicker.PickSaveFileAsync();
+    }
+
+    private async Task ExportPackagesAsync(
+        string destinationFilePath,
+        string loadingMessage,
+        IReadOnlyCollection<(ContentSource Source, int PackageIndex)> selectedPackageKeys = null)
+    {
+        try
+        {
+            ManageWindow.ShowLoading(loadingMessage);
+            if (selectedPackageKeys is null)
+                await Task.Run(() => ContentsManager.ExportAsync(destinationFilePath));
+            else
+                await Task.Run(() => ContentsManager.ExportAsync(destinationFilePath, selectedPackageKeys));
+            ManageWindow.HideLoading();
+
+            await this.ShowDialogAsync("내보내기 완료", "패키지를 성공적으로 내보냈습니다.");
+        }
+        catch (Exception exception)
+        {
+            ManageWindow.HideLoading();
+            await this.ShowDialogAsync("내보내기 실패", exception.Message);
+        }
+    }
 }
