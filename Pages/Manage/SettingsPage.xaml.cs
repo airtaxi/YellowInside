@@ -11,6 +11,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Windows.Services.Store;
 using Windows.Storage.Pickers;
@@ -164,6 +165,8 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
 
         try
         {
+            if (replaceAll && !await ConfirmReplaceImportAsync(file.Path)) return;
+
             ManageWindow.ShowLoading("패키지를 불러오는 중...");
             await Task.Run(async () => await ContentsManager.ImportAsync(file.Path, replaceAll));
             ManageWindow.HideLoading();
@@ -424,10 +427,8 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         try
         {
             ManageWindow.ShowLoading(loadingMessage);
-            if (selectedPackageKeys is null)
-                await Task.Run(() => ContentsManager.ExportAsync(destinationFilePath));
-            else
-                await Task.Run(() => ContentsManager.ExportAsync(destinationFilePath, selectedPackageKeys));
+            if (selectedPackageKeys is null) await Task.Run(() => ContentsManager.ExportAsync(destinationFilePath));
+            else await Task.Run(() => ContentsManager.ExportAsync(destinationFilePath, selectedPackageKeys));
             ManageWindow.HideLoading();
 
             await this.ShowDialogAsync("내보내기 완료", "패키지를 성공적으로 내보냈습니다.");
@@ -437,5 +438,19 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
             ManageWindow.HideLoading();
             await this.ShowDialogAsync("내보내기 실패", exception.Message);
         }
+    }
+
+    private async Task<bool> ConfirmReplaceImportAsync(string sourceFilePath)
+    {
+        var importedPackages = await ContentsManager.ReadPackagesFromImportFileAsync(sourceFilePath);
+        var importedPackageKeys = importedPackages.Select(package => (package.Source, package.PackageIndex)).ToHashSet();
+        var deletedPackages = ContentsManager.GetDownloadedPackages()
+            .Where(package => !importedPackageKeys.Contains((package.Source, package.PackageIndex)))
+            .ToList();
+        if (deletedPackages.Count == 0) return true;
+
+        var replaceImportWarningDialog = new ReplaceImportWarningDialog(deletedPackages) { XamlRoot = XamlRoot, };
+        var warningDialogResult = await replaceImportWarningDialog.ShowAsync();
+        return warningDialogResult == ContentDialogResult.Primary;
     }
 }

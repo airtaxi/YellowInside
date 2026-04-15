@@ -393,6 +393,24 @@ public static class ContentsManager
 	}
 
 	/// <summary>
+	/// .yip 파일에 포함된 패키지 목록을 읽어옵니다.
+	/// </summary>
+	/// <param name="sourceFilePath">불러올 .yip 파일 경로</param>
+	/// <param name="cancellationToken">취소 토큰</param>
+	public static async Task<IReadOnlyList<StickerPackage>> ReadPackagesFromImportFileAsync(
+		string sourceFilePath,
+		CancellationToken cancellationToken = default)
+	{
+		using var importArchive = ZipFile.OpenRead(sourceFilePath);
+		var importedDataEntry = importArchive.GetEntry("contents.json")
+			?? throw new InvalidOperationException("유효하지 않은 .yip 파일입니다. contents.json이 존재하지 않습니다.");
+
+		using var importedDataStream = importedDataEntry.Open();
+		var importedData = await DeserializeImportedDataAsync(importedDataStream, cancellationToken);
+		return importedData.DownloadedPackages;
+	}
+
+	/// <summary>
 	/// .yip 파일을 불러옵니다.
 	/// </summary>
 	/// <param name="sourceFilePath">불러올 .yip 파일 경로</param>
@@ -408,9 +426,8 @@ public static class ContentsManager
 			var importedDataFilePath = Path.Combine(temporaryDirectory, "contents.json");
 			if (!File.Exists(importedDataFilePath)) throw new InvalidOperationException("유효하지 않은 .yip 파일입니다. contents.json이 존재하지 않습니다.");
 
-			var importedJson = await File.ReadAllTextAsync(importedDataFilePath, cancellationToken);
-            var importedData = JsonSerializer.Deserialize(importedJson, ContentsManagerJsonContext.Default.ContentsManagerData)
-				?? throw new InvalidOperationException("유효하지 않은 .yip 파일입니다. contents.json을 역직렬화할 수 없습니다.");
+			await using var importedDataStream = File.OpenRead(importedDataFilePath);
+			var importedData = await DeserializeImportedDataAsync(importedDataStream, cancellationToken);
 
             if (replaceAll)
 			{
@@ -495,6 +512,15 @@ public static class ContentsManager
 			}
 		}
 	}
+
+	private static async Task<ContentsManagerData> DeserializeImportedDataAsync(
+		Stream importedDataStream,
+		CancellationToken cancellationToken = default)
+		=> await JsonSerializer.DeserializeAsync(
+			importedDataStream,
+			ContentsManagerJsonContext.Default.ContentsManagerData,
+			cancellationToken)
+		?? throw new InvalidOperationException("유효하지 않은 .yip 파일입니다. contents.json을 역직렬화할 수 없습니다.");
 
 	private static void CopyDirectoryRecursive(string sourceDirectory, string targetDirectory)
 	{

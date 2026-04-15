@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentDialog
+    x:Class="YellowInside.Dialogs.ReplaceImportWarningDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:vm="using:YellowInside.ViewModels"
+    Title="대체 시 삭제되는 패키지"
+    CloseButtonText="취소"
+    DefaultButton="Close"
+    PrimaryButtonText="대체"
+    Style="{ThemeResource DefaultContentDialogStyle}"
+    mc:Ignorable="d">
+
+    <StackPanel Spacing="12">
+        <InfoBar
+            IsClosable="False"
+            IsOpen="True"
+            Message="대체를 진행하면 현재 구독 중인 아래 패키지가 삭제됩니다."
+            Severity="Error" />
+
+        <ScrollViewer MaxHeight="320">
+            <ItemsRepeater ItemsSource="{x:Bind DeletedPackageItems, Mode=OneWay}">
+                <ItemsRepeater.Layout>
+                    <StackLayout Orientation="Vertical" Spacing="8" />
+                </ItemsRepeater.Layout>
+                <ItemsRepeater.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ReplaceImportWarningListViewModel">
+                        <Grid ColumnSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <SymbolIcon
+                                Grid.Column="0"
+                                VerticalAlignment="Center"
+                                Foreground="Red"
+                                Symbol="Delete" />
+    
+                            <StackPanel Grid.Column="1" Spacing="2">
+                                <TextBlock
+                                    Style="{ThemeResource BodyStrongTextBlockStyle}"
+                                    Text="{x:Bind Title}"
+                                    TextTrimming="CharacterEllipsis" />
+                                <TextBlock
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    Style="{ThemeResource CaptionTextBlockStyle}"
+                                    Text="{x:Bind SourceAndSellerName}"
+                                    TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                        </Grid>
+                    </DataTemplate>
+                </ItemsRepeater.ItemTemplate>
+            </ItemsRepeater>
+        </ScrollViewer>
+
+        <TextBlock
+            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+            Style="{ThemeResource CaptionTextBlockStyle}"
+            Text="{x:Bind AdditionalDeletedPackagesText, Mode=OneWay}"
+            TextWrapping="Wrap"
+            Visibility="{x:Bind AdditionalDeletedPackagesVisibility, Mode=OneWay}" />
+
+        <TextBlock Text="계속 진행할까요?" TextWrapping="Wrap" />
+    </StackPanel>
+</ContentDialog>
