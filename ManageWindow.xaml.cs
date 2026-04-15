@@ -3,20 +3,8 @@ using YellowInside.Pages;
 using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Controls.Primitives;
-using Microsoft.UI.Xaml.Data;
-using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Navigation;
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
-using System.Threading.Tasks;
-using Windows.ApplicationModel;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
+using System.Runtime.InteropServices;
 using WinUIEx;
 using TitleBar = Microsoft.UI.Xaml.Controls.TitleBar;
 
@@ -25,6 +13,23 @@ namespace YellowInside;
 public sealed partial class ManageWindow : WindowEx, IRecipient<LaunchOnStartupChangedMessage>
 {
     public static ManageWindow Instance { get; private set; }
+
+    private const uint WM_CLOSE = 0x0010;
+    private const uint WM_QUERYENDSESSION = 0x0011;
+    private const uint WM_ENDSESSION = 0x0016;
+
+    private delegate nint Subclassprocedure(nint windowHandle, uint message, nint wParam, nint lParam, nuint subclassId, nuint referenceData);
+
+    [LibraryImport("comctl32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool SetWindowSubclass(nint windowHandle, Subclassprocedure procedure, nuint subclassId, nuint referenceData);
+
+    [LibraryImport("comctl32.dll")]
+    private static partial nint DefSubclassProc(nint windowHandle, uint message, nint wParam, nint lParam);
+
+    private readonly Subclassprocedure _subclassprocedure;
+    private bool _forceClose;
+    private bool _systemShutdown;
 
     public ManageWindow()
     {
@@ -40,7 +45,32 @@ public sealed partial class ManageWindow : WindowEx, IRecipient<LaunchOnStartupC
 
         WeakReferenceMessenger.Default.Register(this);
 
+        _subclassprocedure = WindowSubclassProc;
+        SetWindowSubclass(this.GetWindowHandle(), _subclassprocedure, 1, 0);
+
         AppFrame.Navigate(typeof(ManagePage));
+    }
+
+    private nint WindowSubclassProc(nint windowHandle, uint message, nint wParam, nint lParam, nuint subclassId, nuint referenceData)
+    {
+        switch (message)
+        {
+            case WM_QUERYENDSESSION:
+                _systemShutdown = true;
+                return 1;
+
+            case WM_ENDSESSION:
+                if (wParam != 0) App.Shutdown();
+                return 0;
+
+            case WM_CLOSE:
+                if (_forceClose || _systemShutdown)
+                    break;
+                this.Hide();
+                return 0;
+        }
+
+        return DefSubclassProc(windowHandle, message, wParam, lParam);
     }
 
     public void Receive(LaunchOnStartupChangedMessage message)
@@ -97,10 +127,10 @@ public sealed partial class ManageWindow : WindowEx, IRecipient<LaunchOnStartupC
         }
     }
 
-    private void OnClosed(object sender, WindowEventArgs args)
+    public void ForceClose()
     {
-        args.Handled = true;
-        this.Hide();
+        _forceClose = true;
+        Close();
     }
 
     public static void Navigate(Type pageType, object args = null) => Instance.AppFrame.Navigate(pageType, args);

@@ -9,7 +9,6 @@
     xmlns:tb="using:H.NotifyIcon"
     xmlns:winuiex="using:WinUIEx"
     Title="옐로우 인사이드"
-    Closed="OnClosed"
     mc:Ignorable="d">
 
     <Window.SystemBackdrop>

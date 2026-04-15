@@ -55,6 +55,15 @@ public partial class App : Application
         });
     }
 
+    public static void Shutdown()
+    {
+        UpdateCheckManager.Stop();
+        HotkeyManager.Dispose();
+        SessionManager.Instance.Dispose();
+
+        s_manageWindow?.ForceClose();
+    }
+
     private static void OnDcconButtonClicked(SessionInfo info) => OpenDcconPopup(info);
 
     private static void OnHotkeyPressed(nint foregroundWindowHandle) =>
