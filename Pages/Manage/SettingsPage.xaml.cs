@@ -165,12 +165,35 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
 
         var replaceAll = modeResult == ContentDialogResult.Primary;
 
+        var importFavorites = false;
+        try
+        {
+            var hasFavorites = await ContentsManager.HasFavoritesInImportFileAsync(file.Path);
+            if (hasFavorites)
+            {
+                var favoriteResult = await this.ShowDialogAsync(
+                    "즐겨찾기 불러오기",
+                    "불러올 데이터에 즐겨찾기가 포함되어 있습니다.\n즐겨찾기도 함께 불러오시겠습니까?",
+                    primaryButtonText: "예",
+                    secondaryButtonText: "아니오");
+
+                if (favoriteResult == ContentDialogResult.None) return;
+
+                importFavorites = favoriteResult == ContentDialogResult.Primary;
+            }
+        }
+        catch (Exception exception)
+        {
+            await this.ShowDialogAsync("불러오기 실패", exception.Message);
+            return;
+        }
+
         try
         {
             if (replaceAll && !await ConfirmReplaceImportAsync(file.Path)) return;
 
             ManageWindow.ShowLoading("패키지를 불러오는 중...");
-            await Task.Run(async () => await ContentsManager.ImportAsync(file.Path, replaceAll));
+            await Task.Run(async () => await ContentsManager.ImportAsync(file.Path, replaceAll, importFavorites));
             ManageWindow.HideLoading();
 
             await this.ShowDialogAsync("불러오기 완료", "패키지를 성공적으로 불러왔습니다.");

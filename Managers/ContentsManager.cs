@@ -597,7 +597,12 @@ public static class ContentsManager
 						if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
 					}
 
-					s_data = importedData;
+					if (importFavorites) s_data = importedData;
+					else
+					{
+						s_data = importedData;
+						s_data.Favorites = [];
+					}
 				}
 
 				foreach (var package in importedData.DownloadedPackages)
@@ -623,14 +628,17 @@ public static class ContentsManager
 						s_data.DownloadedPackages.Add(package);
 					}
 
-					var existingFavoriteKeys = s_data.Favorites
-						.Select(favorite => (favorite.Source, favorite.PackageIdentifier, favorite.StickerPath))
-						.ToHashSet();
-
-					foreach (var favorite in importedData.Favorites)
+					if (importFavorites)
 					{
-						if (existingFavoriteKeys.Contains((favorite.Source, favorite.PackageIdentifier, favorite.StickerPath))) continue;
-						s_data.Favorites.Add(favorite);
+						var existingFavoriteKeys = s_data.Favorites
+							.Select(favorite => (favorite.Source, favorite.PackageIdentifier, favorite.StickerPath))
+							.ToHashSet();
+
+						foreach (var favorite in importedData.Favorites)
+						{
+							if (existingFavoriteKeys.Contains((favorite.Source, favorite.PackageIdentifier, favorite.StickerPath))) continue;
+							s_data.Favorites.Add(favorite);
+						}
 					}
 				}
 
@@ -652,7 +660,7 @@ public static class ContentsManager
 			await SaveAsync();
 
 			PackagesChanged?.Invoke();
-			FavoritesChanged?.Invoke();
+			if (importFavorites) FavoritesChanged?.Invoke();
 
 			ManageWindow.Instance.DispatcherQueue.TryEnqueue(() =>
 			{
