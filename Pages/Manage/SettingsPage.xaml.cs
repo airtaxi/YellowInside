@@ -61,6 +61,8 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         UpdateHotkeyVisibility();
         PopulateHotkeyKeyVisuals(HotkeyDisplayPanel, SettingsManager.HotkeyModifiers, SettingsManager.HotkeyKey);
 
+        var version = Windows.ApplicationModel.Package.Current.Id.Version;
+        VersionTextBlock.Text = $"v{version.Major}.{version.Minor}.{version.Build}";
 
         _isInitializing = false;
     }
