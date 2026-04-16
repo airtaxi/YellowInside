@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
@@ -12,12 +14,12 @@ namespace YellowInside.Managers;
 /// </summary>
 public static class HistoryManager
 {
-    private const string SettingsKey = "StickerHistory";
+    private const string HistoryFileName = "StickerHistory.json";
     private const int MaxHistoryCount = 100;
 
     private static readonly Lock s_lock = new();
-    private static readonly ApplicationDataContainer s_localSettings =
-        ApplicationData.Current.LocalSettings;
+    private static readonly string s_historyFilePath =
+        Path.Combine(ApplicationData.Current.LocalFolder.Path, HistoryFileName);
 
     private static List<HistoryEntry> s_entries = [];
 
@@ -103,11 +105,17 @@ public static class HistoryManager
 
     private static List<HistoryEntry> Load()
     {
-        if (s_localSettings.Values[SettingsKey] is string json)
+        try
         {
-            return JsonSerializer.Deserialize(json, HistoryManagerJsonContext.Default.ListHistoryEntry)
-                ?? [];
+            if (File.Exists(s_historyFilePath))
+            {
+                var json = File.ReadAllText(s_historyFilePath);
+                return JsonSerializer.Deserialize(json, HistoryManagerJsonContext.Default.ListHistoryEntry)
+                    ?? [];
+            }
         }
+        catch { }
+
         return [];
     }
 
@@ -118,6 +126,8 @@ public static class HistoryManager
         {
             json = JsonSerializer.Serialize(s_entries, HistoryManagerJsonContext.Default.ListHistoryEntry);
         }
-        s_localSettings.Values[SettingsKey] = json;
+
+        try { File.WriteAllText(s_historyFilePath, json); }
+        catch { }
     }
 }
