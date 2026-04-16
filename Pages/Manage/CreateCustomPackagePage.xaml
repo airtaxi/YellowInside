@@ -8,7 +8,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
 
-    <Grid RowSpacing="0">
+    <Grid Padding="12,12,12,0" RowSpacing="0">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -18,7 +18,7 @@
         <!--  Header  -->
         <TextBlock
             Grid.Row="0"
-            Padding="20,12,20,8"
+            Margin="0,0,0,8"
             Style="{ThemeResource TitleTextBlockStyle}"
             Text="사용자 지정콘 추가" />
 
@@ -27,7 +27,7 @@
             Grid.Row="1"
             HorizontalScrollBarVisibility="Disabled"
             VerticalScrollBarVisibility="Hidden">
-            <StackPanel Padding="20,4,20,20" Spacing="16">
+            <StackPanel Margin="0,0,0,12" Spacing="16">
 
                 <!--  제목  -->
                 <TextBox
@@ -241,7 +241,7 @@
         <!--  Bottom bar  -->
         <Border
             Grid.Row="2"
-            Padding="20,12"
+            Padding="12"
             BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
             BorderThickness="0,1,0,0">
             <Grid>

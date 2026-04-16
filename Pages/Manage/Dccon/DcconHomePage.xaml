@@ -13,11 +13,10 @@
     mc:Ignorable="d">
 
     <ScrollViewer>
-        <StackPanel Spacing="4">
+        <StackPanel Margin="12" Spacing="4">
             <Grid>
                 <Button
                     Grid.Row="0"
-                    Margin="0,0,12,0"
                     Padding="8"
                     HorizontalAlignment="Right"
                     VerticalAlignment="Top"
@@ -29,7 +28,6 @@
                 </Button>
                 <TextBlock
                     Grid.Row="0"
-                    Margin="12,0,0,0"
                     HorizontalAlignment="Left"
                     VerticalAlignment="Bottom"
                     Style="{ThemeResource SubtitleTextBlockStyle}"
@@ -42,7 +40,7 @@
                 HorizontalScrollBarVisibility="Hidden"
                 HorizontalScrollMode="Enabled"
                 PointerWheelChanged="OnScrollViewPointerWheelChanged">
-                <ItemsRepeater Margin="8" ItemsSource="{x:Bind DailyPopularList}">
+                <ItemsRepeater ItemsSource="{x:Bind DailyPopularList}">
                     <ItemsRepeater.Layout>
                         <StackLayout Orientation="Horizontal" Spacing="8" />
                     </ItemsRepeater.Layout>
@@ -70,7 +68,6 @@
 
             <TextBlock
                 Grid.Row="0"
-                Margin="12,0,0,0"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Bottom"
                 Style="{ThemeResource SubtitleTextBlockStyle}"
@@ -82,7 +79,7 @@
                 HorizontalScrollBarVisibility="Hidden"
                 HorizontalScrollMode="Enabled"
                 PointerWheelChanged="OnScrollViewPointerWheelChanged">
-                <ItemsRepeater Margin="8" ItemsSource="{x:Bind WeeklyPopularList}">
+                <ItemsRepeater ItemsSource="{x:Bind WeeklyPopularList}">
                     <ItemsRepeater.Layout>
                         <StackLayout Orientation="Horizontal" Spacing="8" />
                     </ItemsRepeater.Layout>
@@ -110,7 +107,6 @@
 
             <TextBlock
                 Grid.Row="0"
-                Margin="12,0,0,0"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Bottom"
                 Style="{ThemeResource SubtitleTextBlockStyle}"
@@ -124,7 +120,7 @@
                 PointerWheelChanged="OnScrollViewPointerWheelChanged"
                 Tag="Hot"
                 ViewChanged="OnScrollViewViewChanged">
-                <ItemsRepeater Margin="8" ItemsSource="{x:Bind HotList}">
+                <ItemsRepeater ItemsSource="{x:Bind HotList}">
                     <ItemsRepeater.Layout>
                         <StackLayout Orientation="Horizontal" Spacing="8" />
                     </ItemsRepeater.Layout>
@@ -152,7 +148,6 @@
 
             <TextBlock
                 Grid.Row="2"
-                Margin="12,0,0,0"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Bottom"
                 Style="{ThemeResource SubtitleTextBlockStyle}"
@@ -166,7 +161,7 @@
                 PointerWheelChanged="OnScrollViewPointerWheelChanged"
                 Tag="New"
                 ViewChanged="OnScrollViewViewChanged">
-                <ItemsRepeater Margin="8" ItemsSource="{x:Bind NewList}">
+                <ItemsRepeater ItemsSource="{x:Bind NewList}">
                     <ItemsRepeater.Layout>
                         <StackLayout Orientation="Horizontal" Spacing="8" />
                     </ItemsRepeater.Layout>

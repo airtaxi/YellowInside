@@ -13,7 +13,7 @@
     mc:Ignorable="d">
 
 
-    <Grid RowSpacing="4">
+    <Grid Padding="0,12,0,0" RowSpacing="4">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -26,7 +26,7 @@
             Style="{ThemeResource SubtitleTextBlockStyle}"
             Text="즐거찾기한 스티커가 있는 패키지 목록" />
         <ScrollViewer Grid.Row="1">
-            <ItemsRepeater Margin="8" ItemsSource="{x:Bind FavoriteList}">
+            <ItemsRepeater Margin="12" ItemsSource="{x:Bind FavoriteList}">
                 <ItemsRepeater.Layout>
                     <wct:StaggeredLayout
                         ColumnSpacing="8"

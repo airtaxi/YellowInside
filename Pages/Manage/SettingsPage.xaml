@@ -8,9 +8,8 @@
     NavigationCacheMode="Required"
     mc:Ignorable="d">
 
-    <ScrollViewer Padding="24,16,24,24">
-        <StackPanel Spacing="4">
-
+    <ScrollViewer>
+        <StackPanel Margin="12" Spacing="4">
             <!--  외관  -->
             <TextBlock
                 Margin="4,0,0,4"
@@ -162,43 +161,43 @@
             </Border>
 
             <!--  시스템  -->
-        <TextBlock
-            Margin="4,20,0,4"
-            Style="{ThemeResource BodyStrongTextBlockStyle}"
-            Text="시스템" />
-        <Border
-            Padding="16"
-            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-            BorderThickness="1"
-            CornerRadius="8">
-            <Grid ColumnSpacing="16">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <StackPanel
-                    Grid.Column="0"
-                    VerticalAlignment="Center"
-                    Spacing="2">
-                    <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="시스템 시작 시 자동 실행" />
-                    <TextBlock
-                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                        Style="{ThemeResource CaptionTextBlockStyle}"
-                        Text="Windows 시작 시 프로그램을 자동으로 실행합니다." />
-                </StackPanel>
-                <ToggleSwitch
-                    x:Name="LaunchOnStartupToggleSwitch"
-                    Grid.Column="1"
-                    MinWidth="0"
-                    VerticalAlignment="Center"
-                    OffContent="끔"
-                    OnContent="켬"
-                    Toggled="OnLaunchOnStartupToggleSwitchToggled" />
-            </Grid>
-        </Border>
+            <TextBlock
+                Margin="4,20,0,4"
+                Style="{ThemeResource BodyStrongTextBlockStyle}"
+                Text="시스템" />
+            <Border
+                Padding="16"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                CornerRadius="8">
+                <Grid ColumnSpacing="16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel
+                        Grid.Column="0"
+                        VerticalAlignment="Center"
+                        Spacing="2">
+                        <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="시스템 시작 시 자동 실행" />
+                        <TextBlock
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Style="{ThemeResource CaptionTextBlockStyle}"
+                            Text="Windows 시작 시 프로그램을 자동으로 실행합니다." />
+                    </StackPanel>
+                    <ToggleSwitch
+                        x:Name="LaunchOnStartupToggleSwitch"
+                        Grid.Column="1"
+                        MinWidth="0"
+                        VerticalAlignment="Center"
+                        OffContent="끔"
+                        OnContent="켬"
+                        Toggled="OnLaunchOnStartupToggleSwitchToggled" />
+                </Grid>
+            </Border>
 
-        <!--  업데이트  -->
+            <!--  업데이트  -->
             <TextBlock
                 Margin="4,20,0,4"
                 Style="{ThemeResource BodyStrongTextBlockStyle}"
@@ -242,7 +241,7 @@
                 </Grid>
             </Border>
 
-        <!--  데이터 관리  -->
+            <!--  데이터 관리  -->
             <TextBlock
                 Margin="4,20,0,4"
                 Style="{ThemeResource BodyStrongTextBlockStyle}"

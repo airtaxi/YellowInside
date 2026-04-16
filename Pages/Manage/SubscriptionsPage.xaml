@@ -12,7 +12,7 @@
     NavigationCacheMode="Required"
     mc:Ignorable="d">
 
-    <Grid RowSpacing="4">
+    <Grid Padding="12,12,12,0" RowSpacing="4">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -30,14 +30,14 @@
                 MinWidth="0"
                 Margin="0,-8,12,-8"
                 HorizontalAlignment="Right"
-                VerticalAlignment="Top"
+                VerticalAlignment="Center"
                 OffContent="목록 보기"
                 OnContent="순서 변경"
                 Toggled="OnReorderToggleSwitchToggled" />
         </Grid>
 
         <ScrollViewer Grid.Row="1" Visibility="{x:Bind ReorderToggleSwitch.IsOn, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=True}">
-            <ItemsRepeater Margin="8" ItemsSource="{x:Bind SubscriptionList}">
+            <ItemsRepeater Margin="0,0,0,12" ItemsSource="{x:Bind SubscriptionList}">
                 <ItemsRepeater.Layout>
                     <wct:StaggeredLayout
                         ColumnSpacing="8"
