@@ -137,10 +137,11 @@ public sealed partial class DcconHomePage : Page
 
     private async void OnScrollViewViewChanged(ScrollView scrollView, object args)
     {
-        var isHorizontalScrollReached = scrollView.HorizontalOffset + scrollView.ViewportWidth >= scrollView.ExtentWidth - 100;
+        var isHorizontalScrollReached = scrollView.HorizontalOffset + scrollView.ViewportWidth >= scrollView.ExtentWidth;
         if (!isHorizontalScrollReached) return;
 
-        scrollView.ScrollTo(scrollView.HorizontalOffset, 0);
+        var isLoadMoreInProgress = _loadMoreSemaphore.CurrentCount == 0;
+        if (isLoadMoreInProgress) return;
 
         var isHot = scrollView.Tag as string == "Hot";
         try { await LoadMoreAsync(isHot, _refreshCancellationTokenSource?.Token ?? default); }
