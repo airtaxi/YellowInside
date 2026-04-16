@@ -113,6 +113,78 @@ public static class ContentsManager
 	}
 
 	/// <summary>
+	/// 사용자 지정 패키지를 추가합니다.
+	/// </summary>
+	public static async Task AddCustomPackageAsync(
+		string title,
+		string description,
+		string mainImageSourcePath,
+		string sellerName,
+		string registrationDate,
+		IReadOnlyList<string> tags,
+		IReadOnlyList<string> stickerSourcePaths)
+	{
+		var packageIdentifier = Guid.NewGuid().ToString();
+		var packageDirectory = GetPackageDirectory(ContentSource.Local, packageIdentifier);
+		Directory.CreateDirectory(packageDirectory);
+
+		var stickersDirectory = Path.Combine(packageDirectory, "stickers");
+		Directory.CreateDirectory(stickersDirectory);
+
+		var mainImageFileName = string.Empty;
+		if (!string.IsNullOrEmpty(mainImageSourcePath) && File.Exists(mainImageSourcePath))
+		{
+			mainImageFileName = $"main_image{Path.GetExtension(mainImageSourcePath)}";
+			File.Copy(mainImageSourcePath, Path.Combine(packageDirectory, mainImageFileName));
+		}
+
+		var stickers = new List<Sticker>();
+		for (var index = 0; index < stickerSourcePaths.Count; index++)
+		{
+			var sourcePath = stickerSourcePaths[index];
+			if (!File.Exists(sourcePath)) continue;
+
+			var extension = Path.GetExtension(sourcePath);
+			var fileName = $"{Guid.NewGuid():N}{extension}";
+			File.Copy(sourcePath, Path.Combine(stickersDirectory, fileName));
+
+			stickers.Add(new Sticker
+			{
+				Path = fileName,
+				Title = System.IO.Path.GetFileNameWithoutExtension(sourcePath),
+				Extension = extension.TrimStart('.'),
+				SortNumber = index,
+				FileName = fileName,
+			});
+		}
+
+		var stickerPackage = new StickerPackage
+		{
+			Source = ContentSource.Local,
+			PackageIdentifier = packageIdentifier,
+			Title = title,
+			Description = description,
+			MainImageFileName = mainImageFileName,
+			SellerName = sellerName,
+			RegistrationDate = registrationDate,
+			Tags = [.. tags],
+			LocalDirectoryName = "stickers",
+			LocalDirectoryPath = stickersDirectory,
+			Stickers = stickers,
+		};
+
+		lock (s_lock)
+		{
+			s_data.DownloadedPackages.Add(stickerPackage);
+		}
+
+		await SaveAsync();
+
+		PackagesChanged?.Invoke();
+		WeakReferenceMessenger.Default.Send(new FavoritesOrPackagesChangedMessage(ContentSource.Local, packageIdentifier));
+	}
+
+	/// <summary>
 	/// 디시콘 패키지를 다운로드합니다 (이미지 포함).
 	/// </summary>
 	public static async Task DownloadDcconPackageAsync(

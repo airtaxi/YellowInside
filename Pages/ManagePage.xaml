@@ -38,6 +38,11 @@
                     <FontIcon Glyph="&#xE728;" />
                 </SelectorBarItem.Icon>
             </SelectorBarItem>
+            <SelectorBarItem x:Name="CustomPackagesSelectorBarItem" Text="사용자 지정콘">
+                <SelectorBarItem.Icon>
+                    <FontIcon Glyph="&#xE8F1;" />
+                </SelectorBarItem.Icon>
+            </SelectorBarItem>
             <SelectorBarItem x:Name="SelectorBarItemSettings" Text="설정">
                 <SelectorBarItem.Icon>
                     <SymbolIcon Symbol="Setting" />

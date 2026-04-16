@@ -43,7 +43,13 @@ public partial class SubscriptionViewModel : ObservableObject
         Title = package.Title;
         SellerName = package.SellerName;
         Tags = [.. package.Tags];
-        ThumbnailSource = new BitmapImage(new Uri(ContentsManager.GetMainImagePath(Source, PackageIdentifier, package.MainImageFileName))) { AutoPlay = SettingsManager.GifPlaybackEnabled };
+
+        if (!string.IsNullOrEmpty(package.MainImageFileName))
+        {
+            var mainImagePath = ContentsManager.GetMainImagePath(Source, PackageIdentifier, package.MainImageFileName);
+            if (File.Exists(mainImagePath))
+                ThumbnailSource = new BitmapImage(new Uri(mainImagePath)) { AutoPlay = SettingsManager.GifPlaybackEnabled };
+        }
     }
 
     public void OnClicked(object _, RoutedEventArgs __) => ManageWindow.Navigate(typeof(DetailPage), (Source, PackageIdentifier));

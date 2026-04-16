@@ -68,6 +68,9 @@ public partial class DetailViewModel : ObservableObject
     [ObservableProperty]
     public partial bool IsSubscribed { get; private set; }
 
+    [ObservableProperty]
+    public partial bool IsLocalPackage { get; private set; }
+
     private string _mainImagePath;
 
     public DetailViewModel() => WeakReferenceMessenger.Default.Register<FavoritesOrPackagesChangedMessage>(this, OnFavoritesOrPackagesChangedMessageReceived);
@@ -111,6 +114,39 @@ public partial class DetailViewModel : ObservableObject
 
             await Parallel.ForEachAsync(Stickers, async (sticker, _) => await sticker.FetchImageAsync());
         }
+        else if (source == ContentSource.Local)
+        {
+            var packages = ContentsManager.GetDownloadedPackages(ContentSource.Local);
+            var package = packages.FirstOrDefault(x => x.PackageIdentifier == packageIdentifier);
+            if (package is null) return;
+
+            Title = package.Title;
+            Description = package.Description;
+            SellerName = string.IsNullOrWhiteSpace(package.SellerName) ? "제작자 정보 없음" : package.SellerName;
+            Tags = [.. package.Tags];
+            IconCount = $"{package.Stickers.Count}개 스티커";
+            SaleCount = string.Empty;
+
+            if (!string.IsNullOrEmpty(package.RegistrationDate))
+            {
+                if (DateTime.TryParse(package.RegistrationDate, out var registrationDateTime))
+                    RegisterationDate = registrationDateTime.ToString("yyyy년 MM월 dd일 등록");
+                else
+                    RegisterationDate = package.RegistrationDate;
+            }
+
+            if (!string.IsNullOrEmpty(package.MainImageFileName))
+            {
+                var mainImagePath = ContentsManager.GetMainImagePath(source, packageIdentifier, package.MainImageFileName);
+                if (System.IO.File.Exists(mainImagePath))
+                    MainImageSource = new BitmapImage(new Uri(mainImagePath)) { AutoPlay = SettingsManager.GifPlaybackEnabled };
+            }
+
+            Stickers = [.. package.Stickers.Select(sticker => new StickerViewModel(ContentSource.Local, packageIdentifier, sticker))];
+            IsLocalPackage = true;
+
+            await Parallel.ForEachAsync(Stickers, async (sticker, _) => await sticker.FetchImageAsync());
+        }
     }
 
     private async Task DownloadMainImageSourceAsync() => MainImageSource = await Utils.GenerateImageSourceAsync(ManageWindow.Instance.DispatcherQueue, Source, Utils.GetImageUrl(Source, _mainImagePath));
@@ -135,7 +171,9 @@ public partial class DetailViewModel : ObservableObject
     [RelayCommand]
     public async Task Unsubscribe()
     {
-        var result = await DialogHelper.ShowDialogAsync(ManageWindow.Instance.Content, "구독 취소", "정말로 구독을 취소하시겠습니까?", "예", "아니요");
+        var dialogTitle = IsLocalPackage ? "삭제" : "구독 취소";
+        var dialogMessage = IsLocalPackage ? "정말로 이 사용자 지정콘을 삭제하시겠습니까?" : "정말로 구독을 취소하시겠습니까?";
+        var result = await DialogHelper.ShowDialogAsync(ManageWindow.Instance.Content, dialogTitle, dialogMessage, "예", "아니요");
         if (result != ContentDialogResult.Primary) return;
 
         ManageWindow.ShowLoading("파일 정리중...");

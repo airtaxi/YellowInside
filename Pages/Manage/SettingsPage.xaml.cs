@@ -11,6 +11,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Windows.Services.Store;
@@ -266,6 +267,32 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
             await this.ShowDialogAsync("불러오기 완료", "전송 설정을 성공적으로 불러왔습니다.");
         }
         catch (Exception exception) { await this.ShowDialogAsync("불러오기 실패", exception.Message); }
+    }
+
+    private async void OnDownloadLogButtonClicked(object sender, RoutedEventArgs e)
+    {
+        if (!FileLogManager.HasLogs())
+        {
+            await this.ShowDialogAsync("로그 다운로드", "저장된 로그가 없습니다.");
+            return;
+        }
+
+        var savePicker = new FileSavePicker();
+        savePicker.FileTypeChoices.Add("텍스트 파일", [".txt"]);
+        savePicker.SuggestedFileName = $"YellowInside_Log_{DateTime.Now:yyyyMMdd_HHmmss}";
+        savePicker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
+
+        InitializeWithWindow.Initialize(savePicker, ManageWindow.Instance.GetWindowHandle());
+
+        var file = await savePicker.PickSaveFileAsync();
+        if (file is null) return;
+
+        try
+        {
+            File.Copy(FileLogManager.LogFilePath, file.Path, overwrite: true);
+            await this.ShowDialogAsync("로그 다운로드 완료", "로그 파일을 성공적으로 저장했습니다.");
+        }
+        catch (Exception exception) { await this.ShowDialogAsync("로그 다운로드 실패", exception.Message); }
     }
 
     private void UpdateHotkeyVisibility()

@@ -39,7 +39,9 @@ public partial class App : Application
         InitializeComponent();
 
         var manager = SessionManager.Instance;
-        manager.Log += (text) => Debug.WriteLine(text);
+        manager.InfoLog += (text) => { Debug.WriteLine(text); Managers.FileLogManager.WriteInfo(text); };
+        manager.WarnLog += (text) => { Debug.WriteLine(text); Managers.FileLogManager.WriteWarn(text); };
+        manager.ErrorLog += (text) => { Debug.WriteLine(text); Managers.FileLogManager.WriteError(text); };
         manager.DcconButtonClicked += OnDcconButtonClicked;
 
         var buttonIconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "dccon.png");

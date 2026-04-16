@@ -384,6 +384,42 @@
                 </StackPanel>
             </Border>
 
+            <!--  개발자  -->
+            <TextBlock
+                Margin="4,20,0,4"
+                Style="{ThemeResource BodyStrongTextBlockStyle}"
+                Text="개발자" />
+            <Border
+                Padding="16"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                CornerRadius="8">
+                <Grid ColumnSpacing="16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel
+                        Grid.Column="0"
+                        VerticalAlignment="Center"
+                        Spacing="2">
+                        <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="통합 로그 다운로드" />
+                        <TextBlock
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Style="{ThemeResource CaptionTextBlockStyle}"
+                            Text="앱 실행 중 기록된 로그를 파일로 저장합니다. (최대 1,000건)" />
+                    </StackPanel>
+                    <Button
+                        x:Name="DownloadLogButton"
+                        Grid.Column="1"
+                        MinWidth="120"
+                        VerticalAlignment="Center"
+                        Click="OnDownloadLogButtonClicked"
+                        Content="다운로드" />
+                </Grid>
+            </Border>
+
         </StackPanel>
     </ScrollViewer>
 </Page>

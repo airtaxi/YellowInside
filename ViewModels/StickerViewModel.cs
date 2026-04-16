@@ -42,6 +42,16 @@ public partial class StickerViewModel : ObservableObject
         WeakReferenceMessenger.Default.Register<FavoritesOrPackagesChangedMessage>(this, OnFavoritesOrPackagesChangedMessageReceived);
     }
 
+    public StickerViewModel(ContentSource source, string packageIdentifier, Models.Sticker sticker)
+    {
+        _packageIdentifier = packageIdentifier;
+        _source = source;
+        _path = sticker.Path;
+
+        UpdateFavoriteAndSubscriptionStatus();
+        WeakReferenceMessenger.Default.Register<FavoritesOrPackagesChangedMessage>(this, OnFavoritesOrPackagesChangedMessageReceived);
+    }
+
     public async Task FetchImageAsync()
     {
         // If the package is subscribed, we can get the image from local storage. Otherwise, we need to fetch it from the web.
