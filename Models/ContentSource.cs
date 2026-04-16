@@ -1,12 +1,13 @@
 ﻿namespace YellowInside.Models;
 
 /// <summary>
-/// 콘텐츠 소스 유형 (디시콘, 아카콘 지원)
+/// 콘텐츠 소스 유형 (디시콘, 아카콘, 인벤 스티커)
 /// </summary>
 public enum ContentSource : int
 {
 	Dccon = 0,
 	Arcacon = 1,
+	Inven = 2,
 	Local = -1 // -1로 설정하여 추후 다른 소스가 추가되더라도 기존 값이 변경되지 않도록 함
 }
 

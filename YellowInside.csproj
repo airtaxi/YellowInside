@@ -58,7 +58,7 @@
 	</ItemGroup>
 	
 	<ItemGroup>
-	  <!--<ProjectReference Include="..\YellowInsideLib\YellowInsideLib.csproj" />-->
+	  <ProjectReference Include="..\InvenSticker.NET\src\InvenSticker.NET\InvenSticker.NET.csproj" />
 	</ItemGroup>
 	
 	<!--
