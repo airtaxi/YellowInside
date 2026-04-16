@@ -17,6 +17,7 @@ public static class SettingsManager
     private const string HotkeyEnabledKey = "HotkeyEnabled";
     private const string HotkeyModifiersKey = "HotkeyModifiers";
     private const string HotkeyKeyKey = "HotkeyKey";
+    private const string LastSeenVersionKey = "LastSeenVersion";
 
     private static readonly ApplicationDataContainer s_localSettings =
         ApplicationData.Current.LocalSettings;
@@ -60,5 +61,11 @@ public static class SettingsManager
     {
         get => s_localSettings.Values[HotkeyKeyKey] is int value ? (uint)value : 0x44;
         set => s_localSettings.Values[HotkeyKeyKey] = (int)value;
+    }
+
+    public static string LastSeenVersion
+    {
+        get => s_localSettings.Values[LastSeenVersionKey] as string;
+        set => s_localSettings.Values[LastSeenVersionKey] = value;
     }
 }
