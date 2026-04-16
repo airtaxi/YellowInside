@@ -42,6 +42,7 @@ public sealed partial class PopupWindow : WindowEx
 
     private readonly bool _openedViaHotkey;
     private readonly string _applicationTitle;
+    private readonly nint _chatHwnd;
 
     public PopupWindow(SessionInfo sessionInfo)
     {
@@ -49,6 +50,7 @@ public sealed partial class PopupWindow : WindowEx
 
         _openedViaHotkey = !sessionInfo.IsButtonAttached;
         _applicationTitle = ResolveApplicationTitle(sessionInfo);
+        _chatHwnd = sessionInfo.ChatHwnd;
 
         ViewModel = new PopupViewModel(sessionInfo.ChatHwnd, OnStickerClicked);
 
@@ -158,13 +160,22 @@ public sealed partial class PopupWindow : WindowEx
 
     private void ConfigureSendMethodToggle()
     {
-        if (_openedViaHotkey)
+        if (_openedViaHotkey && !IsKakaoTalkProcess(_chatHwnd))
         {
             SendMethodToggleBorder.Visibility = Visibility.Visible;
             SendMethodToggleSwitch.IsOn = AppSendMethodManager.GetCompatibilityMode(_applicationTitle);
         }
 
         ApplyCurrentSendMethod();
+    }
+
+    private static bool IsKakaoTalkProcess(nint hwnd)
+    {
+        if (hwnd == 0) return false;
+
+        GetWindowThreadProcessId(hwnd, out var processId);
+        try { return string.Equals(Process.GetProcessById((int)processId).ProcessName, "KakaoTalk", StringComparison.OrdinalIgnoreCase); }
+        catch { return false; }
     }
 
     private void ApplyCurrentSendMethod()
