@@ -6,6 +6,7 @@ using Microsoft.Windows.AppLifecycle;
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 using System.Threading.Tasks;
 using Windows.ApplicationModel;
 using AppInstance = Microsoft.Windows.AppLifecycle.AppInstance;
@@ -38,6 +39,10 @@ public partial class App : Application
     {
         InitializeComponent();
 
+        UnhandledException += OnUnhandledException;
+        AppDomain.CurrentDomain.UnhandledException += OnAppDomainUnhandledException;
+        TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
+
         var manager = SessionManager.Instance;
         manager.InfoLog += (text) => { Debug.WriteLine(text); Managers.FileLogManager.WriteInfo(text); };
         manager.WarnLog += (text) => { Debug.WriteLine(text); Managers.FileLogManager.WriteWarn(text); };
@@ -46,6 +51,44 @@ public partial class App : Application
 
         var buttonIconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "dccon.png");
         manager.Start(buttonIconPath);
+    }
+
+    private static void OnUnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
+    {
+        LogException("UnhandledException", e.Exception);
+        e.Handled = true;
+    }
+
+    private static void OnAppDomainUnhandledException(object sender, System.UnhandledExceptionEventArgs e)
+    {
+        if (e.ExceptionObject is Exception exception)
+            LogException("AppDomain.UnhandledException", exception);
+    }
+
+    private static void OnUnobservedTaskException(object sender, UnobservedTaskExceptionEventArgs e)
+    {
+        LogException("UnobservedTaskException", e.Exception);
+        e.SetObserved();
+    }
+
+    private static void LogException(string source, Exception exception)
+    {
+        var builder = new StringBuilder();
+        builder.Append($"[{source}] ");
+
+        var current = exception;
+        var depth = 0;
+        while (current is not null)
+        {
+            if (depth > 0) builder.Append(" → [InnerException] ");
+            builder.Append($"{current.GetType().Name}: {current.Message}\n{current.StackTrace}");
+            current = current.InnerException;
+            depth++;
+        }
+
+        var message = builder.ToString();
+        Debug.WriteLine(message);
+        Managers.FileLogManager.WriteError(message);
     }
 
     public static void ShowManageWindow()
