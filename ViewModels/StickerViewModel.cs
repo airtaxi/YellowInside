@@ -57,8 +57,7 @@ public partial class StickerViewModel : ObservableObject
         // If the package is subscribed, we can get the image from local storage. Otherwise, we need to fetch it from the web.
         if (IsSubscribed)
         {
-            var packages = ContentsManager.GetDownloadedPackages(_source);
-            var package = packages.FirstOrDefault(x => x.PackageIdentifier == _packageIdentifier);
+            var package = ContentsManager.GetDownloadedPackage(_source, _packageIdentifier);
             if (package != null)
             {
                 var sticker = package.Stickers.FirstOrDefault(x => x.Path == _path);
