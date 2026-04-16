@@ -580,6 +580,43 @@ public static class ContentsManager
 	}
 
 	/// <summary>
+	/// .yip 파일에서 특정 패키지들에 대한 즐겨찾기가 포함되어 있는지 확인합니다.
+	/// </summary>
+	public static async Task<bool> HasFavoritesForPackagesInImportFileAsync(
+		string sourceFilePath,
+		IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> packageKeys,
+		CancellationToken cancellationToken = default)
+	{
+		var importedData = await ReadDataFromImportFileAsync(sourceFilePath, cancellationToken);
+		var keySet = packageKeys as HashSet<(ContentSource, string)> ?? [.. packageKeys];
+		return importedData.Favorites.Any(
+			favorite => keySet.Contains((favorite.Source, favorite.PackageIdentifier)));
+	}
+
+	/// <summary>
+	/// .yip 파일에서 패키지의 대표 이미지만 임시 디렉토리에 추출합니다.
+	/// </summary>
+	public static void ExtractMainImagesFromImportFile(
+		string sourceFilePath,
+		IReadOnlyList<StickerPackage> packages,
+		string targetDirectory)
+	{
+		using var archive = ZipFile.OpenRead(sourceFilePath);
+		foreach (var package in packages)
+		{
+			if (string.IsNullOrWhiteSpace(package.MainImageFileName)) continue;
+
+			var entryPath = $"{package.Source}/{package.PackageIdentifier}/{package.MainImageFileName}";
+			var entry = archive.GetEntry(entryPath);
+			if (entry is null) continue;
+
+			var packageDirectory = Path.Combine(targetDirectory, package.Source.ToString(), package.PackageIdentifier);
+			Directory.CreateDirectory(packageDirectory);
+			entry.ExtractToFile(Path.Combine(packageDirectory, package.MainImageFileName));
+		}
+	}
+
+	/// <summary>
 	/// .yip 파일에 포함된 전체 데이터를 읽어옵니다.
 	/// </summary>
 	private static async Task<ContentsManagerData> ReadDataFromImportFileAsync(
@@ -602,8 +639,14 @@ public static class ContentsManager
 	/// <param name="sourceFilePath">불러올 .yip 파일 경로</param>
 	/// <param name="replaceAll">true이면 기존 데이터를 모두 삭제하고 새로 시작, false이면 기존 데이터에 추가만 합니다.</param>
 	/// <param name="importFavorites">true이면 즐겨찾기도 함께 불러옵니다.</param>
+	/// <param name="selectedPackageKeys">null이 아니면 선택한 패키지만 불러옵니다.</param>
 	/// <param name="cancellationToken">취소 토큰</param>
-	public static async Task ImportAsync(string sourceFilePath, bool replaceAll, bool importFavorites = true, CancellationToken cancellationToken = default)
+	public static async Task ImportAsync(
+		string sourceFilePath,
+		bool replaceAll,
+		bool importFavorites = true,
+		IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> selectedPackageKeys = null,
+		CancellationToken cancellationToken = default)
 	{
 		var temporaryDirectory = Path.Combine(Path.GetTempPath(), $"YellowInside_Import_{Guid.NewGuid():N}");
 		try
@@ -616,6 +659,13 @@ public static class ContentsManager
 			await using var importedDataStream = File.OpenRead(importedDataFilePath);
 			var importedData = await DeserializeImportedDataAsync(importedDataStream, cancellationToken);
 			MigrateImportedPackageIdentifiers(importedData);
+
+		if (selectedPackageKeys is not null)
+			{
+				var selectedKeySet = selectedPackageKeys as HashSet<(ContentSource, string)> ?? [.. selectedPackageKeys];
+				importedData.DownloadedPackages = [.. importedData.DownloadedPackages.Where(package => selectedKeySet.Contains((package.Source, package.PackageIdentifier)))];
+				importedData.Favorites = [.. importedData.Favorites.Where(favorite => selectedKeySet.Contains((favorite.Source, favorite.PackageIdentifier)))];
+			}
 
             if (replaceAll)
 			{
@@ -650,6 +700,19 @@ public static class ContentsManager
 			{
 				lock (s_lock)
 				{
+					// For partial import, remove existing selected packages to allow overwrite
+					if (selectedPackageKeys is not null)
+					{
+						var selectedKeySet = selectedPackageKeys as HashSet<(ContentSource, string)> ?? [.. selectedPackageKeys];
+						s_data.DownloadedPackages = [.. s_data.DownloadedPackages
+							.Where(package => !selectedKeySet.Contains((package.Source, package.PackageIdentifier)))];
+						if (importFavorites)
+						{
+							s_data.Favorites = [.. s_data.Favorites
+								.Where(favorite => !selectedKeySet.Contains((favorite.Source, favorite.PackageIdentifier)))];
+						}
+					}
+
 					var existingKeys = s_data.DownloadedPackages.Select(package => (package.Source, package.PackageIdentifier)).ToHashSet();
 
 					foreach (var package in importedData.DownloadedPackages)
@@ -677,7 +740,10 @@ public static class ContentsManager
 					cancellationToken.ThrowIfCancellationRequested();
 
 					var targetDirectory = GetPackageDirectory(package.Source, package.PackageIdentifier);
-					if (Directory.Exists(targetDirectory)) continue;
+
+					if (selectedPackageKeys is not null && Directory.Exists(targetDirectory))
+						Directory.Delete(targetDirectory, recursive: true);
+					else if (Directory.Exists(targetDirectory)) continue;
 
 					var importedPackageDirectory = Path.Combine(
 						temporaryDirectory, package.Source.ToString(), package.PackageIdentifier);

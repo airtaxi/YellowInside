@@ -325,6 +325,31 @@
                             Click="OnImportButtonClicked"
                             Content="불러오기" />
                     </Grid>
+
+                    <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel
+                            Grid.Column="0"
+                            VerticalAlignment="Center"
+                            Spacing="2">
+                            <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="패키지 일부 불러오기" />
+                            <TextBlock
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Style="{ThemeResource CaptionTextBlockStyle}"
+                                Text=".yip 파일에서 선택한 패키지와 관련 즐겨찾기만 불러옵니다." />
+                        </StackPanel>
+                        <Button
+                            Grid.Column="1"
+                            MinWidth="120"
+                            VerticalAlignment="Center"
+                            Click="OnPartialImportButtonClicked"
+                            Content="일부만 불러오기" />
+                    </Grid>
                 </StackPanel>
             </Border>
 

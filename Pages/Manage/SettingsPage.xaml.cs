@@ -3,6 +3,7 @@ using YellowInside.Helpers;
 using YellowInside.Managers;
 using YellowInside.Messages;
 using YellowInside.Models;
+using YellowInside.ViewModels;
 using CommunityToolkit.Mvvm.Messaging;
 using DevWinUI;
 using Microsoft.UI.Input;
@@ -219,15 +220,20 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
             return;
         }
 
-        var partialPackageExportDialog = new PartialPackageExportDialog(downloadedPackages)
+        var exportItems = downloadedPackages.Select(package => (PackageSelectionListViewModel)new PartialPackageExportListViewModel(package));
+        var packageSelectionDialog = new PackageSelectionDialog(
+            "패키지 일부 내보내기",
+            "내보낼 패키지를 선택하세요.",
+            "내보내기",
+            exportItems)
         {
             XamlRoot = XamlRoot,
         };
 
-        var dialogResult = await partialPackageExportDialog.ShowAsync();
+        var dialogResult = await packageSelectionDialog.ShowAsync();
         if (dialogResult != ContentDialogResult.Primary) return;
 
-        var selectedPackageKeys = partialPackageExportDialog.SelectedPackageKeys;
+        var selectedPackageKeys = packageSelectionDialog.SelectedPackageKeys;
         if (selectedPackageKeys.Count == 0) return;
 
         var exportFavorites = await AskExportFavoritesAsync(selectedPackageKeys);
@@ -237,6 +243,101 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         if (file is null) return;
 
         await ExportPackagesAsync(file.Path, "선택한 패키지를 내보내는 중...", selectedPackageKeys, exportFavorites.Value);
+    }
+
+    private async void OnPartialImportButtonClicked(object sender, RoutedEventArgs e)
+    {
+        var openPicker = new FileOpenPicker();
+        openPicker.FileTypeFilter.Add(".yip");
+        openPicker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
+
+        InitializeWithWindow.Initialize(openPicker, ManageWindow.Instance.GetWindowHandle());
+
+        var file = await openPicker.PickSingleFileAsync();
+        if (file is null) return;
+
+        IReadOnlyList<StickerPackage> packages;
+        try { packages = await ContentsManager.ReadPackagesFromImportFileAsync(file.Path); }
+        catch (Exception exception)
+        {
+            await this.ShowDialogAsync("불러오기 실패", exception.Message);
+            return;
+        }
+
+        if (packages.Count == 0)
+        {
+            await this.ShowDialogAsync("일부 불러오기", "불러올 패키지가 없습니다.");
+            return;
+        }
+
+        // Extract thumbnails to temp directory, load into memory, then clean up immediately
+        var importItems = new List<PackageSelectionListViewModel>();
+        var temporaryDirectory = Path.Combine(Path.GetTempPath(), $"YellowInside_PartialImport_{Guid.NewGuid():N}");
+        try
+        {
+            Directory.CreateDirectory(temporaryDirectory);
+            await Task.Run(() => ContentsManager.ExtractMainImagesFromImportFile(file.Path, packages, temporaryDirectory));
+
+            foreach (var package in packages)
+                importItems.Add(await PartialPackageImportListViewModel.CreateAsync(package, temporaryDirectory));
+        }
+        finally
+        {
+            try { if (Directory.Exists(temporaryDirectory)) Directory.Delete(temporaryDirectory, recursive: true); }
+            catch { /* Temp cleanup failure is non-critical */ }
+        }
+
+        var packageSelectionDialog = new PackageSelectionDialog(
+            "패키지 일부 불러오기",
+            "불러올 패키지를 선택하세요.",
+            "불러오기",
+            importItems)
+        {
+            XamlRoot = XamlRoot,
+        };
+
+        var dialogResult = await packageSelectionDialog.ShowAsync();
+        if (dialogResult != ContentDialogResult.Primary) return;
+
+        var selectedPackageKeys = packageSelectionDialog.SelectedPackageKeys;
+        if (selectedPackageKeys.Count == 0) return;
+
+        var importFavorites = false;
+        try
+        {
+            var hasFavorites = await ContentsManager.HasFavoritesForPackagesInImportFileAsync(file.Path, selectedPackageKeys);
+            if (hasFavorites)
+            {
+                var favoriteResult = await this.ShowDialogAsync(
+                    "즐겨찾기 불러오기",
+                    "선택한 패키지에 즐겨찾기가 포함되어 있습니다.\n즐겨찾기도 함께 불러오시겠습니까?",
+                    primaryButtonText: "예",
+                    secondaryButtonText: "아니오");
+
+                if (favoriteResult == ContentDialogResult.None) return;
+
+                importFavorites = favoriteResult == ContentDialogResult.Primary;
+            }
+        }
+        catch (Exception exception)
+        {
+            await this.ShowDialogAsync("불러오기 실패", exception.Message);
+            return;
+        }
+
+        try
+        {
+            ManageWindow.ShowLoading("선택한 패키지를 불러오는 중...");
+            await Task.Run(async () => await ContentsManager.ImportAsync(file.Path, replaceAll: false, importFavorites, selectedPackageKeys));
+            ManageWindow.HideLoading();
+
+            await this.ShowDialogAsync("불러오기 완료", "선택한 패키지를 성공적으로 불러왔습니다.");
+        }
+        catch (Exception exception)
+        {
+            ManageWindow.HideLoading();
+            await this.ShowDialogAsync("불러오기 실패", exception.Message);
+        }
     }
 
     private void OnHotkeyToggleSwitchToggled(object sender, RoutedEventArgs e)
@@ -519,9 +620,10 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
     private async Task<bool> ConfirmReplaceImportAsync(string sourceFilePath)
     {
         var importedPackages = await ContentsManager.ReadPackagesFromImportFileAsync(sourceFilePath);
-        var importedPackageKeys = importedPackages.Select(package => (package.Source, package.PackageIdentifier)).ToHashSet();
+        var importingKeySet = importedPackages.Select(package => (package.Source, package.PackageIdentifier)).ToHashSet();
+
         var deletedPackages = ContentsManager.GetDownloadedPackages()
-            .Where(package => !importedPackageKeys.Contains((package.Source, package.PackageIdentifier)))
+            .Where(package => !importingKeySet.Contains((package.Source, package.PackageIdentifier)))
             .ToList();
         if (deletedPackages.Count == 0) return true;
 
