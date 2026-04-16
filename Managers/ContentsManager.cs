@@ -347,6 +347,21 @@ public static class ContentsManager
 	}
 
 	/// <summary>
+	/// 특정 패키지들에 대한 즐겨찾기가 존재하는지 확인합니다. 패키지 키를 지정하지 않으면 전체 즐겨찾기를 확인합니다.
+	/// </summary>
+	public static bool HasFavorites(IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> packageKeys = null)
+	{
+		lock (s_lock)
+		{
+			if (packageKeys is null) return s_data.Favorites.Count > 0;
+
+			var keySet = packageKeys as HashSet<(ContentSource, string)> ?? [.. packageKeys];
+			return s_data.Favorites.Any(
+				favorite => keySet.Contains((favorite.Source, favorite.PackageIdentifier)));
+		}
+	}
+
+	/// <summary>
 	/// 즐겨찾기 목록을 반환합니다.
 	/// </summary>
 	public static IReadOnlyList<FavoriteSticker> GetFavorites(ContentSource? source = null)
@@ -469,8 +484,8 @@ public static class ContentsManager
 	/// <summary>
 	/// 현재 다운로드된 패키지와 설정을 .yip 파일로 내보냅니다.
 	/// </summary>
-	public static Task ExportAsync(string destinationFilePath, CancellationToken cancellationToken = default)
-		=> ExportAsync(destinationFilePath, selectedPackageKeys: null, cancellationToken);
+	public static Task ExportAsync(string destinationFilePath, bool exportFavorites = true, CancellationToken cancellationToken = default)
+		=> ExportAsync(destinationFilePath, selectedPackageKeys: null, exportFavorites, cancellationToken);
 
 	/// <summary>
 	/// 선택한 패키지와 관련 즐겨찾기를 .yip 파일로 내보냅니다.
@@ -478,6 +493,7 @@ public static class ContentsManager
 	public static async Task ExportAsync(
 		string destinationFilePath,
 		IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> selectedPackageKeys,
+		bool exportFavorites = true,
 		CancellationToken cancellationToken = default)
 	{
 		if (File.Exists(destinationFilePath))
@@ -501,9 +517,11 @@ public static class ContentsManager
 					DownloadedPackages = selectedPackageKeySet is null
 						? [.. s_data.DownloadedPackages]
 						: [.. s_data.DownloadedPackages.Where(package => selectedPackageKeySet.Contains((package.Source, package.PackageIdentifier)))],
-					Favorites = selectedPackageKeySet is null
-						? [.. s_data.Favorites]
-						: [.. s_data.Favorites.Where(favorite => selectedPackageKeySet.Contains((favorite.Source, favorite.PackageIdentifier)))],
+					Favorites = exportFavorites
+						? selectedPackageKeySet is null
+							? [.. s_data.Favorites]
+							: [.. s_data.Favorites.Where(favorite => selectedPackageKeySet.Contains((favorite.Source, favorite.PackageIdentifier)))]
+						: [],
 				};
 
 				dataJson = JsonSerializer.Serialize(exportData, ContentsManagerJsonContext.Default.ContentsManagerData);

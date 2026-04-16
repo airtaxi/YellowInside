@@ -138,10 +138,13 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
 
     private async void OnExportButtonClicked(object sender, RoutedEventArgs e)
     {
+        var exportFavorites = await AskExportFavoritesAsync();
+        if (exportFavorites is null) return;
+
         var file = await PickPackageExportFileAsync("YellowInside_Export");
         if (file is null) return;
 
-        await ExportPackagesAsync(file.Path, "패키지를 내보내는 중...");
+        await ExportPackagesAsync(file.Path, "패키지를 내보내는 중...", exportFavorites: exportFavorites.Value);
     }
 
     private async void OnImportButtonClicked(object sender, RoutedEventArgs e)
@@ -225,10 +228,13 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         var selectedPackageKeys = partialPackageExportDialog.SelectedPackageKeys;
         if (selectedPackageKeys.Count == 0) return;
 
+        var exportFavorites = await AskExportFavoritesAsync(selectedPackageKeys);
+        if (exportFavorites is null) return;
+
         var file = await PickPackageExportFileAsync("YellowInside_PartialExport");
         if (file is null) return;
 
-        await ExportPackagesAsync(file.Path, "선택한 패키지를 내보내는 중...", selectedPackageKeys);
+        await ExportPackagesAsync(file.Path, "선택한 패키지를 내보내는 중...", selectedPackageKeys, exportFavorites.Value);
     }
 
     private void OnHotkeyToggleSwitchToggled(object sender, RoutedEventArgs e)
@@ -458,6 +464,22 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         _ => $"0x{virtualKey:X2}",
     };
 
+    private async Task<bool?> AskExportFavoritesAsync(
+        IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> selectedPackageKeys = null)
+    {
+        if (!ContentsManager.HasFavorites(selectedPackageKeys)) return false;
+
+        var result = await this.ShowDialogAsync(
+            "즐겨찾기 내보내기",
+            "즐겨찾기 정보가 존재합니다.\n즐겨찾기도 함께 내보내시겠습니까?",
+            primaryButtonText: "예",
+            secondaryButtonText: "아니오");
+
+        if (result == ContentDialogResult.None) return null;
+
+        return result == ContentDialogResult.Primary;
+    }
+
     private static async Task<StorageFile> PickPackageExportFileAsync(string suggestedFileName)
     {
         var savePicker = new FileSavePicker();
@@ -473,13 +495,14 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
     private async Task ExportPackagesAsync(
         string destinationFilePath,
         string loadingMessage,
-        IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> selectedPackageKeys = null)
+        IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> selectedPackageKeys = null,
+        bool exportFavorites = true)
     {
         try
         {
             ManageWindow.ShowLoading(loadingMessage);
-            if (selectedPackageKeys is null) await Task.Run(() => ContentsManager.ExportAsync(destinationFilePath));
-            else await Task.Run(() => ContentsManager.ExportAsync(destinationFilePath, selectedPackageKeys));
+            if (selectedPackageKeys is null) await Task.Run(() => ContentsManager.ExportAsync(destinationFilePath, exportFavorites));
+            else await Task.Run(() => ContentsManager.ExportAsync(destinationFilePath, selectedPackageKeys, exportFavorites));
             ManageWindow.HideLoading();
 
             await this.ShowDialogAsync("내보내기 완료", "패키지를 성공적으로 내보냈습니다.");
