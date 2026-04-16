@@ -58,11 +58,13 @@ public partial class PopupViewModel : ObservableObject
         if (existing is not null)
         {
             PendingStickers.Remove(existing);
+            sticker.IsPending = false;
             return false;
         }
 
         if (PendingStickers.Count >= MaxPendingCount) return false;
 
+        sticker.IsPending = true;
         PendingStickers.Add(new PendingStickerViewModel
         {
             LocalFilePath = sticker.LocalFilePath,
@@ -76,9 +78,20 @@ public partial class PopupViewModel : ObservableObject
         return true;
     }
 
-    public void RemoveFromPending(PendingStickerViewModel item) => PendingStickers.Remove(item);
+    public void RemoveFromPending(PendingStickerViewModel item)
+    {
+        PendingStickers.Remove(item);
+        var matchingSticker = Stickers.FirstOrDefault(
+            sticker => sticker.LocalFilePath == item.LocalFilePath);
+        if (matchingSticker is not null) matchingSticker.IsPending = false;
+    }
 
-    public void ClearPending() => PendingStickers.Clear();
+    public void ClearPending()
+    {
+        foreach (var sticker in Stickers)
+            sticker.IsPending = false;
+        PendingStickers.Clear();
+    }
 
     public IReadOnlyList<string> GetPendingFilePaths() =>
         PendingStickers.Select(pendingSticker => pendingSticker.LocalFilePath).ToList();
@@ -163,6 +176,16 @@ public partial class PopupViewModel : ObservableObject
             LoadHistoryStickers();
         else
             LoadPackageStickers(Categories[index].Package);
+
+        ApplyPendingFlags();
+    }
+
+    private void ApplyPendingFlags()
+    {
+        var pendingFilePaths = new HashSet<string>(
+            PendingStickers.Select(pendingSticker => pendingSticker.LocalFilePath));
+        foreach (var sticker in Stickers)
+            sticker.IsPending = pendingFilePaths.Contains(sticker.LocalFilePath);
     }
 
     private void RememberCategory(int index)

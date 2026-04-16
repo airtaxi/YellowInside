@@ -21,7 +21,12 @@ public partial class PopupStickerViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(FavoriteIconVisibility))]
     public partial bool IsFavorite { get; set; }
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PendingBorderVisibility))]
+    public partial bool IsPending { get; set; }
+
     public Visibility FavoriteIconVisibility => IsFavorite ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility PendingBorderVisibility => IsPending ? Visibility.Visible : Visibility.Collapsed;
 
     public Action<PopupStickerViewModel> FavoriteToggled { get; set; }
     public Action<PopupStickerViewModel> StickerClicked { get; set; }

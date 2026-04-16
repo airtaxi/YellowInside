@@ -131,53 +131,65 @@
             </GridView.ItemContainerStyle>
             <GridView.ItemTemplate>
                 <DataTemplate x:DataType="vm:PopupStickerViewModel">
-                    <Button
-                        Width="80"
-                        Height="80"
-                        Padding="0"
-                        Background="{ThemeResource SubtleFillColorSecondaryBrush}"
-                        Command="{x:Bind SendCommand}"
-                        CornerRadius="6"
-                        ToolTipService.ToolTip="{x:Bind Title}">
-                        <Grid Width="72" Height="72">
-                            <Image Source="{x:Bind ImageSource}" Stretch="Uniform" />
+                    <Grid>
+                        <Button
+                            Width="80"
+                            Height="80"
+                            Padding="0"
+                            Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                            Command="{x:Bind SendCommand}"
+                            CornerRadius="6"
+                            ToolTipService.ToolTip="{x:Bind Title}">
+                            <Grid Width="72" Height="72">
+                                <Image Source="{x:Bind ImageSource}" Stretch="Uniform" />
 
-                            <!--  즐겨찾기 토글  -->
-                            <Button
-                                Width="18"
-                                Height="18"
-                                Padding="0"
-                                HorizontalAlignment="Right"
-                                VerticalAlignment="Top"
-                                Background="Transparent"
-                                BorderThickness="0"
-                                Command="{x:Bind ToggleFavoriteCommand}">
-                                <Grid>
-                                    <FontIcon
-                                        HorizontalAlignment="Center"
-                                        VerticalAlignment="Center"
-                                        FontSize="18"
-                                        Foreground="Black"
-                                        Glyph="&#xE735;" />
-                                    <FontIcon
-                                        HorizontalAlignment="Center"
-                                        VerticalAlignment="Center"
-                                        FontSize="16"
-                                        Foreground="LightGray"
-                                        Glyph="&#xE735;"
-                                        IsHitTestVisible="False" />
-                                    <FontIcon
-                                        HorizontalAlignment="Center"
-                                        VerticalAlignment="Center"
-                                        FontSize="16"
-                                        Foreground="Gold"
-                                        Glyph="&#xE735;"
-                                        IsHitTestVisible="False"
-                                        Visibility="{x:Bind FavoriteIconVisibility, Mode=OneWay}" />
-                                </Grid>
-                            </Button>
-                        </Grid>
-                    </Button>
+                                <!--  즐겨찾기 토글  -->
+                                <Button
+                                    Width="18"
+                                    Height="18"
+                                    Padding="0"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Top"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Command="{x:Bind ToggleFavoriteCommand}">
+                                    <Grid>
+                                        <FontIcon
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            FontSize="18"
+                                            Foreground="Black"
+                                            Glyph="&#xE735;" />
+                                        <FontIcon
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            FontSize="16"
+                                            Foreground="LightGray"
+                                            Glyph="&#xE735;"
+                                            IsHitTestVisible="False" />
+                                        <FontIcon
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            FontSize="16"
+                                            Foreground="Gold"
+                                            Glyph="&#xE735;"
+                                            IsHitTestVisible="False"
+                                            Visibility="{x:Bind FavoriteIconVisibility, Mode=OneWay}" />
+                                    </Grid>
+                                </Button>
+                            </Grid>
+                        </Button>
+
+                        <!--  대기열 강조 테두리  -->
+                        <Border
+                            Width="80"
+                            Height="80"
+                            BorderBrush="{ThemeResource AccentFillColorDefaultBrush}"
+                            BorderThickness="2.5"
+                            CornerRadius="6"
+                            IsHitTestVisible="False"
+                            Visibility="{x:Bind PendingBorderVisibility, Mode=OneWay}" />
+                    </Grid>
                 </DataTemplate>
             </GridView.ItemTemplate>
         </GridView>
