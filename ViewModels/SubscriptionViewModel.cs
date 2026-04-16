@@ -47,8 +47,7 @@ public partial class SubscriptionViewModel : ObservableObject
         if (!string.IsNullOrEmpty(package.MainImageFileName))
         {
             var mainImagePath = ContentsManager.GetMainImagePath(Source, PackageIdentifier, package.MainImageFileName);
-            if (File.Exists(mainImagePath))
-                ThumbnailSource = new BitmapImage(new Uri(mainImagePath)) { AutoPlay = SettingsManager.GifPlaybackEnabled };
+            if (File.Exists(mainImagePath)) ThumbnailSource = new BitmapImage(new Uri(mainImagePath)) { AutoPlay = SettingsManager.GifPlaybackEnabled };
         }
     }
 

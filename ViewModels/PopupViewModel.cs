@@ -1,5 +1,4 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 using YellowInside.Managers;
 using YellowInside.Models;
 using Microsoft.UI.Xaml;
@@ -12,69 +11,10 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using Windows.Devices.PointOfService;
 using Windows.Storage;
 
 namespace YellowInside.ViewModels;
-
-public class PopupCategoryViewModel
-{
-    public bool IsFavorite { get; init; }
-    public bool IsHistory { get; init; }
-    public string Title { get; init; } = string.Empty;
-    public ImageSource ThumbnailSource { get; init; }
-    public StickerPackage Package { get; init; }
-    public Visibility FavoriteIconVisibility => IsFavorite ? Visibility.Visible : Visibility.Collapsed;
-    public Visibility HistoryIconVisibility => IsHistory ? Visibility.Visible : Visibility.Collapsed;
-    public Visibility ThumbnailVisibility => !IsFavorite && !IsHistory ? Visibility.Visible : Visibility.Collapsed;
-}
-
-public partial class PopupStickerViewModel : ObservableObject
-{
-    public ImageSource ImageSource { get; set; }
-    public string LocalFilePath { get; init; } = string.Empty;
-    public string Title { get; init; } = string.Empty;
-    public ContentSource Source { get; init; }
-    public string PackageIdentifier { get; init; } = string.Empty;
-    public string StickerPath { get; init; } = string.Empty;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(FavoriteIconVisibility))]
-    public partial bool IsFavorite { get; set; }
-
-    public Visibility FavoriteIconVisibility => IsFavorite ? Visibility.Visible : Visibility.Collapsed;
-
-    public Action<PopupStickerViewModel> FavoriteToggled { get; set; }
-    public Action<PopupStickerViewModel> StickerClicked { get; set; }
-
-    [RelayCommand]
-    public async Task ToggleFavorite()
-    {
-        if (IsFavorite) await ContentsManager.RemoveFavoriteAsync(Source, PackageIdentifier, StickerPath);
-        else await ContentsManager.AddFavoriteAsync(Source, PackageIdentifier, StickerPath);
-
-        IsFavorite = !IsFavorite;
-        FavoriteToggled?.Invoke(this);
-    }
-
-    [RelayCommand]
-    public void Send() => StickerClicked?.Invoke(this);
-}
-
-public partial class PendingStickerViewModel
-{
-    public string LocalFilePath { get; init; } = string.Empty;
-    public ImageSource ImageSource { get; init; }
-    public string Title { get; init; } = string.Empty;
-    public ContentSource Source { get; init; }
-    public string PackageIdentifier { get; init; } = string.Empty;
-    public string StickerPath { get; init; } = string.Empty;
-    public Action<PendingStickerViewModel> RemoveAction { get; init; }
-
-    [RelayCommand]
-    private void Remove() => RemoveAction?.Invoke(this);
-}
 
 public partial class PopupViewModel : ObservableObject
 {
@@ -145,15 +85,13 @@ public partial class PopupViewModel : ObservableObject
 
     private void BuildCategories()
     {
-        Categories.Add(new PopupCategoryViewModel
+        Categories.Add(new PopupCategoryViewModel(true, default, default, default)
         {
-            IsFavorite = true,
             Title = "즐겨찾기",
         });
 
-        Categories.Add(new PopupCategoryViewModel
+        Categories.Add(new PopupCategoryViewModel(default, true, default, default)
         {
-            IsHistory = true,
             Title = "최근 사용",
         });
 
@@ -166,12 +104,9 @@ public partial class PopupViewModel : ObservableObject
             if (!string.IsNullOrEmpty(mainImagePath) && File.Exists(mainImagePath))
                 thumbnailSource = new BitmapImage(new Uri(mainImagePath)) { AutoPlay = SettingsManager.GifPlaybackEnabled };
 
-            Categories.Add(new PopupCategoryViewModel
+            Categories.Add(new PopupCategoryViewModel(false, default, thumbnailSource, package)
             {
-                IsFavorite = false,
                 Title = package.Title,
-                ThumbnailSource = thumbnailSource,
-                Package = package,
             });
         }
     }
