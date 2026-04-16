@@ -8,6 +8,7 @@ using YellowInside.Helpers;
 using YellowInside.Messages;
 using YellowInside.Models;
 using YellowInside.Pages;
+using YellowInside.Pages.Manage;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
@@ -205,6 +206,9 @@ public partial class DetailViewModel : ObservableObject
 
         if (IsLocalPackage) ManageWindow.GoBack();
     }
+
+    [RelayCommand]
+    private void Edit() => ManageWindow.Navigate(typeof(CustomPackageEditorPage), new CustomPackageEditorArguments(CustomPackageEditorMode.Edit, PackageIdentifier));
 
     private void OnFavoritesOrPackagesChangedMessageReceived(object recipient, FavoritesOrPackagesChangedMessage message)
     {

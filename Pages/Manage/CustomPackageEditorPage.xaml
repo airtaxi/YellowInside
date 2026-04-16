@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <Page
-    x:Class="YellowInside.Pages.Manage.CreateCustomPackagePage"
+    x:Class="YellowInside.Pages.Manage.CustomPackageEditorPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -17,10 +17,10 @@
 
         <!--  Header  -->
         <TextBlock
+            x:Name="HeaderTextBlock"
             Grid.Row="0"
             Margin="0,0,0,8"
-            Style="{ThemeResource TitleTextBlockStyle}"
-            Text="사용자 지정콘 추가" />
+            Style="{ThemeResource TitleTextBlockStyle}" />
 
         <!--  Content  -->
         <ScrollViewer

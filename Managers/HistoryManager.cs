@@ -87,6 +87,23 @@ public static class HistoryManager
         if (removed) Save();
     }
 
+    /// <summary>
+    /// 특정 패키지 내 지정된 스티커들의 히스토리 항목을 삭제합니다.
+    /// </summary>
+    public static void RemoveByStickers(ContentSource source, string packageIdentifier, IReadOnlyList<string> stickerPaths)
+    {
+        bool removed;
+        lock (s_lock)
+        {
+            removed = s_entries.RemoveAll(
+                entry => entry.Source == source
+                    && entry.PackageIdentifier == packageIdentifier
+                    && stickerPaths.Contains(entry.StickerPath)) > 0;
+        }
+
+        if (removed) Save();
+    }
+
     private static void MigratePackageIdentifiers()
     {
         var migrated = false;

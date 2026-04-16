@@ -13,6 +13,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Windows.Security.Authentication.OnlineId;
+using YellowInside.Managers;
 
 namespace YellowInside;
 
@@ -185,8 +186,136 @@ public static class ContentsManager
 	}
 
 	/// <summary>
-	/// 디시콘 패키지를 다운로드합니다 (이미지 포함).
+	/// 사용자 지정 패키지를 수정합니다.
 	/// </summary>
+	public static async Task UpdateCustomPackageAsync(
+		string packageIdentifier,
+		string title,
+		string description,
+		string newMainImageSourcePath,
+		string sellerName,
+		IReadOnlyList<string> tags,
+		IReadOnlyList<(string SourceFilePath, bool IsExisting, string OriginalStickerPath, string OriginalFileName)> stickerEntries)
+	{
+		StickerPackage package;
+		lock (s_lock)
+		{
+			package = s_data.DownloadedPackages.FirstOrDefault(p => p.Source == ContentSource.Local && p.PackageIdentifier == packageIdentifier);
+		}
+		if (package is null) return;
+
+		var packageDirectory = GetPackageDirectory(ContentSource.Local, packageIdentifier);
+		var stickersDirectory = Path.Combine(packageDirectory, package.LocalDirectoryName);
+		Directory.CreateDirectory(stickersDirectory);
+
+		// Collect old sticker info for orphan cleanup and favorite/history pruning
+		var oldStickerFileNames = package.Stickers.Select(sticker => sticker.FileName).ToHashSet();
+		var oldStickerPaths = package.Stickers.Select(sticker => sticker.Path).ToHashSet();
+		var keptStickerFileNames = new HashSet<string>();
+		var keptStickerPaths = new HashSet<string>();
+
+		// Build new sticker list (copy new files first, before metadata update)
+		var newStickers = new List<Sticker>();
+		for (var index = 0; index < stickerEntries.Count; index++)
+		{
+			var entry = stickerEntries[index];
+			if (entry.IsExisting)
+			{
+				keptStickerFileNames.Add(entry.OriginalFileName);
+				keptStickerPaths.Add(entry.OriginalStickerPath);
+				var existingSticker = package.Stickers.FirstOrDefault(sticker => sticker.Path == entry.OriginalStickerPath);
+				if (existingSticker is not null)
+				{
+					newStickers.Add(new Sticker
+					{
+						Path = existingSticker.Path,
+						Title = existingSticker.Title,
+						Extension = existingSticker.Extension,
+						SortNumber = index,
+						FileName = existingSticker.FileName,
+					});
+				}
+			}
+			else
+			{
+				if (!File.Exists(entry.SourceFilePath)) continue;
+
+				var extension = Path.GetExtension(entry.SourceFilePath);
+				var fileName = $"{Guid.NewGuid():N}{extension}";
+				File.Copy(entry.SourceFilePath, Path.Combine(stickersDirectory, fileName));
+
+				newStickers.Add(new Sticker
+				{
+					Path = fileName,
+					Title = System.IO.Path.GetFileNameWithoutExtension(entry.SourceFilePath),
+					Extension = extension.TrimStart('.'),
+					SortNumber = index,
+					FileName = fileName,
+				});
+			}
+		}
+
+		// Handle main image (copy new before metadata update)
+		var oldMainImageFileName = package.MainImageFileName;
+		var mainImageFileName = package.MainImageFileName;
+		if (!string.IsNullOrEmpty(newMainImageSourcePath) && File.Exists(newMainImageSourcePath))
+		{
+			mainImageFileName = $"main_image{Path.GetExtension(newMainImageSourcePath)}";
+			File.Copy(newMainImageSourcePath, Path.Combine(packageDirectory, mainImageFileName), overwrite: true);
+		}
+
+		// Update metadata + save
+		lock (s_lock)
+		{
+			package.Title = title;
+			package.Description = description;
+			package.MainImageFileName = mainImageFileName;
+			package.SellerName = sellerName;
+			package.Tags = [.. tags];
+			package.Stickers = newStickers;
+		}
+
+		await SaveAsync();
+
+		// Delete orphaned sticker files (after metadata is safely saved)
+		foreach (var orphanedFileName in oldStickerFileNames.Except(keptStickerFileNames))
+		{
+			var orphanedFilePath = Path.Combine(stickersDirectory, orphanedFileName);
+			try { if (File.Exists(orphanedFilePath)) File.Delete(orphanedFilePath); }
+			catch { }
+		}
+
+		// Delete old main image if replaced with different extension
+		if (!string.IsNullOrEmpty(newMainImageSourcePath) &&
+			!string.IsNullOrEmpty(oldMainImageFileName) &&
+			oldMainImageFileName != mainImageFileName)
+		{
+			var oldMainImagePath = Path.Combine(packageDirectory, oldMainImageFileName);
+			try { if (File.Exists(oldMainImagePath)) File.Delete(oldMainImagePath); }
+			catch { }
+		}
+
+		// Remove favorites and history entries for deleted stickers
+		var removedStickerPaths = oldStickerPaths.Except(keptStickerPaths).ToList();
+		if (removedStickerPaths.Count > 0)
+		{
+			bool favoritesRemoved;
+			lock (s_lock)
+			{
+				favoritesRemoved = s_data.Favorites.RemoveAll(
+					favorite => favorite.Source == ContentSource.Local
+						&& favorite.PackageIdentifier == packageIdentifier
+						&& removedStickerPaths.Contains(favorite.StickerPath)) > 0;
+			}
+
+			HistoryManager.RemoveByStickers(ContentSource.Local, packageIdentifier, removedStickerPaths);
+
+			if (favoritesRemoved) FavoritesChanged?.Invoke();
+		}
+
+		PackagesChanged?.Invoke();
+		WeakReferenceMessenger.Default.Send(new FavoritesOrPackagesChangedMessage(ContentSource.Local, packageIdentifier));
+	}
 	public static async Task DownloadDcconPackageAsync(
 		int packageIndex,
 		IProgress<(int Completed, int Total)> progress = null,
@@ -414,7 +543,7 @@ public static class ContentsManager
 
 		if (!packageRemoved) return;
 
-		Managers.HistoryManager.RemoveByPackage(source, packageIdentifier);
+		HistoryManager.RemoveByPackage(source, packageIdentifier);
 
 		var packageDirectory = GetPackageDirectory(source, packageIdentifier);
 		if (Directory.Exists(packageDirectory))

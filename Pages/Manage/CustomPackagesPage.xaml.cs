@@ -63,5 +63,5 @@ public sealed partial class CustomPackagesPage : Page
     }
 
     private void OnAddCustomPackageButtonClicked(object sender, RoutedEventArgs e)
-        => ManageWindow.Navigate(typeof(CreateCustomPackagePage));
+        => ManageWindow.Navigate(typeof(CustomPackageEditorPage), new CustomPackageEditorArguments(CustomPackageEditorMode.Add));
 }

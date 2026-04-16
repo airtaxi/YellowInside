@@ -86,16 +86,25 @@
                     </Button>
                 </Grid>
 
-                <!--  삭제 (사용자 지정콘)  -->
-                <Button
+                <!--  수정 / 삭제 (사용자 지정콘)  -->
+                <StackPanel
                     Grid.Column="1"
                     HorizontalAlignment="Right"
                     VerticalAlignment="Top"
-                    Command="{x:Bind ViewModel.UnsubscribeCommand}"
-                    ToolTipService.ToolTip="삭제"
+                    Orientation="Horizontal"
+                    Spacing="4"
                     Visibility="{x:Bind ViewModel.IsLocalPackage, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                    <FontIcon Glyph="&#xE74D;" />
-                </Button>
+                    <Button
+                        Command="{x:Bind ViewModel.EditCommand}"
+                        ToolTipService.ToolTip="수정">
+                        <FontIcon Glyph="&#xE70F;" />
+                    </Button>
+                    <Button
+                        Command="{x:Bind ViewModel.UnsubscribeCommand}"
+                        ToolTipService.ToolTip="삭제">
+                        <FontIcon Glyph="&#xE74D;" />
+                    </Button>
+                </StackPanel>
 
                 <StackPanel
                     Grid.Column="1"
