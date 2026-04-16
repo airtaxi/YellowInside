@@ -143,6 +143,8 @@ public sealed partial class DcconHomePage : Page
         var isLoadMoreInProgress = _loadMoreSemaphore.CurrentCount == 0;
         if (isLoadMoreInProgress) return;
 
+        scrollView.ScrollTo(scrollView.HorizontalOffset - 1, 0);
+
         var isHot = scrollView.Tag as string == "Hot";
         try { await LoadMoreAsync(isHot, _refreshCancellationTokenSource?.Token ?? default); }
         catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
