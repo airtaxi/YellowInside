@@ -48,8 +48,11 @@ public sealed partial class ManageWindow : WindowEx, IRecipient<LaunchOnStartupC
         _subclassprocedure = WindowSubclassProc;
         SetWindowSubclass(this.GetWindowHandle(), _subclassprocedure, 1, 0);
 
+        AppFrame.Navigated += OnAppFrameNavigated;
         AppFrame.Navigate(typeof(ManagePage));
     }
+
+    private void OnAppFrameNavigated(object sender, Microsoft.UI.Xaml.Navigation.NavigationEventArgs e) => AppTitleBar.IsPaneToggleButtonVisible = e.SourcePageType == typeof(ManagePage);
 
     private nint WindowSubclassProc(nint windowHandle, uint message, nint wParam, nint lParam, nuint subclassId, nuint referenceData)
     {
@@ -125,6 +128,11 @@ public sealed partial class ManageWindow : WindowEx, IRecipient<LaunchOnStartupC
         {
             AppFrame.GoBack();
         }
+    }
+
+    private void OnAppTitleBarPaneToggleRequested(TitleBar sender, object args)
+    {
+        if (AppFrame.Content is ManagePage managePage) managePage.ToggleNavigationPane();
     }
 
     public void ForceClose()

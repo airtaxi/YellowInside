@@ -49,7 +49,8 @@
             Grid.Row="0"
             BackRequested="OnAppTitleBarBackRequested"
             IsBackButtonVisible="{Binding ElementName=AppFrame, Path=CanGoBack}"
-            IsPaneToggleButtonVisible="False">
+            IsPaneToggleButtonVisible="True"
+            PaneToggleRequested="OnAppTitleBarPaneToggleRequested">
             <TitleBar.IconSource>
                 <ImageIconSource ImageSource="ms-appx:///Assets/Icon.png" />
             </TitleBar.IconSource>

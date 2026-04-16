@@ -1,18 +1,6 @@
 ﻿using YellowInside.Pages.Manage;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Controls.Primitives;
-using Microsoft.UI.Xaml.Data;
-using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Navigation;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
 
 namespace YellowInside.Pages;
 
@@ -20,13 +8,29 @@ public sealed partial class ManagePage : Page
 {
     public ManagePage() => InitializeComponent();
 
-    private void OnSelectorBarSelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
+    public void ToggleNavigationPane() => NavigationView.IsPaneOpen = !NavigationView.IsPaneOpen;
+
+    private void OnPageLoaded(object sender, RoutedEventArgs e)
     {
-        if (sender.SelectedItem == SelectorBarItemHome) ContentFrame.Navigate(typeof(HomePage));
-        else if (sender.SelectedItem == SearchSelectorBarItem) ContentFrame.Navigate(typeof(SearchPage));
-        else if (sender.SelectedItem == SubscriptionsSelectorBarItem) ContentFrame.Navigate(typeof(SubscriptionsPage));
-        else if (sender.SelectedItem == SelectorBarItemFavorites) ContentFrame.Navigate(typeof(FavoritesPage));
-        else if (sender.SelectedItem == CustomPackagesSelectorBarItem) ContentFrame.Navigate(typeof(CustomPackagesPage));
-        else if (sender.SelectedItem == SelectorBarItemSettings) ContentFrame.Navigate(typeof(SettingsPage));
+        if (NavigationView.SelectedItem is null)
+            NavigationView.SelectedItem = HomeNavigationViewItem;
+    }
+
+    private void OnNavigationViewSelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
+    {
+        if (args.SelectedItem is not NavigationViewItem selectedItem) return;
+
+        var pageType = (selectedItem.Tag as string) switch
+        {
+            "Home" => typeof(HomePage),
+            "Search" => typeof(SearchPage),
+            "Subscriptions" => typeof(SubscriptionsPage),
+            "Favorites" => typeof(FavoritesPage),
+            "CustomPackages" => typeof(CustomPackagesPage),
+            "Settings" => typeof(SettingsPage),
+            _ => null
+        };
+
+        if (pageType is not null) ContentFrame.Navigate(pageType);
     }
 }

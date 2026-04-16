@@ -6,50 +6,69 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="using:YellowInside.Pages"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Loaded="OnPageLoaded"
     NavigationCacheMode="Required"
     mc:Ignorable="d">
 
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
-        <SelectorBar
-            Grid.Row="0"
-            SelectedItem="{x:Bind SelectorBarItemHome}"
-            SelectionChanged="OnSelectorBarSelectionChanged">
-            <SelectorBarItem x:Name="SelectorBarItemHome" Text="홈">
-                <SelectorBarItem.Icon>
+    <NavigationView
+        x:Name="NavigationView"
+        IsBackButtonVisible="Collapsed"
+        IsPaneToggleButtonVisible="False"
+        IsSettingsVisible="False"
+        PaneDisplayMode="LeftMinimal"
+        SelectionChanged="OnNavigationViewSelectionChanged">
+        <NavigationView.MenuItems>
+            <NavigationViewItem
+                x:Name="HomeNavigationViewItem"
+                Content="홈"
+                Tag="Home">
+                <NavigationViewItem.Icon>
                     <SymbolIcon Symbol="Home" />
-                </SelectorBarItem.Icon>
-            </SelectorBarItem>
-            <SelectorBarItem x:Name="SearchSelectorBarItem" Text="검색">
-                <SelectorBarItem.Icon>
+                </NavigationViewItem.Icon>
+            </NavigationViewItem>
+            <NavigationViewItem
+                x:Name="SearchNavigationViewItem"
+                Content="검색"
+                Tag="Search">
+                <NavigationViewItem.Icon>
                     <SymbolIcon Symbol="Find" />
-                </SelectorBarItem.Icon>
-            </SelectorBarItem>
-            <SelectorBarItem x:Name="SubscriptionsSelectorBarItem" Text="구독">
-                <SelectorBarItem.Icon>
+                </NavigationViewItem.Icon>
+            </NavigationViewItem>
+            <NavigationViewItem
+                x:Name="SubscriptionsNavigationViewItem"
+                Content="구독"
+                Tag="Subscriptions">
+                <NavigationViewItem.Icon>
                     <FontIcon Glyph="&#xEA8F;" />
-                </SelectorBarItem.Icon>
-            </SelectorBarItem>
-            <SelectorBarItem x:Name="SelectorBarItemFavorites" Text="즐겨찾기">
-                <SelectorBarItem.Icon>
+                </NavigationViewItem.Icon>
+            </NavigationViewItem>
+            <NavigationViewItem
+                x:Name="FavoritesNavigationViewItem"
+                Content="즐겨찾기"
+                Tag="Favorites">
+                <NavigationViewItem.Icon>
                     <FontIcon Glyph="&#xE728;" />
-                </SelectorBarItem.Icon>
-            </SelectorBarItem>
-            <SelectorBarItem x:Name="CustomPackagesSelectorBarItem" Text="사용자 지정콘">
-                <SelectorBarItem.Icon>
+                </NavigationViewItem.Icon>
+            </NavigationViewItem>
+            <NavigationViewItem
+                x:Name="CustomPackagesNavigationViewItem"
+                Content="사용자 지정콘"
+                Tag="CustomPackages">
+                <NavigationViewItem.Icon>
                     <FontIcon Glyph="&#xE8F1;" />
-                </SelectorBarItem.Icon>
-            </SelectorBarItem>
-            <SelectorBarItem x:Name="SelectorBarItemSettings" Text="설정">
-                <SelectorBarItem.Icon>
+                </NavigationViewItem.Icon>
+            </NavigationViewItem>
+        </NavigationView.MenuItems>
+        <NavigationView.FooterMenuItems>
+            <NavigationViewItem
+                x:Name="SettingsNavigationViewItem"
+                Content="설정"
+                Tag="Settings">
+                <NavigationViewItem.Icon>
                     <SymbolIcon Symbol="Setting" />
-                </SelectorBarItem.Icon>
-            </SelectorBarItem>
-        </SelectorBar>
-
-        <Frame x:Name="ContentFrame" Grid.Row="1" />
-    </Grid>
+                </NavigationViewItem.Icon>
+            </NavigationViewItem>
+        </NavigationView.FooterMenuItems>
+        <Frame x:Name="ContentFrame" />
+    </NavigationView>
 </Page>
