@@ -15,37 +15,37 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- Header -->
+        <!--  Header  -->
         <TextBlock
             Grid.Row="0"
             Padding="20,12,20,8"
             Style="{ThemeResource TitleTextBlockStyle}"
             Text="사용자 지정콘 추가" />
 
-        <!-- Content -->
+        <!--  Content  -->
         <ScrollViewer
             Grid.Row="1"
             HorizontalScrollBarVisibility="Disabled"
             VerticalScrollBarVisibility="Hidden">
             <StackPanel Padding="20,4,20,20" Spacing="16">
 
-                <!-- 제목 -->
+                <!--  제목  -->
                 <TextBox
                     x:Name="TitleTextBox"
                     Header="제목"
                     PlaceholderText="패키지 제목을 입력하세요"
                     TextChanged="OnTitleTextBoxTextChanged" />
 
-                <!-- 설명 -->
+                <!--  설명  -->
                 <TextBox
                     x:Name="DescriptionTextBox"
+                    MaxHeight="120"
                     AcceptsReturn="True"
                     Header="설명"
-                    MaxHeight="120"
                     PlaceholderText="패키지 설명을 입력하세요 (선택)"
                     TextWrapping="Wrap" />
 
-                <!-- 대표 이미지 -->
+                <!--  대표 이미지  -->
                 <StackPanel Spacing="8">
                     <TextBlock Style="{ThemeResource BodyStrongTextBlockStyle}" Text="대표 이미지" />
                     <Grid ColumnSpacing="12">
@@ -80,20 +80,20 @@
                     </Grid>
                 </StackPanel>
 
-                <!-- 제작자 이름 -->
+                <!--  제작자 이름  -->
                 <TextBox
                     x:Name="SellerNameTextBox"
                     Header="제작자 이름"
                     PlaceholderText="제작자 이름을 입력하세요 (선택)" />
 
-                <!-- 등록일 -->
+                <!--  등록일  -->
                 <TextBox
                     x:Name="RegistrationDateTextBox"
                     Foreground="{ThemeResource TextFillColorDisabledBrush}"
                     Header="등록일"
                     IsReadOnly="True" />
 
-                <!-- 태그 -->
+                <!--  태그  -->
                 <StackPanel Spacing="8">
                     <TextBlock Style="{ThemeResource BodyStrongTextBlockStyle}" Text="태그" />
                     <Grid ColumnSpacing="8">
@@ -146,11 +146,17 @@
                     </ItemsRepeater>
                 </StackPanel>
 
-                <!-- 스티커 -->
+                <!--  스티커  -->
                 <StackPanel Spacing="8">
                     <Grid>
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <TextBlock Style="{ThemeResource BodyStrongTextBlockStyle}" Text="스티커" />
+                        <StackPanel
+                            VerticalAlignment="Center"
+                            Orientation="Horizontal"
+                            Spacing="8">
+                            <TextBlock
+                                VerticalAlignment="Center"
+                                Style="{ThemeResource BodyStrongTextBlockStyle}"
+                                Text="스티커" />
                             <TextBlock
                                 x:Name="StickerCountTextBlock"
                                 VerticalAlignment="Center"
@@ -158,9 +164,7 @@
                                 Style="{ThemeResource CaptionTextBlockStyle}"
                                 Text="0개" />
                         </StackPanel>
-                        <Button
-                            HorizontalAlignment="Right"
-                            Click="OnAddStickersButtonClicked">
+                        <Button HorizontalAlignment="Right" Click="OnAddStickersButtonClicked">
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <FontIcon FontSize="12" Glyph="&#xE8B9;" />
                                 <TextBlock Text="이미지 추가..." />
@@ -234,7 +238,7 @@
             </StackPanel>
         </ScrollViewer>
 
-        <!-- Bottom bar -->
+        <!--  Bottom bar  -->
         <Border
             Grid.Row="2"
             Padding="20,12"
