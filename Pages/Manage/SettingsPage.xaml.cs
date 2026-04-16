@@ -20,6 +20,7 @@ using Windows.System;
 using Windows.UI.Core;
 using WinRT.Interop;
 using WinUIEx;
+using Windows.Storage;
 
 namespace YellowInside.Pages.Manage;
 
@@ -434,7 +435,7 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         _ => $"0x{virtualKey:X2}",
     };
 
-    private async Task<Windows.Storage.StorageFile> PickPackageExportFileAsync(string suggestedFileName)
+    private static async Task<StorageFile> PickPackageExportFileAsync(string suggestedFileName)
     {
         var savePicker = new FileSavePicker();
         savePicker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
