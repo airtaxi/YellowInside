@@ -142,4 +142,9 @@ public sealed partial class ManageWindow : WindowEx, IRecipient<LaunchOnStartupC
     }
 
     public static void Navigate(Type pageType, object args = null) => Instance.AppFrame.Navigate(pageType, args);
+
+    public static void GoBack()
+    {
+        if (Instance.AppFrame.CanGoBack) Instance.AppFrame.GoBack();
+    }
 }

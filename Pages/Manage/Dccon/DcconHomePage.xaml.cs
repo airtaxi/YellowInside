@@ -1,10 +1,13 @@
+using YellowInside.Helpers;
 using YellowInside.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Navigation;
+using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -105,10 +108,26 @@ public sealed partial class DcconHomePage : Page
     {
         base.OnNavigatedTo(e);
 
-        if (!_isLoaded) await RefreshAsync();
+        if (!_isLoaded)
+        {
+            try { await RefreshAsync(); }
+            catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
+            {
+                ManageWindow.HideLoading();
+                await this.ShowDialogAsync("네트워크 오류", "인터넷 연결을 확인해 주세요.\n오프라인 상태에서는 홈 목록을 불러올 수 없습니다.");
+            }
+        }
     }
 
-    private async void OnRefreshButtonClicked(object sender, RoutedEventArgs e) => await RefreshAsync();
+    private async void OnRefreshButtonClicked(object sender, RoutedEventArgs e)
+    {
+        try { await RefreshAsync(); }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
+        {
+            ManageWindow.HideLoading();
+            await this.ShowDialogAsync("네트워크 오류", "인터넷 연결을 확인해 주세요.\n오프라인 상태에서는 홈 목록을 불러올 수 없습니다.");
+        }
+    }
 
     private async void OnScrollViewViewChanged(ScrollView scrollView, object args)
     {
@@ -118,7 +137,11 @@ public sealed partial class DcconHomePage : Page
         scrollView.ScrollTo(scrollView.HorizontalOffset, 0);
 
         var isHot = scrollView.Tag as string == "Hot";
-        await LoadMoreAsync(isHot, _refreshCancellationTokenSource?.Token ?? default);
+        try { await LoadMoreAsync(isHot, _refreshCancellationTokenSource?.Token ?? default); }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
+        {
+            ManageWindow.HideLoading();
+        }
     }
 
     private void OnScrollViewPointerWheelChanged(object sender, PointerRoutedEventArgs e)

@@ -1,9 +1,12 @@
 using dccon.NET.Models;
+using YellowInside.Helpers;
 using YellowInside.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -96,15 +99,33 @@ public sealed partial class DcconSearchPage : Page
     }
 
     private async void OnSearchAutoSuggestBoxQuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
-        => await SearchAsync(args.QueryText);
+    {
+        try { await SearchAsync(args.QueryText); }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
+        {
+            ManageWindow.HideLoading();
+            await this.ShowDialogAsync("네트워크 오류", "인터넷 연결을 확인해 주세요.\n오프라인 상태에서는 검색할 수 없습니다.");
+        }
+    }
 
     private async void OnResultScrollViewerViewChanged(object sender, ScrollViewerViewChangedEventArgs e)
     {
         if (e.IsIntermediate) return;
         if (!IsScrolledToBottom()) return;
 
-        await FillViewportAsync();
+        try { await FillViewportAsync(); }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
+        {
+            ManageWindow.HideLoading();
+        }
     }
 
-    private async void OnResultScrollViewerSizeChanged(object sender, SizeChangedEventArgs e) => await FillViewportAsync();
+    private async void OnResultScrollViewerSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        try { await FillViewportAsync(); }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
+        {
+            ManageWindow.HideLoading();
+        }
+    }
 }
