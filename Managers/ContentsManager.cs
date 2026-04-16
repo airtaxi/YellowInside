@@ -260,6 +260,18 @@ public static class ContentsManager
     }
 
 	/// <summary>
+	/// 다운로드된 특정 패키지를 반환합니다. 없으면 null을 반환합니다.
+	/// </summary>
+	public static StickerPackage GetDownloadedPackage(ContentSource source, string packageIdentifier)
+	{
+		lock (s_lock)
+		{
+			return s_data.DownloadedPackages.FirstOrDefault(
+				package => package.Source == source && package.PackageIdentifier == packageIdentifier);
+		}
+	}
+
+	/// <summary>
 	/// 특정 패키지가 다운로드되어 있는지 확인합니다.
 	/// </summary>
 	public static bool IsPackageDownloaded(ContentSource source, string packageIdentifier)

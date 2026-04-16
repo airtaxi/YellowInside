@@ -86,67 +86,90 @@ public partial class DetailViewModel : ObservableObject
 
         if (source == ContentSource.Dccon)
         {
-            var packageIndex = int.Parse(packageIdentifier);
-            var detail = await App.DcconClient.GetPackageDetailAsync(packageIndex);
+            var downloadedPackage = ContentsManager.GetDownloadedPackage(source, packageIdentifier);
 
-            _mainImagePath = detail.MainImagePath;
-
-            Title = detail.Title;
-            Description = detail.Description;
-            SellerName = detail.SellerName;
-            Tags = detail.Tags;
-            IconCount = detail.IconCount == 0 ? $"{detail.Stickers.Count}개 스티커" : $"{detail.IconCount}개 스티커";
-            SaleCount = detail.SaleCount == 0 ? "판매량 정보 없음" : $"{detail.SaleCount}회 판매됨";
-
-            var registerationDateText = DateTime.Parse(detail.RegistrationDate);
-            RegisterationDate = registerationDateText.ToString("yyyy년 MM월 dd일 등록");
-
-            if (IsSubscribed) await DownloadMainImageSourceAsync();
+            if (downloadedPackage is not null)
+            {
+                await InitializeFromLocalPackageAsync(source, packageIdentifier, downloadedPackage);
+            }
             else
             {
-                var packages = ContentsManager.GetDownloadedPackages(source);
-                var package = packages.FirstOrDefault(x => x.PackageIdentifier == packageIdentifier);
-                if (package == null) await DownloadMainImageSourceAsync();
-                else MainImageSource = new BitmapImage(new Uri(ContentsManager.GetMainImagePath(source, packageIdentifier, package.MainImageFileName))) { AutoPlay = SettingsManager.GifPlaybackEnabled };
+                await InitializeFromRemoteDcconAsync(packageIdentifier);
             }
-
-            Stickers = [.. detail.Stickers.Select(sticker => new StickerViewModel(packageIdentifier, sticker))];
-
-            await Parallel.ForEachAsync(Stickers, async (sticker, _) => await sticker.FetchImageAsync());
         }
         else if (source == ContentSource.Local)
         {
-            var packages = ContentsManager.GetDownloadedPackages(ContentSource.Local);
-            var package = packages.FirstOrDefault(x => x.PackageIdentifier == packageIdentifier);
+            var package = ContentsManager.GetDownloadedPackage(ContentSource.Local, packageIdentifier);
             if (package is null) return;
 
-            Title = package.Title;
-            Description = package.Description;
-            SellerName = string.IsNullOrWhiteSpace(package.SellerName) ? "제작자 정보 없음" : package.SellerName;
-            Tags = [.. package.Tags];
-            IconCount = $"{package.Stickers.Count}개 스티커";
-            SaleCount = string.Empty;
-
-            if (!string.IsNullOrEmpty(package.RegistrationDate))
-            {
-                if (DateTime.TryParse(package.RegistrationDate, out var registrationDateTime))
-                    RegisterationDate = registrationDateTime.ToString("yyyy년 MM월 dd일 등록");
-                else
-                    RegisterationDate = package.RegistrationDate;
-            }
-
-            if (!string.IsNullOrEmpty(package.MainImageFileName))
-            {
-                var mainImagePath = ContentsManager.GetMainImagePath(source, packageIdentifier, package.MainImageFileName);
-                if (System.IO.File.Exists(mainImagePath))
-                    MainImageSource = new BitmapImage(new Uri(mainImagePath)) { AutoPlay = SettingsManager.GifPlaybackEnabled };
-            }
-
-            Stickers = [.. package.Stickers.Select(sticker => new StickerViewModel(ContentSource.Local, packageIdentifier, sticker))];
+            await InitializeFromLocalPackageAsync(source, packageIdentifier, package);
             IsLocalPackage = true;
-
-            await Parallel.ForEachAsync(Stickers, async (sticker, _) => await sticker.FetchImageAsync());
         }
+    }
+
+    private async Task InitializeFromRemoteDcconAsync(string packageIdentifier)
+    {
+        var packageIndex = int.Parse(packageIdentifier);
+        var detail = await App.DcconClient.GetPackageDetailAsync(packageIndex);
+
+        _mainImagePath = detail.MainImagePath;
+
+        Title = detail.Title;
+        Description = detail.Description;
+        SellerName = detail.SellerName;
+        Tags = detail.Tags;
+        IconCount = detail.IconCount == 0 ? $"{detail.Stickers.Count}개 스티커" : $"{detail.IconCount}개 스티커";
+        SaleCount = detail.SaleCount == 0 ? "판매량 정보 없음" : $"{detail.SaleCount}회 판매됨";
+
+        var registerationDateText = DateTime.Parse(detail.RegistrationDate);
+        RegisterationDate = registerationDateText.ToString("yyyy년 MM월 dd일 등록");
+
+        var downloadedPackage = ContentsManager.GetDownloadedPackage(Source, packageIdentifier);
+        if (downloadedPackage is not null && !string.IsNullOrEmpty(downloadedPackage.MainImageFileName))
+        {
+            var mainImagePath = ContentsManager.GetMainImagePath(Source, packageIdentifier, downloadedPackage.MainImageFileName);
+            if (File.Exists(mainImagePath))
+                MainImageSource = new BitmapImage(new Uri(mainImagePath)) { AutoPlay = SettingsManager.GifPlaybackEnabled };
+            else
+                await DownloadMainImageSourceAsync();
+        }
+        else
+        {
+            await DownloadMainImageSourceAsync();
+        }
+
+        Stickers = [.. detail.Stickers.Select(sticker => new StickerViewModel(packageIdentifier, sticker))];
+
+        await Parallel.ForEachAsync(Stickers, async (sticker, _) => await sticker.FetchImageAsync());
+    }
+
+    private async Task InitializeFromLocalPackageAsync(ContentSource source, string packageIdentifier, StickerPackage package)
+    {
+        Title = package.Title;
+        Description = package.Description;
+        SellerName = string.IsNullOrWhiteSpace(package.SellerName) ? "제작자 정보 없음" : package.SellerName;
+        Tags = [.. package.Tags];
+        IconCount = $"{package.Stickers.Count}개 스티커";
+        SaleCount = source == ContentSource.Dccon ? "판매량 정보 없음" : string.Empty;
+
+        if (!string.IsNullOrEmpty(package.RegistrationDate))
+        {
+            if (DateTime.TryParse(package.RegistrationDate, out var registrationDateTime))
+                RegisterationDate = registrationDateTime.ToString("yyyy년 MM월 dd일 등록");
+            else
+                RegisterationDate = package.RegistrationDate;
+        }
+
+        if (!string.IsNullOrEmpty(package.MainImageFileName))
+        {
+            var mainImagePath = ContentsManager.GetMainImagePath(source, packageIdentifier, package.MainImageFileName);
+            if (File.Exists(mainImagePath))
+                MainImageSource = new BitmapImage(new Uri(mainImagePath)) { AutoPlay = SettingsManager.GifPlaybackEnabled };
+        }
+
+        Stickers = [.. package.Stickers.Select(sticker => new StickerViewModel(source, packageIdentifier, sticker))];
+
+        await Parallel.ForEachAsync(Stickers, async (sticker, _) => await sticker.FetchImageAsync());
     }
 
     private async Task DownloadMainImageSourceAsync() => MainImageSource = await Utils.GenerateImageSourceAsync(ManageWindow.Instance.DispatcherQueue, Source, Utils.GetImageUrl(Source, _mainImagePath));
