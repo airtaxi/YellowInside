@@ -59,12 +59,14 @@
                         Text="{x:Bind ViewModel.SellerName, Mode=OneWay}" />
                     <TextBlock
                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        MaxLines="4"
                         Style="{ThemeResource CaptionTextBlockStyle}"
                         Text="{x:Bind ViewModel.Description, Mode=OneWay}"
+                        TextTrimming="CharacterEllipsis"
                         TextWrapping="Wrap" />
                 </StackPanel>
 
-                <!--  구독 (온라인 소스) -->
+                <!--  구독 (온라인 소스)  -->
                 <Grid
                     Grid.Column="1"
                     HorizontalAlignment="Right"
@@ -84,7 +86,7 @@
                     </Button>
                 </Grid>
 
-                <!--  삭제 (사용자 지정콘) -->
+                <!--  삭제 (사용자 지정콘)  -->
                 <Button
                     Grid.Column="1"
                     HorizontalAlignment="Right"
