@@ -202,6 +202,8 @@ public partial class DetailViewModel : ObservableObject
         ManageWindow.ShowLoading("파일 정리중...");
         try { await ContentsManager.DeletePackageAsync(Source, PackageIdentifier); }
         finally { ManageWindow.HideLoading(); }
+
+        if (IsLocalPackage) ManageWindow.GoBack();
     }
 
     private void OnFavoritesOrPackagesChangedMessageReceived(object recipient, FavoritesOrPackagesChangedMessage message)
