@@ -422,7 +422,7 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
     private async Task ExportPackagesAsync(
         string destinationFilePath,
         string loadingMessage,
-        IReadOnlyCollection<(ContentSource Source, int PackageIndex)> selectedPackageKeys = null)
+        IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> selectedPackageKeys = null)
     {
         try
         {
@@ -443,9 +443,9 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
     private async Task<bool> ConfirmReplaceImportAsync(string sourceFilePath)
     {
         var importedPackages = await ContentsManager.ReadPackagesFromImportFileAsync(sourceFilePath);
-        var importedPackageKeys = importedPackages.Select(package => (package.Source, package.PackageIndex)).ToHashSet();
+        var importedPackageKeys = importedPackages.Select(package => (package.Source, package.PackageIdentifier)).ToHashSet();
         var deletedPackages = ContentsManager.GetDownloadedPackages()
-            .Where(package => !importedPackageKeys.Contains((package.Source, package.PackageIndex)))
+            .Where(package => !importedPackageKeys.Contains((package.Source, package.PackageIdentifier)))
             .ToList();
         if (deletedPackages.Count == 0) return true;
 

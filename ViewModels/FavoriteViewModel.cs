@@ -24,7 +24,7 @@ public partial class FavoriteViewModel : ObservableObject
 {
     public ContentSource Source { get; }
 
-    public int PackageIndex { get; }
+    public string PackageIdentifier { get; }
 
     public string Title { get; }
 
@@ -39,10 +39,10 @@ public partial class FavoriteViewModel : ObservableObject
     public FavoriteViewModel(StickerPackage package)
     {
         Source = package.Source;
-        PackageIndex = package.PackageIndex;
+        PackageIdentifier = package.PackageIdentifier;
         Title = package.Title;
         SellerName = package.SellerName;
-        ThumbnailSource = new BitmapImage(new Uri(ContentsManager.GetMainImagePath(Source, PackageIndex, package.MainImageFileName))) { AutoPlay = SettingsManager.GifPlaybackEnabled };
+        ThumbnailSource = new BitmapImage(new Uri(ContentsManager.GetMainImagePath(Source, PackageIdentifier, package.MainImageFileName))) { AutoPlay = SettingsManager.GifPlaybackEnabled };
         UpdateTags();
 
         WeakReferenceMessenger.Default.Register<FavoritesOrPackagesChangedMessage>(this, OnFavoritesOrPackagesChangedMessageReceived);
@@ -50,11 +50,11 @@ public partial class FavoriteViewModel : ObservableObject
 
     private void UpdateTags()
     {
-        var favoriteCount = ContentsManager.GetFavorites(Source).Count(x => x.PackageIndex == PackageIndex);
+        var favoriteCount = ContentsManager.GetFavorites(Source).Count(x => x.PackageIdentifier == PackageIdentifier);
         Tags = [$"즐겨찾기 {favoriteCount}개"];
     }
 
     private void OnFavoritesOrPackagesChangedMessageReceived(object recipient, FavoritesOrPackagesChangedMessage message) => UpdateTags();
 
-    public void OnClicked(object _, RoutedEventArgs __) => ManageWindow.Navigate(typeof(DetailPage), (Source, PackageIndex));
+    public void OnClicked(object _, RoutedEventArgs __) => ManageWindow.Navigate(typeof(DetailPage), (Source, PackageIdentifier));
 }

@@ -31,7 +31,7 @@ public sealed partial class FavoritesPage : Page
         FavoriteList.Clear();
         var subscriptions = ContentsManager.GetDownloadedPackages();
         var favorites = ContentsManager.GetFavorites();
-        var subscriptionsWithFavorites = subscriptions.Where(s => favorites.Any(f => f.Source == s.Source && f.PackageIndex == s.PackageIndex)).ToList();
+        var subscriptionsWithFavorites = subscriptions.Where(s => favorites.Any(f => f.Source == s.Source && f.PackageIdentifier == s.PackageIdentifier)).ToList();
 
         foreach (var subscription in subscriptionsWithFavorites) FavoriteList.Add(new FavoriteViewModel(subscription));
 
@@ -43,12 +43,12 @@ public sealed partial class FavoritesPage : Page
     {
         var subscriptions = ContentsManager.GetDownloadedPackages();
         var favorites = ContentsManager.GetFavorites();
-        var subscriptionsWithFavorites = subscriptions.Where(s => favorites.Any(f => f.Source == s.Source && f.PackageIndex == s.PackageIndex)).ToList();
+        var subscriptionsWithFavorites = subscriptions.Where(s => favorites.Any(f => f.Source == s.Source && f.PackageIdentifier == s.PackageIdentifier)).ToList();
 
-        var viewModelsToAdd = subscriptionsWithFavorites.Where(s => !FavoriteList.Any(vm => vm.Source == s.Source && vm.PackageIndex == s.PackageIndex)).Select(s => new FavoriteViewModel(s)).ToList();
+        var viewModelsToAdd = subscriptionsWithFavorites.Where(s => !FavoriteList.Any(vm => vm.Source == s.Source && vm.PackageIdentifier == s.PackageIdentifier)).Select(s => new FavoriteViewModel(s)).ToList();
         foreach (var viewModel in viewModelsToAdd) FavoriteList.Add(viewModel);
 
-        var viewModelsToRemove = FavoriteList.Where(vm => !subscriptionsWithFavorites.Any(s => s.Source == vm.Source && s.PackageIndex == vm.PackageIndex)).ToList();
+        var viewModelsToRemove = FavoriteList.Where(vm => !subscriptionsWithFavorites.Any(s => s.Source == vm.Source && s.PackageIdentifier == vm.PackageIdentifier)).ToList();
         foreach (var viewModel in viewModelsToRemove) FavoriteList.Remove(viewModel);
 
         NoFavoritesTextBlock.Visibility = FavoriteList.Count == 0 ? Visibility.Visible : Visibility.Collapsed;

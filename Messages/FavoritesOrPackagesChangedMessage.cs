@@ -6,7 +6,7 @@ using System.Text;
 
 namespace YellowInside.Messages;
 
-public class FavoritesOrPackagesChangedMessage(ContentSource contentSource, int packageIndex) : ValueChangedMessage<int>(packageIndex)
+public class FavoritesOrPackagesChangedMessage(ContentSource contentSource, string packageIdentifier) : ValueChangedMessage<string>(packageIdentifier)
 {
     public ContentSource Source { get; } = contentSource;
 }

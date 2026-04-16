@@ -29,25 +29,26 @@ public static class HistoryManager
         lock (s_lock)
         {
             s_entries = Load();
+            MigratePackageIdentifiers();
         }
     }
 
     /// <summary>
     /// 스티커를 히스토리에 기록합니다. 이미 존재하면 맨 앞으로 이동합니다.
     /// </summary>
-    public static void Record(ContentSource source, int packageIndex, string stickerPath)
+    public static void Record(ContentSource source, string packageIdentifier, string stickerPath)
     {
         lock (s_lock)
         {
             s_entries.RemoveAll(
                 entry => entry.Source == source
-                    && entry.PackageIndex == packageIndex
+                    && entry.PackageIdentifier == packageIdentifier
                     && entry.StickerPath == stickerPath);
 
             s_entries.Insert(0, new HistoryEntry
             {
                 Source = source,
-                PackageIndex = packageIndex,
+                PackageIdentifier = packageIdentifier,
                 StickerPath = stickerPath,
             });
 
@@ -72,16 +73,32 @@ public static class HistoryManager
     /// <summary>
     /// 특정 패키지에 속한 히스토리 항목을 모두 삭제합니다.
     /// </summary>
-    public static void RemoveByPackage(ContentSource source, int packageIndex)
+    public static void RemoveByPackage(ContentSource source, string packageIdentifier)
     {
         bool removed;
         lock (s_lock)
         {
             removed = s_entries.RemoveAll(
-                entry => entry.Source == source && entry.PackageIndex == packageIndex) > 0;
+                entry => entry.Source == source && entry.PackageIdentifier == packageIdentifier) > 0;
         }
 
         if (removed) Save();
+    }
+
+    private static void MigratePackageIdentifiers()
+    {
+        var migrated = false;
+        foreach (var entry in s_entries)
+        {
+            if (!string.IsNullOrEmpty(entry.PackageIdentifier)) continue;
+
+#pragma warning disable CS0618 // Obsolete
+            entry.PackageIdentifier = entry.PackageIndex.ToString();
+#pragma warning restore CS0618
+            migrated = true;
+        }
+
+        if (migrated) Save();
     }
 
     private static List<HistoryEntry> Load()

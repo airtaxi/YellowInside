@@ -68,7 +68,7 @@ public sealed partial class SearchPage : Page
             var searchResult = await App.DcconClient.SearchAsync(_currentQuery, searchType: searchType, sort: searchSort, page: _currentPage);
             foreach (var package in searchResult.Packages)
             {
-                if (!SearchResultList.Any(existing => existing.PackageIndex == package.PackageIndex))
+                if (!SearchResultList.Any(existing => existing.PackageIdentifier == package.PackageIndex.ToString()))
                     SearchResultList.Add(new SearchResultViewModel(package, _searchCancellationTokenSource?.Token ?? default));
             }
 

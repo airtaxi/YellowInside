@@ -24,7 +24,7 @@ public partial class SearchResultViewModel : ObservableObject
 {
     public ContentSource Source { get; }
 
-    public int PackageIndex { get; }
+    public string PackageIdentifier { get; }
 
     public string Title { get; }
 
@@ -39,7 +39,7 @@ public partial class SearchResultViewModel : ObservableObject
     public SearchResultViewModel(DcconPackageSummary dcconPackageSummary, CancellationToken cancellationToken = default)
     {
         Source = ContentSource.Dccon;
-        PackageIndex = dcconPackageSummary.PackageIndex;
+        PackageIdentifier = dcconPackageSummary.PackageIndex.ToString();
         Title = dcconPackageSummary.Title;
         SellerName = dcconPackageSummary.SellerName;
         UpdateFavoriteAndSubscriptionStatus();
@@ -77,8 +77,8 @@ public partial class SearchResultViewModel : ObservableObject
         var subscriptions = ContentsManager.GetDownloadedPackages(Source);
         var favorites = ContentsManager.GetFavorites(Source);
 
-        var isSubscribed = subscriptions.Any(package => package.PackageIndex == PackageIndex);
-        var isFavorite = favorites.Any(favorite => favorite.PackageIndex == PackageIndex);
+        var isSubscribed = subscriptions.Any(package => package.PackageIdentifier == PackageIdentifier);
+        var isFavorite = favorites.Any(favorite => favorite.PackageIdentifier == PackageIdentifier);
 
         var tags = new ObservableCollection<string>();
         if (isSubscribed) tags.Add("구독중");
@@ -89,10 +89,10 @@ public partial class SearchResultViewModel : ObservableObject
 
     private void OnFavoritesOrPackagesChangedMessageReceived(object recipient, FavoritesOrPackagesChangedMessage message)
     {
-        if (message.Source != Source || message.Value != PackageIndex) return;
+        if (message.Source != Source || message.Value != PackageIdentifier) return;
 
         UpdateFavoriteAndSubscriptionStatus();
     }
 
-    public void OnClicked(object _, RoutedEventArgs __) => ManageWindow.Navigate(typeof(DetailPage), (Source, PackageIndex));
+    public void OnClicked(object _, RoutedEventArgs __) => ManageWindow.Navigate(typeof(DetailPage), (Source, PackageIdentifier));
 }

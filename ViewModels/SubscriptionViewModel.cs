@@ -24,7 +24,7 @@ public partial class SubscriptionViewModel : ObservableObject
 {
     public ContentSource Source { get; }
 
-    public int PackageIndex { get; }
+    public string PackageIdentifier { get; }
 
     public string Title { get; }
 
@@ -39,12 +39,12 @@ public partial class SubscriptionViewModel : ObservableObject
     public SubscriptionViewModel(StickerPackage package)
     {
         Source = package.Source;
-        PackageIndex = package.PackageIndex;
+        PackageIdentifier = package.PackageIdentifier;
         Title = package.Title;
         SellerName = package.SellerName;
         Tags = [.. package.Tags];
-        ThumbnailSource = new BitmapImage(new Uri(ContentsManager.GetMainImagePath(Source, PackageIndex, package.MainImageFileName))) { AutoPlay = SettingsManager.GifPlaybackEnabled };
+        ThumbnailSource = new BitmapImage(new Uri(ContentsManager.GetMainImagePath(Source, PackageIdentifier, package.MainImageFileName))) { AutoPlay = SettingsManager.GifPlaybackEnabled };
     }
 
-    public void OnClicked(object _, RoutedEventArgs __) => ManageWindow.Navigate(typeof(DetailPage), (Source, PackageIndex));
+    public void OnClicked(object _, RoutedEventArgs __) => ManageWindow.Navigate(typeof(DetailPage), (Source, PackageIdentifier));
 }

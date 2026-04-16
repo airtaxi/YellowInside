@@ -40,10 +40,10 @@ public sealed partial class SubscriptionsPage : Page
     {
         var subscriptions = ContentsManager.GetDownloadedPackages();
 
-        var viewModelsToAdd = subscriptions.Where(s => !SubscriptionList.Any(vm => vm.PackageIndex == s.PackageIndex)).Select(s => new SubscriptionViewModel(s)).ToList();
+        var viewModelsToAdd = subscriptions.Where(s => !SubscriptionList.Any(vm => vm.PackageIdentifier == s.PackageIdentifier)).Select(s => new SubscriptionViewModel(s)).ToList();
         foreach (var viewModel in viewModelsToAdd) SubscriptionList.Add(viewModel);
 
-        var viewModelsToRemove = SubscriptionList.Where(vm => !subscriptions.Any(s => s.PackageIndex == vm.PackageIndex)).ToList();
+        var viewModelsToRemove = SubscriptionList.Where(vm => !subscriptions.Any(s => s.PackageIdentifier == vm.PackageIdentifier)).ToList();
         foreach (var viewModel in viewModelsToRemove) SubscriptionList.Remove(viewModel);
 
         NoSubscriptionsTextBlock.Visibility = SubscriptionList.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
@@ -61,7 +61,7 @@ public sealed partial class SubscriptionsPage : Page
     private async void OnReorderListViewDragItemsCompleted(ListViewBase sender, DragItemsCompletedEventArgs arguments)
     {
         var orderedPackageKeys = SubscriptionList
-            .Select(viewModel => (viewModel.Source, viewModel.PackageIndex))
+            .Select(viewModel => (viewModel.Source, viewModel.PackageIdentifier))
             .ToList();
         await ContentsManager.ReorderPackagesAsync(orderedPackageKeys);
     }

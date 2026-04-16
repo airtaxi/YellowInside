@@ -224,7 +224,7 @@ public sealed partial class PopupWindow : WindowEx
             return;
         }
 
-        HistoryManager.Record(sticker.Source, sticker.PackageIndex, sticker.StickerPath);
+        HistoryManager.Record(sticker.Source, sticker.PackageIdentifier, sticker.StickerPath);
         await SessionManager.Instance.SendDcconAsync(ViewModel.ChatHwnd, sticker.LocalFilePath);
         Close();
     }

@@ -81,7 +81,7 @@ public sealed partial class HomePage : Page
                 if (_hotListPage >= searchResult.TotalPages) _hotListHasMore = false;
 
                 var viewModels = searchResult.Packages.Select(c => new SearchResultViewModel(c, cancellationToken));
-                foreach (var vm in viewModels.Where(x => !HotList.Any(y => x.PackageIndex == y.PackageIndex))) HotList.Add(vm);
+                foreach (var vm in viewModels.Where(x => !HotList.Any(y => x.PackageIdentifier == y.PackageIdentifier))) HotList.Add(vm);
             }
             else
             {
@@ -92,7 +92,7 @@ public sealed partial class HomePage : Page
                 if (_newListPage >= searchResult.TotalPages) _newListHasMore = false;
 
                 var viewModels = searchResult.Packages.Select(c => new SearchResultViewModel(c, cancellationToken));
-                foreach (var vm in viewModels.Where(x => !NewList.Any(y => x.PackageIndex == y.PackageIndex))) NewList.Add(vm);
+                foreach (var vm in viewModels.Where(x => !NewList.Any(y => x.PackageIdentifier == y.PackageIdentifier))) NewList.Add(vm);
             }
         }
         finally

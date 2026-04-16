@@ -33,7 +33,7 @@ public partial class DetailViewModel : ObservableObject
 {
     public ContentSource Source { get; private set; }
 
-    public int PackageIndex { get; private set; }
+    public string PackageIdentifier { get; private set; }
 
     [ObservableProperty]
     public partial string HeaderText { get; private set; }
@@ -72,10 +72,10 @@ public partial class DetailViewModel : ObservableObject
 
     public DetailViewModel() => WeakReferenceMessenger.Default.Register<FavoritesOrPackagesChangedMessage>(this, OnFavoritesOrPackagesChangedMessageReceived);
 
-    public async Task InitializeAsync(ContentSource source, int packageIndex)
+    public async Task InitializeAsync(ContentSource source, string packageIdentifier)
     {
         Source = source;
-        PackageIndex = packageIndex;
+        PackageIdentifier = packageIdentifier;
 
         HeaderText = $"{source.GetFriendlyName()} 정보";
 
@@ -83,6 +83,7 @@ public partial class DetailViewModel : ObservableObject
 
         if (source == ContentSource.Dccon)
         {
+            var packageIndex = int.Parse(packageIdentifier);
             var detail = await App.DcconClient.GetPackageDetailAsync(packageIndex);
 
             _mainImagePath = detail.MainImagePath;
@@ -101,12 +102,12 @@ public partial class DetailViewModel : ObservableObject
             else
             {
                 var packages = ContentsManager.GetDownloadedPackages(source);
-                var package = packages.FirstOrDefault(x => x.PackageIndex == packageIndex);
+                var package = packages.FirstOrDefault(x => x.PackageIdentifier == packageIdentifier);
                 if (package == null) await DownloadMainImageSourceAsync();
-                else MainImageSource = new BitmapImage(new Uri(ContentsManager.GetMainImagePath(source, packageIndex, package.MainImageFileName))) { AutoPlay = SettingsManager.GifPlaybackEnabled };
+                else MainImageSource = new BitmapImage(new Uri(ContentsManager.GetMainImagePath(source, packageIdentifier, package.MainImageFileName))) { AutoPlay = SettingsManager.GifPlaybackEnabled };
             }
 
-            Stickers = [.. detail.Stickers.Select(sticker => new StickerViewModel(packageIndex, sticker))];
+            Stickers = [.. detail.Stickers.Select(sticker => new StickerViewModel(packageIdentifier, sticker))];
 
             await Parallel.ForEachAsync(Stickers, async (sticker, _) => await sticker.FetchImageAsync());
         }
@@ -114,7 +115,7 @@ public partial class DetailViewModel : ObservableObject
 
     private async Task DownloadMainImageSourceAsync() => MainImageSource = await Utils.GenerateImageSourceAsync(ManageWindow.Instance.DispatcherQueue, Source, Utils.GetImageUrl(Source, _mainImagePath));
 
-    private void UpdateSubscriptionStatus() => IsSubscribed = ContentsManager.IsPackageDownloaded(Source, PackageIndex);
+    private void UpdateSubscriptionStatus() => IsSubscribed = ContentsManager.IsPackageDownloaded(Source, PackageIdentifier);
 
     [RelayCommand]
     public async Task Subscribe()
@@ -124,7 +125,7 @@ public partial class DetailViewModel : ObservableObject
             ManageWindow.ShowLoading("다운로드중...");
             try
             {
-                await ContentsManager.DownloadDcconPackageAsync(PackageIndex,
+                await ContentsManager.DownloadDcconPackageAsync(int.Parse(PackageIdentifier),
                     new Progress<(int Completed, int Total)>(progress => ManageWindow.ShowLoading($"다운로드중... {progress.Completed}/{progress.Total}")));
             }
             finally { ManageWindow.HideLoading(); }
@@ -138,13 +139,13 @@ public partial class DetailViewModel : ObservableObject
         if (result != ContentDialogResult.Primary) return;
 
         ManageWindow.ShowLoading("파일 정리중...");
-        try { await ContentsManager.DeletePackageAsync(Source, PackageIndex); }
+        try { await ContentsManager.DeletePackageAsync(Source, PackageIdentifier); }
         finally { ManageWindow.HideLoading(); }
     }
 
     private void OnFavoritesOrPackagesChangedMessageReceived(object recipient, FavoritesOrPackagesChangedMessage message)
     {
-        if (message.Source != Source || message.Value != PackageIndex) return;
+        if (message.Source != Source || message.Value != PackageIdentifier) return;
 
         UpdateSubscriptionStatus();
     }

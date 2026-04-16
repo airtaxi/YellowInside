@@ -11,7 +11,7 @@ public sealed class PartialPackageExportListViewModel(StickerPackage stickerPack
 {
     public ContentSource Source { get; } = stickerPackage.Source;
 
-    public int PackageIndex { get; } = stickerPackage.PackageIndex;
+    public string PackageIdentifier { get; } = stickerPackage.PackageIdentifier;
 
     public string Title { get; } = stickerPackage.Title;
 
@@ -25,7 +25,7 @@ public sealed class PartialPackageExportListViewModel(StickerPackage stickerPack
 
         var mainImagePath = ContentsManager.GetMainImagePath(
             stickerPackage.Source,
-            stickerPackage.PackageIndex,
+            stickerPackage.PackageIdentifier,
             stickerPackage.MainImageFileName);
         if (!File.Exists(mainImagePath)) return null;
 

@@ -14,11 +14,11 @@ public sealed partial class DetailPage : Page
     {
         base.OnNavigatedTo(e);
 
-        (ContentSource source, int packageIndex) = (ValueTuple<ContentSource, int>)e.Parameter;
+        (ContentSource source, string packageIdentifier) = (ValueTuple<ContentSource, string>)e.Parameter;
 
         var viewModel = DataContext as DetailViewModel;
         ManageWindow.ShowLoading("상세 정보 불러오는 중...");
-        try { await viewModel.InitializeAsync(source, packageIndex); }
+        try { await viewModel.InitializeAsync(source, packageIdentifier); }
         finally { ManageWindow.HideLoading(); }
         
     }

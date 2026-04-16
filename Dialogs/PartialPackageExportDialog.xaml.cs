@@ -15,10 +15,10 @@ public sealed partial class PartialPackageExportDialog : ContentDialog
 {
     public ObservableCollection<PartialPackageExportListViewModel> PackageItems { get; } = [];
 
-    public IReadOnlyList<(ContentSource Source, int PackageIndex)> SelectedPackageKeys =>
+    public IReadOnlyList<(ContentSource Source, string PackageIdentifier)> SelectedPackageKeys =>
         [.. PackageListView.SelectedItems
             .OfType<PartialPackageExportListViewModel>()
-            .Select(partialPackageExportListItem => (partialPackageExportListItem.Source, partialPackageExportListItem.PackageIndex))];
+            .Select(partialPackageExportListItem => (partialPackageExportListItem.Source, partialPackageExportListItem.PackageIdentifier))];
 
     public PartialPackageExportDialog(IReadOnlyList<StickerPackage> stickerPackages)
     {

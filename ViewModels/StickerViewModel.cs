@@ -28,13 +28,13 @@ public partial class StickerViewModel : ObservableObject
     [ObservableProperty]
     public partial bool IsFavorite { get; private set; }
 
-    private readonly int _packageIndex;
+    private readonly string _packageIdentifier;
     private readonly ContentSource _source;
     private readonly string _path;
 
-    public StickerViewModel(int packageIndex, DcconSticker sticker)
+    public StickerViewModel(string packageIdentifier, DcconSticker sticker)
     {
-        _packageIndex = packageIndex;
+        _packageIdentifier = packageIdentifier;
         _source = ContentSource.Dccon;
         _path = sticker.Path;
 
@@ -48,11 +48,11 @@ public partial class StickerViewModel : ObservableObject
         if (IsSubscribed)
         {
             var packages = ContentsManager.GetDownloadedPackages(_source);
-            var package = packages.FirstOrDefault(x => x.PackageIndex == _packageIndex);
+            var package = packages.FirstOrDefault(x => x.PackageIdentifier == _packageIdentifier);
             if (package != null)
             {
                 var sticker = package.Stickers.FirstOrDefault(x => x.Path == _path);
-                var imagePath = ContentsManager.GetStickerImagePath(_source, _packageIndex, package.LocalDirectoryName, sticker.FileName);
+                var imagePath = ContentsManager.GetStickerImagePath(_source, _packageIdentifier, package.LocalDirectoryName, sticker.FileName);
                 ManageWindow.Instance.DispatcherQueue.TryEnqueue(() => { ImageSource = new BitmapImage(new Uri(imagePath)) { AutoPlay = SettingsManager.GifPlaybackEnabled }; });
                 return;
             }
@@ -69,13 +69,13 @@ public partial class StickerViewModel : ObservableObject
 
     private void UpdateFavoriteAndSubscriptionStatus()
     {
-        IsSubscribed = ContentsManager.IsPackageDownloaded(_source, _packageIndex);
-        IsFavorite = IsSubscribed && ContentsManager.IsFavorite(_source, _packageIndex, _path);
+        IsSubscribed = ContentsManager.IsPackageDownloaded(_source, _packageIdentifier);
+        IsFavorite = IsSubscribed && ContentsManager.IsFavorite(_source, _packageIdentifier, _path);
     }
 
     private void OnFavoritesOrPackagesChangedMessageReceived(object recipient, FavoritesOrPackagesChangedMessage message)
     {
-        if (message.Source != _source || message.Value != _packageIndex) return;
+        if (message.Source != _source || message.Value != _packageIdentifier) return;
 
         UpdateFavoriteAndSubscriptionStatus();
     }
@@ -84,7 +84,7 @@ public partial class StickerViewModel : ObservableObject
     {
         if (!IsSubscribed) return;
 
-        if (IsFavorite) await ContentsManager.RemoveFavoriteAsync(_source, _packageIndex, _path);
-        else await ContentsManager.AddFavoriteAsync(_source, _packageIndex, _path);
+        if (IsFavorite) await ContentsManager.RemoveFavoriteAsync(_source, _packageIdentifier, _path);
+        else await ContentsManager.AddFavoriteAsync(_source, _packageIdentifier, _path);
     }
 }
