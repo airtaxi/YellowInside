@@ -20,6 +20,7 @@ public sealed partial class DcconHomePage : Page
     private bool _hotListHasMore = true;
     private bool _newListHasMore = true;
     private bool _isLoaded;
+    private readonly SemaphoreSlim _loadMoreSemaphore = new(1, 1);
     private CancellationTokenSource _refreshCancellationTokenSource;
     private ObservableCollection<SearchResultViewModel> DailyPopularList { get; } = [];
     private ObservableCollection<SearchResultViewModel> WeeklyPopularList { get; } = [];
@@ -68,40 +69,45 @@ public sealed partial class DcconHomePage : Page
 
     private async Task LoadMoreAsync(bool isHot, CancellationToken cancellationToken = default)
     {
-        IsEnabled = false;
-        if (isHot) ManageWindow.ShowLoading("인기콘 불러오는 중...");
-        else ManageWindow.ShowLoading("최신콘 불러오는 중...");
-
+        await _loadMoreSemaphore.WaitAsync();
         try
         {
-            if (isHot)
+            IsEnabled = false;
+            if (isHot) ManageWindow.ShowLoading("인기콘 불러오는 중...");
+            else ManageWindow.ShowLoading("최신콘 불러오는 중...");
+
+            try
             {
-                if (!_hotListHasMore) return;
+                if (isHot)
+                {
+                    if (!_hotListHasMore) return;
 
-                var searchResult = await App.DcconClient.GetHotListAsync(_hotListPage++);
-                cancellationToken.ThrowIfCancellationRequested();
-                if (_hotListPage >= searchResult.TotalPages) _hotListHasMore = false;
+                    var searchResult = await App.DcconClient.GetHotListAsync(_hotListPage++);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (_hotListPage >= searchResult.TotalPages) _hotListHasMore = false;
 
-                var viewModels = searchResult.Packages.Select(c => new SearchResultViewModel(c, cancellationToken));
-                foreach (var viewModel in viewModels.Where(x => !HotList.Any(y => x.PackageIdentifier == y.PackageIdentifier))) HotList.Add(viewModel);
+                    var viewModels = searchResult.Packages.Select(c => new SearchResultViewModel(c, cancellationToken));
+                    foreach (var viewModel in viewModels.Where(x => !HotList.Any(y => x.PackageIdentifier == y.PackageIdentifier))) HotList.Add(viewModel);
+                }
+                else
+                {
+                    if (!_newListHasMore) return;
+
+                    var searchResult = await App.DcconClient.GetNewListAsync(_newListPage++);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (_newListPage >= searchResult.TotalPages) _newListHasMore = false;
+
+                    var viewModels = searchResult.Packages.Select(c => new SearchResultViewModel(c, cancellationToken));
+                    foreach (var viewModel in viewModels.Where(x => !NewList.Any(y => x.PackageIdentifier == y.PackageIdentifier))) NewList.Add(viewModel);
+                }
             }
-            else
+            finally
             {
-                if (!_newListHasMore) return;
-
-                var searchResult = await App.DcconClient.GetNewListAsync(_newListPage++);
-                cancellationToken.ThrowIfCancellationRequested();
-                if (_newListPage >= searchResult.TotalPages) _newListHasMore = false;
-
-                var viewModels = searchResult.Packages.Select(c => new SearchResultViewModel(c, cancellationToken));
-                foreach (var viewModel in viewModels.Where(x => !NewList.Any(y => x.PackageIdentifier == y.PackageIdentifier))) NewList.Add(viewModel);
+                IsEnabled = true;
+                ManageWindow.HideLoading();
             }
         }
-        finally
-        {
-            IsEnabled = true;
-            ManageWindow.HideLoading();
-        }
+        finally { _loadMoreSemaphore.Release(); }
     }
 
     protected override async void OnNavigatedTo(NavigationEventArgs e)
