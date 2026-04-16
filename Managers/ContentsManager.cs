@@ -532,6 +532,30 @@ public static class ContentsManager
 		string sourceFilePath,
 		CancellationToken cancellationToken = default)
 	{
+		var importedData = await ReadDataFromImportFileAsync(sourceFilePath, cancellationToken);
+		return importedData.DownloadedPackages;
+	}
+
+	/// <summary>
+	/// .yip 파일에 즐겨찾기 데이터가 포함되어 있는지 확인합니다.
+	/// </summary>
+	/// <param name="sourceFilePath">불러올 .yip 파일 경로</param>
+	/// <param name="cancellationToken">취소 토큰</param>
+	public static async Task<bool> HasFavoritesInImportFileAsync(
+		string sourceFilePath,
+		CancellationToken cancellationToken = default)
+	{
+		var importedData = await ReadDataFromImportFileAsync(sourceFilePath, cancellationToken);
+		return importedData.Favorites.Count > 0;
+	}
+
+	/// <summary>
+	/// .yip 파일에 포함된 전체 데이터를 읽어옵니다.
+	/// </summary>
+	private static async Task<ContentsManagerData> ReadDataFromImportFileAsync(
+		string sourceFilePath,
+		CancellationToken cancellationToken = default)
+	{
 		using var importArchive = ZipFile.OpenRead(sourceFilePath);
 		var importedDataEntry = importArchive.GetEntry("contents.json")
 			?? throw new InvalidOperationException("유효하지 않은 .yip 파일입니다. contents.json이 존재하지 않습니다.");
@@ -539,7 +563,7 @@ public static class ContentsManager
 		using var importedDataStream = importedDataEntry.Open();
 		var importedData = await DeserializeImportedDataAsync(importedDataStream, cancellationToken);
 		MigrateImportedPackageIdentifiers(importedData);
-		return importedData.DownloadedPackages;
+		return importedData;
 	}
 
 	/// <summary>
@@ -547,8 +571,9 @@ public static class ContentsManager
 	/// </summary>
 	/// <param name="sourceFilePath">불러올 .yip 파일 경로</param>
 	/// <param name="replaceAll">true이면 기존 데이터를 모두 삭제하고 새로 시작, false이면 기존 데이터에 추가만 합니다.</param>
+	/// <param name="importFavorites">true이면 즐겨찾기도 함께 불러옵니다.</param>
 	/// <param name="cancellationToken">취소 토큰</param>
-	public static async Task ImportAsync(string sourceFilePath, bool replaceAll, CancellationToken cancellationToken = default)
+	public static async Task ImportAsync(string sourceFilePath, bool replaceAll, bool importFavorites = true, CancellationToken cancellationToken = default)
 	{
 		var temporaryDirectory = Path.Combine(Path.GetTempPath(), $"YellowInside_Import_{Guid.NewGuid():N}");
 		try
