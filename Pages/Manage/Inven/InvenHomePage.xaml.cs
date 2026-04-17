@@ -1,16 +1,17 @@
 using InvenSticker.NET.Models;
-using YellowInside.Helpers;
-using YellowInside.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Navigation;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using YellowInside.Helpers;
+using YellowInside.ViewModels;
 
 namespace YellowInside.Pages.Manage.Inven;
 
@@ -131,12 +132,17 @@ public sealed partial class InvenHomePage : Page
         }
     }
 
+    private readonly Dictionary<ScrollView, double> _targetHorizontalOffset = [];
     private void OnScrollViewPointerWheelChanged(object sender, PointerRoutedEventArgs e)
     {
         var delta = e.GetCurrentPoint(null).Properties.MouseWheelDelta;
 
         var scrollView = sender as ScrollView;
-        scrollView?.ScrollBy(-delta * 5, 0);
+        if (scrollView == null) return;
+
+        if (!_targetHorizontalOffset.ContainsKey(scrollView)) _targetHorizontalOffset.Add(scrollView, scrollView.HorizontalOffset);
+        _targetHorizontalOffset[scrollView] = Math.Clamp(_targetHorizontalOffset[scrollView] - delta, 0, scrollView.ExtentWidth - scrollView.ViewportWidth);
+        scrollView.ScrollTo(_targetHorizontalOffset[scrollView], 0);
 
         e.Handled = true;
     }

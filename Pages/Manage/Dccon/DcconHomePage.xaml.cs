@@ -10,6 +10,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace YellowInside.Pages.Manage.Dccon;
 
@@ -153,12 +154,17 @@ public sealed partial class DcconHomePage : Page
         }
     }
 
+    private readonly Dictionary<ScrollView, double> _targetHorizontalOffset = [];
     private void OnScrollViewPointerWheelChanged(object sender, PointerRoutedEventArgs e)
     {
         var delta = e.GetCurrentPoint(null).Properties.MouseWheelDelta;
 
         var scrollView = sender as ScrollView;
-        scrollView?.ScrollBy(-delta * 5, 0);
+        if (scrollView == null) return;
+
+        if (!_targetHorizontalOffset.ContainsKey(scrollView)) _targetHorizontalOffset.Add(scrollView, scrollView.HorizontalOffset);
+        _targetHorizontalOffset[scrollView] = Math.Clamp(_targetHorizontalOffset[scrollView] - delta, 0, scrollView.ExtentWidth - scrollView.ViewportWidth);
+        scrollView.ScrollTo(_targetHorizontalOffset[scrollView], 0);
 
         e.Handled = true;
     }
