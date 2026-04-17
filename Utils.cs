@@ -17,7 +17,8 @@ public static class Utils
     public static string GetImageUrl(ContentSource source, string imagePath)
     {
         if (source == ContentSource.Dccon) return $"https://dcimg5.dcinside.com/dccon.php?no={imagePath}";
-        else throw new NotImplementedException("아카콘 이미지 URL 생성 미구현됨");
+        else if (source == ContentSource.Inven) return imagePath;
+        else throw new NotImplementedException("이미지 URL 생성 미구현됨");
     }
 
     public static async Task<ImageSource> GenerateImageSourceAsync(DispatcherQueue dispatcherQueue, ContentSource source, string url)
@@ -44,8 +45,22 @@ public static class Utils
                 });
                 return await taskCompletionSource.Task;
             }
-            catch { return null; } // Ignore
+            catch { return null; }
         }
-        else throw new NotImplementedException("아카콘 이미지 다운로드 미구현됨");
+        else if (source == ContentSource.Inven)
+        {
+            try
+            {
+                var taskCompletionSource = new TaskCompletionSource<ImageSource>();
+                dispatcherQueue.TryEnqueue(() =>
+                {
+                    var bitmapImage = new BitmapImage(new Uri(url)) { AutoPlay = SettingsManager.GifPlaybackEnabled };
+                    taskCompletionSource.SetResult(bitmapImage);
+                });
+                return await taskCompletionSource.Task;
+            }
+            catch { return null; }
+        }
+        else throw new NotImplementedException("이미지 다운로드 미구현됨");
     }
 }

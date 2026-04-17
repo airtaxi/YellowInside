@@ -1,4 +1,5 @@
 ﻿using dccon.NET;
+using InvenSticker.NET;
 using YellowInside.Managers;
 using YellowInsideLib;
 using Microsoft.UI.Xaml;
@@ -18,6 +19,7 @@ public partial class App : Application
     private static ManageWindow s_manageWindow;
     private static PopupWindow s_dcconPopupWindow;
     public static DcconClient DcconClient { get; } = new DcconClient();
+    public static InvenStickerClient InvenStickerClient { get; } = new InvenStickerClient();
     public static HotkeyManager HotkeyManager { get; } = new();
 
     public static bool LaunchOnStartup

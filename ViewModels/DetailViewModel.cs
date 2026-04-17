@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using dccon.NET.Models;
+using InvenSticker.NET.Models;
 using YellowInside.Helpers;
 using YellowInside.Messages;
 using YellowInside.Models;
@@ -98,6 +99,19 @@ public partial class DetailViewModel : ObservableObject
                 await InitializeFromRemoteDcconAsync(packageIdentifier);
             }
         }
+        else if (source == ContentSource.Inven)
+        {
+            var downloadedPackage = ContentsManager.GetDownloadedPackage(source, packageIdentifier);
+
+            if (downloadedPackage is not null)
+            {
+                await InitializeFromLocalPackageAsync(source, packageIdentifier, downloadedPackage);
+            }
+            else
+            {
+                await InitializeFromRemoteInvenAsync(packageIdentifier);
+            }
+        }
         else if (source == ContentSource.Local)
         {
             var package = ContentsManager.GetDownloadedPackage(ContentSource.Local, packageIdentifier);
@@ -144,6 +158,42 @@ public partial class DetailViewModel : ObservableObject
         await Parallel.ForEachAsync(Stickers, async (sticker, _) => await sticker.FetchImageAsync());
     }
 
+    private async Task InitializeFromRemoteInvenAsync(string packageIdentifier)
+    {
+        var packageId = int.Parse(packageIdentifier);
+        var detail = await App.InvenStickerClient.GetDetailAsync(packageId);
+
+        _mainImagePath = detail.ThumbnailUrl;
+
+        Title = detail.Title;
+        Description = detail.PriceInfo;
+        SellerName = detail.AuthorName;
+        Tags = detail.Tags;
+        IconCount = $"{detail.Images.Count}개 스티커";
+        SaleCount = detail.SalesCount == 0 ? "판매량 정보 없음" : $"{detail.SalesCount}회 판매됨";
+
+        if (!string.IsNullOrEmpty(detail.RegistrationDate) && DateTime.TryParse(detail.RegistrationDate, out var registrationDateTime))
+            RegisterationDate = registrationDateTime.ToString("yyyy년 MM월 dd일 등록");
+
+        var downloadedPackage = ContentsManager.GetDownloadedPackage(Source, packageIdentifier);
+        if (downloadedPackage is not null && !string.IsNullOrEmpty(downloadedPackage.MainImageFileName))
+        {
+            var mainImagePath = ContentsManager.GetMainImagePath(Source, packageIdentifier, downloadedPackage.MainImageFileName);
+            if (File.Exists(mainImagePath))
+                MainImageSource = new BitmapImage(new Uri(mainImagePath)) { AutoPlay = SettingsManager.GifPlaybackEnabled };
+            else
+                await DownloadMainImageSourceAsync();
+        }
+        else
+        {
+            await DownloadMainImageSourceAsync();
+        }
+
+        Stickers = [.. detail.Images.Select(sticker => new StickerViewModel(packageIdentifier, sticker))];
+
+        await Parallel.ForEachAsync(Stickers, async (sticker, _) => await sticker.FetchImageAsync());
+    }
+
     private async Task InitializeFromLocalPackageAsync(ContentSource source, string packageIdentifier, StickerPackage package)
     {
         Title = package.Title;
@@ -186,6 +236,16 @@ public partial class DetailViewModel : ObservableObject
             try
             {
                 await ContentsManager.DownloadDcconPackageAsync(int.Parse(PackageIdentifier),
+                    new Progress<(int Completed, int Total)>(progress => ManageWindow.ShowLoading($"다운로드중... {progress.Completed}/{progress.Total}")));
+            }
+            finally { ManageWindow.HideLoading(); }
+        }
+        else if (Source == ContentSource.Inven)
+        {
+            ManageWindow.ShowLoading("다운로드중...");
+            try
+            {
+                await ContentsManager.DownloadInvenStickerPackageAsync(int.Parse(PackageIdentifier),
                     new Progress<(int Completed, int Total)>(progress => ManageWindow.ShowLoading($"다운로드중... {progress.Completed}/{progress.Total}")));
             }
             finally { ManageWindow.HideLoading(); }

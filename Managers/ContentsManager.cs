@@ -1,6 +1,8 @@
 ﻿using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using dccon.NET;
+using InvenSticker.NET;
+using InvenSticker.NET.Models;
 using YellowInside.Messages;
 using YellowInside.Models;
 using System;
@@ -22,6 +24,7 @@ public static class ContentsManager
 	private static readonly Lock s_lock = new();
 	private static readonly HttpClient s_httpClient = new();
 	private static readonly DcconClient s_dcconClient = new(s_httpClient);
+	private static readonly InvenStickerClient s_stickerClient = new(s_httpClient);
 
 	private static ContentsManagerData s_data = new();
 	private static string s_basePath = string.Empty;
@@ -376,6 +379,66 @@ public static class ContentsManager
 		PackagesChanged?.Invoke();
         WeakReferenceMessenger.Default.Send(new FavoritesOrPackagesChangedMessage(ContentSource.Dccon, packageIdentifier));
     }
+
+	public static async Task DownloadInvenStickerPackageAsync(
+		int packageId,
+		IProgress<(int Completed, int Total)> progress = null,
+		CancellationToken cancellationToken = default)
+	{
+		var packageIdentifier = packageId.ToString();
+
+		lock (s_lock)
+		{
+			if (s_data.DownloadedPackages.Any(
+				package => package.Source == ContentSource.Inven && package.PackageIdentifier == packageIdentifier))
+				return;
+		}
+
+		var detail = await s_stickerClient.GetDetailAsync(packageId, cancellationToken);
+
+		var packageDirectory = GetPackageDirectory(ContentSource.Inven, packageIdentifier);
+		Directory.CreateDirectory(packageDirectory);
+
+		await s_stickerClient.DownloadPackageAsync(packageId, packageDirectory, progress, cancellationToken);
+
+		var mainImageFileName = await DownloadMainImageAsync(
+			ContentSource.Inven, detail.ThumbnailUrl, packageDirectory, cancellationToken);
+
+		var localDirectoryName = InvenStickerFileNameHelper.SanitizeFileName(detail.Title);
+
+		var stickerPackage = new StickerPackage
+		{
+			Source = ContentSource.Inven,
+			PackageIdentifier = packageIdentifier,
+			Title = detail.Title,
+			Description = detail.PriceInfo,
+			MainImagePath = detail.ThumbnailUrl,
+			MainImageFileName = mainImageFileName,
+			SellerName = detail.AuthorName,
+			RegistrationDate = detail.RegistrationDate,
+			LocalDirectoryName = localDirectoryName,
+			LocalDirectoryPath = Path.Combine(packageDirectory, localDirectoryName),
+			Stickers = [.. detail.Images.Select((sticker, index) => new Sticker
+			{
+				Path = sticker.Url,
+				Extension = sticker.Extension,
+				SortNumber = index,
+				ImageUrl = sticker.Url,
+				FileName = InvenStickerFileNameHelper.GetStickerFileName(sticker, index),
+			})],
+			Tags = [.. detail.Tags],
+		};
+
+		lock (s_lock)
+		{
+			s_data.DownloadedPackages.Add(stickerPackage);
+		}
+
+		await SaveAsync();
+
+		PackagesChanged?.Invoke();
+		WeakReferenceMessenger.Default.Send(new FavoritesOrPackagesChangedMessage(ContentSource.Inven, packageIdentifier));
+	}
 
 	/// <summary>
 	/// 다운로드된 패키지 목록을 반환합니다.

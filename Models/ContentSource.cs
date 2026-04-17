@@ -19,6 +19,7 @@ public static class ContentSourceExtensions
 		{
 			ContentSource.Dccon => "디시콘",
 			ContentSource.Arcacon => "아카콘",
+			ContentSource.Inven => "인벤 스티커",
 			ContentSource.Local => "사용자 지정콘",
 			_ => "알 수 없음"
 		};

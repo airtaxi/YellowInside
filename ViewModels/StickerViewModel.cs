@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Messaging;
 using dccon.NET.Models;
+using InvenSticker.NET.Models;
 using YellowInside.Messages;
 using YellowInside.Models;
 using Microsoft.UI.Xaml.Input;
@@ -8,11 +9,9 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.SymbolStore;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace YellowInside.ViewModels;
@@ -42,6 +41,17 @@ public partial class StickerViewModel : ObservableObject
         WeakReferenceMessenger.Default.Register<FavoritesOrPackagesChangedMessage>(this, OnFavoritesOrPackagesChangedMessageReceived);
     }
 
+    public StickerViewModel(string packageIdentifier, InvenStickerImage stickerImage)
+    {
+        _packageIdentifier = packageIdentifier;
+        _source = ContentSource.Inven;
+        _path = stickerImage.Url;
+
+        UpdateFavoriteAndSubscriptionStatus();
+        WeakReferenceMessenger.Default.Register<FavoritesOrPackagesChangedMessage>(this, OnFavoritesOrPackagesChangedMessageReceived);
+    }
+
+
     public StickerViewModel(ContentSource source, string packageIdentifier, Models.Sticker sticker)
     {
         _packageIdentifier = packageIdentifier;
@@ -51,7 +61,6 @@ public partial class StickerViewModel : ObservableObject
         UpdateFavoriteAndSubscriptionStatus();
         WeakReferenceMessenger.Default.Register<FavoritesOrPackagesChangedMessage>(this, OnFavoritesOrPackagesChangedMessageReceived);
     }
-
     public async Task FetchImageAsync()
     {
         // If the package is subscribed, we can get the image from local storage. Otherwise, we need to fetch it from the web.

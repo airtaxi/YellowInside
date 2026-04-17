@@ -1,7 +1,7 @@
-﻿using AngleSharp.Dom;
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Messaging;
 using dccon.NET.Models;
+using InvenSticker.NET.Models;
 using YellowInside.Messages;
 using YellowInside.Models;
 using YellowInside.Pages;
@@ -9,13 +9,11 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using System;
-using System.Buffers.Text;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Text;
 using System.Threading;
 
 namespace YellowInside.ViewModels;
@@ -48,11 +46,23 @@ public partial class SearchResultViewModel : ObservableObject
         WeakReferenceMessenger.Default.Register<FavoritesOrPackagesChangedMessage>(this, OnFavoritesOrPackagesChangedMessageReceived);
     }
 
+    public SearchResultViewModel(InvenStickerPackageSummary stickerPackageSummary, CancellationToken cancellationToken = default)
+    {
+        Source = ContentSource.Inven;
+        PackageIdentifier = stickerPackageSummary.PackageId.ToString();
+        Title = stickerPackageSummary.Title;
+        SellerName = stickerPackageSummary.AuthorName;
+        UpdateFavoriteAndSubscriptionStatus();
+        FetchThumbnail(stickerPackageSummary.ThumbnailUrl, cancellationToken);
+
+        WeakReferenceMessenger.Default.Register<FavoritesOrPackagesChangedMessage>(this, OnFavoritesOrPackagesChangedMessageReceived);
+    }
+
     private async void FetchThumbnail(string url, CancellationToken cancellationToken)
     {
-        if (Source == ContentSource.Dccon)
+        try
         {
-            try
+            if (Source == ContentSource.Dccon)
             {
                 using var httpClient = new HttpClient();
                 var request = new HttpRequestMessage(HttpMethod.Get, url);
@@ -68,8 +78,13 @@ public partial class SearchResultViewModel : ObservableObject
                 await bitmapImage.SetSourceAsync(stream.AsRandomAccessStream());
                 ThumbnailSource = bitmapImage;
             }
-            catch { } // Ignore
+            else if (Source == ContentSource.Inven)
+            {
+                var bitmapImage = new BitmapImage(new Uri(url)) { AutoPlay = SettingsManager.GifPlaybackEnabled };
+                ThumbnailSource = bitmapImage;
+            }
         }
+        catch { }
     }
 
     private void UpdateFavoriteAndSubscriptionStatus()
