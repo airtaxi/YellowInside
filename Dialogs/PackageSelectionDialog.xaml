@@ -39,7 +39,7 @@
                             <Image
                                 HorizontalAlignment="Stretch"
                                 VerticalAlignment="Stretch"
-                                Source="{x:Bind ThumbnailSource, Mode=OneWay}"
+                                Source="{x:Bind ThumbnailSource}"
                                 Stretch="Uniform" />
                         </Border>
                         <StackPanel

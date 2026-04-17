@@ -38,7 +38,7 @@
                                 VerticalAlignment="Center"
                                 Foreground="Red"
                                 Symbol="Delete" />
-    
+
                             <StackPanel Grid.Column="1" Spacing="2">
                                 <TextBlock
                                     Style="{ThemeResource BodyStrongTextBlockStyle}"
@@ -59,9 +59,9 @@
         <TextBlock
             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
             Style="{ThemeResource CaptionTextBlockStyle}"
-            Text="{x:Bind AdditionalDeletedPackagesText, Mode=OneWay}"
+            Text="{x:Bind AdditionalDeletedPackagesText}"
             TextWrapping="Wrap"
-            Visibility="{x:Bind AdditionalDeletedPackagesVisibility, Mode=OneWay}" />
+            Visibility="{x:Bind AdditionalDeletedPackagesVisibility}" />
 
         <TextBlock Text="계속 진행할까요?" TextWrapping="Wrap" />
     </StackPanel>
