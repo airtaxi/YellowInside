@@ -158,7 +158,7 @@ public sealed partial class DcconHomePage : Page
         var delta = e.GetCurrentPoint(null).Properties.MouseWheelDelta;
 
         var scrollView = sender as ScrollView;
-        scrollView?.ScrollBy(-delta, 0);
+        scrollView?.ScrollBy(-delta * 5, 0);
 
         e.Handled = true;
     }
