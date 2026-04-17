@@ -59,8 +59,7 @@
                 VerticalAlignment="Center"
                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                 Style="{ThemeResource SubtitleTextBlockStyle}"
-                Text="검색 결과가 없습니다"
-                Visibility="Collapsed" />
+                Text="검색 결과가 없습니다" />
 
             <ScrollViewer
                 x:Name="ResultScrollViewer"
