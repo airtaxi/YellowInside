@@ -30,6 +30,7 @@ public sealed partial class ManageWindow : WindowEx, IRecipient<LaunchOnStartupC
     private readonly Subclassprocedure _subclassprocedure;
     private bool _forceClose;
     private bool _systemShutdown;
+    private bool _shouldClearBackStackOnNextNavigation;
 
     public ManageWindow()
     {
@@ -52,7 +53,16 @@ public sealed partial class ManageWindow : WindowEx, IRecipient<LaunchOnStartupC
         AppFrame.Navigate(typeof(ManagePage));
     }
 
-    private void OnAppFrameNavigated(object sender, Microsoft.UI.Xaml.Navigation.NavigationEventArgs e) => AppTitleBar.IsPaneToggleButtonVisible = e.SourcePageType == typeof(ManagePage);
+    private void OnAppFrameNavigated(object sender, Microsoft.UI.Xaml.Navigation.NavigationEventArgs navigationEventArgs)
+    {
+        if (_shouldClearBackStackOnNextNavigation)
+        {
+            AppFrame.BackStack.Clear();
+            _shouldClearBackStackOnNextNavigation = false;
+        }
+
+        UpdateTitleBarNavigationState(navigationEventArgs.SourcePageType);
+    }
 
     private nint WindowSubclassProc(nint windowHandle, uint message, nint wParam, nint lParam, nuint subclassId, nuint referenceData)
     {
@@ -124,6 +134,9 @@ public sealed partial class ManageWindow : WindowEx, IRecipient<LaunchOnStartupC
 
     private void OnAppTitleBarBackRequested(TitleBar sender, object args)
     {
+        if (AppFrame.Content is ArcaconLoginPage)
+            return;
+
         if (AppFrame.CanGoBack)
         {
             AppFrame.GoBack();
@@ -143,8 +156,23 @@ public sealed partial class ManageWindow : WindowEx, IRecipient<LaunchOnStartupC
 
     public static void Navigate(Type pageType, object args = null) => Instance.AppFrame.Navigate(pageType, args);
 
+    public static void NavigateAndClearBackStack(Type pageType, object args = null)
+    {
+        Instance._shouldClearBackStackOnNextNavigation = true;
+        Instance.AppFrame.Navigate(pageType, args);
+    }
+
     public static void GoBack()
     {
+        if (Instance.AppFrame.Content is ArcaconLoginPage)
+            return;
+
         if (Instance.AppFrame.CanGoBack) Instance.AppFrame.GoBack();
+    }
+
+    private void UpdateTitleBarNavigationState(Type currentPageType)
+    {
+        AppTitleBar.IsPaneToggleButtonVisible = currentPageType == typeof(ManagePage);
+        AppTitleBar.IsBackButtonVisible = currentPageType != typeof(ArcaconLoginPage) && AppFrame.CanGoBack;
     }
 }

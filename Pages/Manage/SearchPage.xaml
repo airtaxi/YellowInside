@@ -15,6 +15,7 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
         <SelectorBar
+            x:Name="ContentSourceSelectorBar"
             Grid.Row="0"
             SelectedItem="{x:Bind DcconSelectorBarItem}"
             SelectionChanged="OnSelectorBarSelectionChanged">

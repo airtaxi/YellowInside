@@ -1,12 +1,14 @@
 using Arcacon.NET.Exceptions;
 using Arcacon.NET.Models;
-using YellowInside.Pages.Manage.Arcacon;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
 using YellowInside.Models;
+using YellowInside.Pages;
+using YellowInside.Pages.Manage;
+using YellowInside.Pages.Manage.Arcacon;
 
 namespace YellowInside.Helpers;
 
@@ -28,15 +30,7 @@ public static class ArcaconSessionHelper
             return true;
         }
 
-        var contentDialogResult = await dialogHostElement.ShowDialogAsync(
-            EntryDialogTitle,
-            EntryDialogDescription,
-            "이동",
-            "취소");
-        if (contentDialogResult != ContentDialogResult.Primary) return false;
-
-        NavigateToArcaconLoginPage(navigateAction, targetPageType, targetPageParameter);
-        return true;
+        return await PromptArcaconLoginPageNavigationAsync(dialogHostElement, targetPageType, targetPageParameter);
     }
 
     public static async Task<ArcaconSearchResult> EnsureArcaconSessionAsync(
@@ -49,128 +43,65 @@ public static class ArcaconSessionHelper
         try { return await App.ArcaconClient.GetNewListAsync(cancellationToken: cancellationToken); }
         catch (Exception exception) when (exception is ArcaconLoginException or InvalidOperationException)
         {
-            var contentDialogResult = await dialogHostElement.ShowDialogAsync(
-                EntryDialogTitle,
-                SessionExpiredDialogDescription,
-                "이동",
-                "취소");
-            if (contentDialogResult != ContentDialogResult.Primary) return null;
-
-            NavigateToArcaconLoginPage(navigateAction, returnPageType, returnPageParameter);
+            await PromptArcaconLoginPageNavigationAsync(dialogHostElement, returnPageType, returnPageParameter, isSessionExpired: true);
             return null;
         }
     }
 
-    public static async Task<bool> ShowArcaconLoginDialogAsync(UIElement dialogHostElement)
+    public static async Task<bool> PromptArcaconLoginPageNavigationAsync(
+        UIElement dialogHostElement,
+        Type returnPageType,
+        object returnPageParameter = null,
+        bool isSessionExpired = false)
     {
-        var loginInstructionTextBlock = new TextBlock
-        {
-            Foreground = Application.Current.Resources["TextFillColorSecondaryBrush"] as Microsoft.UI.Xaml.Media.Brush,
-            Text = "아카라이브 로그인 후 자동으로 계속 진행합니다.",
-            TextWrapping = TextWrapping.Wrap,
-        };
-        var loginWebView = new WebView2
-        {
-            MinHeight = 420,
-        };
-        var loginProgressRing = new ProgressRing
-        {
-            Width = 20,
-            Height = 20,
-            IsActive = true,
-        };
-        var loginStatusTextBlock = new TextBlock
-        {
-            VerticalAlignment = VerticalAlignment.Center,
-            Foreground = Application.Current.Resources["TextFillColorSecondaryBrush"] as Microsoft.UI.Xaml.Media.Brush,
-            Text = "로그인 페이지를 준비하는 중...",
-            TextWrapping = TextWrapping.Wrap,
-        };
-        var loginFooterGrid = new Grid
-        {
-            ColumnSpacing = 8,
-        };
-        loginFooterGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        loginFooterGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        loginFooterGrid.Children.Add(loginProgressRing);
-        loginFooterGrid.Children.Add(loginStatusTextBlock);
-        Grid.SetColumn(loginStatusTextBlock, 1);
+        var contentDialogResult = await dialogHostElement.ShowDialogAsync(
+            EntryDialogTitle,
+            isSessionExpired ? SessionExpiredDialogDescription : EntryDialogDescription,
+            "이동",
+            "취소");
+        if (contentDialogResult != ContentDialogResult.Primary) return false;
 
-        var loginContentGrid = new Grid
-        {
-            RowSpacing = 12,
-        };
-        loginContentGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        loginContentGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        loginContentGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        loginContentGrid.Children.Add(loginInstructionTextBlock);
-        loginContentGrid.Children.Add(loginWebView);
-        loginContentGrid.Children.Add(loginFooterGrid);
-        Grid.SetRow(loginWebView, 1);
-        Grid.SetRow(loginFooterGrid, 2);
-
-        using var loginCancellationTokenSource = new CancellationTokenSource();
-        var loginTaskCompletionSource = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var isLoginSuccessful = false;
-        Exception loginException = null;
-
-        var loginContentDialog = new ContentDialog
-        {
-            Title = "아카콘 로그인",
-            Content = loginContentGrid,
-            CloseButtonText = "취소",
-            DefaultButton = ContentDialogButton.Close,
-            RequestedTheme = SettingsManager.GetElementTheme(),
-            XamlRoot = dialogHostElement.XamlRoot,
-        };
-
-        loginContentDialog.Closing += (_, _) =>
-        {
-            if (!isLoginSuccessful && !loginCancellationTokenSource.IsCancellationRequested)
-                loginCancellationTokenSource.Cancel();
-        };
-        loginContentDialog.Opened += async (_, _) =>
-        {
-            try
-            {
-                await loginWebView.EnsureCoreWebView2Async();
-                if (loginWebView.CoreWebView2 is null) throw new InvalidOperationException("WebView2 초기화에 실패했습니다.");
-
-                loginStatusTextBlock.Text = "아카라이브에 로그인해 주세요.";
-                await App.ArcaconClient.LoginAsync(loginWebView.CoreWebView2, loginCancellationTokenSource.Token);
-
-                if (loginCancellationTokenSource.IsCancellationRequested) return;
-
-                isLoginSuccessful = true;
-                loginStatusTextBlock.Text = "로그인 완료. 계속 진행하는 중...";
-                loginContentDialog.Hide();
-            }
-            catch (OperationCanceledException)
-            {
-            }
-            catch (Exception exception)
-            {
-                loginException = exception;
-                loginContentDialog.Hide();
-            }
-            finally
-            {
-                loginProgressRing.IsActive = false;
-                loginTaskCompletionSource.TrySetResult(true);
-            }
-        };
-
-        await loginContentDialog.ShowAsync();
-        await loginTaskCompletionSource.Task;
-
-        if (loginException is not null)
-        {
-            await dialogHostElement.ShowDialogAsync("아카콘 로그인 실패", loginException.Message);
-            return false;
-        }
-
-        return isLoginSuccessful;
+        NavigateToArcaconLoginPage(returnPageType, returnPageParameter);
+        return true;
     }
 
-    private static void NavigateToArcaconLoginPage(Action<Type, object> navigateAction, Type returnPageType, object returnPageParameter) => navigateAction(typeof(ArcaconLoginPage), new ArcaconLoginPageNavigationArguments(returnPageType, returnPageParameter));
+    public static void NavigateToArcaconLoginPage(Type returnPageType, object returnPageParameter = null)
+    {
+        var (normalizedReturnPageType, normalizedReturnPageParameter) = NormalizeArcaconLoginReturnPage(returnPageType, returnPageParameter);
+        ManageWindow.NavigateAndClearBackStack(
+            typeof(ArcaconLoginPage),
+            new ArcaconLoginPageNavigationArguments(normalizedReturnPageType, normalizedReturnPageParameter));
+    }
+
+    private static (Type ReturnPageType, object ReturnPageParameter) NormalizeArcaconLoginReturnPage(Type returnPageType, object returnPageParameter)
+    {
+        if (returnPageType == typeof(ArcaconHomePage))
+        {
+            return (
+                typeof(ManagePage),
+                new ManagePageNavigationArguments(
+                    typeof(HomePage),
+                    new HomePageNavigationArguments(OpenArcaconPage: true)));
+        }
+
+        if (returnPageType == typeof(ArcaconSearchPage))
+        {
+            return (
+                typeof(ManagePage),
+                new ManagePageNavigationArguments(
+                    typeof(SearchPage),
+                    new SearchPageNavigationArguments(OpenArcaconPage: true)));
+        }
+
+        if (returnPageType == typeof(SettingsPage))
+        {
+            return (
+                typeof(ManagePage),
+                new ManagePageNavigationArguments(
+                    typeof(SettingsPage),
+                    returnPageParameter));
+        }
+
+        return (returnPageType, returnPageParameter);
+    }
 }

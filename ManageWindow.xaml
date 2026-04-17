@@ -48,7 +48,6 @@
             Title="옐로우 인사이드"
             Grid.Row="0"
             BackRequested="OnAppTitleBarBackRequested"
-            IsBackButtonVisible="{Binding ElementName=AppFrame, Path=CanGoBack}"
             IsPaneToggleButtonVisible="True"
             PaneToggleRequested="OnAppTitleBarPaneToggleRequested">
             <TitleBar.IconSource>

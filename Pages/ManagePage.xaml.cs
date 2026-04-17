@@ -18,15 +18,25 @@ public sealed partial class ManagePage : Page
     private static readonly Uri s_storeApiUri = new($"https://storeedgefd.dsx.mp.microsoft.com/v9.0/products/{StoreProductId}?market=KR&locale=ko-KR&deviceFamily=Windows.Desktop");
 
     private static bool s_whatsNewChecked;
+    private bool _isProgrammaticNavigationSelection;
 
     public ManagePage() => InitializeComponent();
 
     public void ToggleNavigationPane() => NavigationView.IsPaneOpen = !NavigationView.IsPaneOpen;
 
+    protected override void OnNavigatedTo(Microsoft.UI.Xaml.Navigation.NavigationEventArgs navigationEventArgs)
+    {
+        base.OnNavigatedTo(navigationEventArgs);
+
+        if (navigationEventArgs.NavigationMode == Microsoft.UI.Xaml.Navigation.NavigationMode.New
+            && navigationEventArgs.Parameter is ManagePageNavigationArguments managePageNavigationArguments)
+            NavigateToContentPage(managePageNavigationArguments.ContentPageType, managePageNavigationArguments.ContentPageParameter, updateNavigationSelection: true);
+    }
+
     private async void OnPageLoaded(object sender, RoutedEventArgs e)
     {
         if (NavigationView.SelectedItem is null)
-            NavigationView.SelectedItem = HomeNavigationViewItem;
+            NavigateToContentPage(typeof(HomePage), updateNavigationSelection: true);
 
         await ShowWhatsNewIfFirstLaunchAsync();
     }
@@ -78,6 +88,7 @@ public sealed partial class ManagePage : Page
 
     private void OnNavigationViewSelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
     {
+        if (_isProgrammaticNavigationSelection) return;
         if (args.SelectedItem is not NavigationViewItem selectedItem) return;
 
         var pageType = (selectedItem.Tag as string) switch
@@ -91,6 +102,34 @@ public sealed partial class ManagePage : Page
             _ => null
         };
 
-        if (pageType is not null) ContentFrame.Navigate(pageType);
+        if (pageType is not null) NavigateToContentPage(pageType);
+    }
+
+    private void NavigateToContentPage(Type contentPageType, object contentPageParameter = null, bool updateNavigationSelection = false)
+    {
+        if (updateNavigationSelection)
+            SelectNavigationViewItem(contentPageType);
+
+        if (ContentFrame.Content?.GetType() == contentPageType && contentPageParameter is null)
+            return;
+
+        ContentFrame.Navigate(contentPageType, contentPageParameter);
+    }
+
+    private void SelectNavigationViewItem(Type contentPageType)
+    {
+        var navigationViewItem = contentPageType == typeof(HomePage) ? HomeNavigationViewItem
+            : contentPageType == typeof(SearchPage) ? SearchNavigationViewItem
+            : contentPageType == typeof(SubscriptionsPage) ? SubscriptionsNavigationViewItem
+            : contentPageType == typeof(FavoritesPage) ? FavoritesNavigationViewItem
+            : contentPageType == typeof(CustomPackagesPage) ? CustomPackagesNavigationViewItem
+            : contentPageType == typeof(SettingsPage) ? SettingsNavigationViewItem
+            : null;
+        if (navigationViewItem is null || ReferenceEquals(NavigationView.SelectedItem, navigationViewItem))
+            return;
+
+        _isProgrammaticNavigationSelection = true;
+        NavigationView.SelectedItem = navigationViewItem;
+        _isProgrammaticNavigationSelection = false;
     }
 }

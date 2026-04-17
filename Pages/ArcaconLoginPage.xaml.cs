@@ -1,17 +1,18 @@
-using YellowInside.Helpers;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using YellowInside.Helpers;
 using YellowInside.Models;
+using YellowInside.Pages.Manage;
 
-namespace YellowInside.Pages.Manage.Arcacon;
+namespace YellowInside.Pages;
 
 public sealed partial class ArcaconLoginPage : Page
 {
-    private ArcaconLoginPageNavigationArguments _navigationArguments = new(typeof(ArcaconHomePage), null);
+    private ArcaconLoginPageNavigationArguments _navigationArguments = CreateDefaultNavigationArguments();
     private CancellationTokenSource _loginCancellationTokenSource;
     private bool _isLoggingIn;
 
@@ -22,7 +23,7 @@ public sealed partial class ArcaconLoginPage : Page
         base.OnNavigatedTo(navigationEventArgs);
 
         _navigationArguments = navigationEventArgs.Parameter as ArcaconLoginPageNavigationArguments
-            ?? new ArcaconLoginPageNavigationArguments(typeof(ArcaconHomePage), null);
+            ?? CreateDefaultNavigationArguments();
         await StartLoginAsync();
     }
 
@@ -59,10 +60,13 @@ public sealed partial class ArcaconLoginPage : Page
             if (_loginCancellationTokenSource.IsCancellationRequested) return;
 
             StatusTextBlock.Text = "로그인 완료. 페이지로 이동하는 중...";
-            Frame.Navigate(_navigationArguments.ReturnPageType, _navigationArguments.ReturnPageParameter);
+            ManageWindow.NavigateAndClearBackStack(_navigationArguments.ReturnPageType, _navigationArguments.ReturnPageParameter);
         }
-        catch (OperationCanceledException) { StatusTextBlock.Text = "로그인이 취소되었습니다."; }
-        catch (Exception exception) 
+        catch (OperationCanceledException)
+        {
+            StatusTextBlock.Text = "로그인이 취소되었습니다.";
+        }
+        catch (Exception exception)
         {
             StatusTextBlock.Text = "로그인에 실패했습니다. 다시 시도해 주세요.";
             await this.ShowDialogAsync("아카콘 로그인 실패", exception.Message);
@@ -74,6 +78,13 @@ public sealed partial class ArcaconLoginPage : Page
             _isLoggingIn = false;
         }
     }
+
+    private static ArcaconLoginPageNavigationArguments CreateDefaultNavigationArguments()
+        => new(
+            typeof(ManagePage),
+            new ManagePageNavigationArguments(
+                typeof(HomePage),
+                new HomePageNavigationArguments(OpenArcaconPage: true)));
 
     private async void OnRetryButtonClicked(object sender, RoutedEventArgs routedEventArgs) => await StartLoginAsync();
 }

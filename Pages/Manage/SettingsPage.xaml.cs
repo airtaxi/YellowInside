@@ -30,6 +30,7 @@ namespace YellowInside.Pages.Manage;
 public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChangedMessage>
 {
     private bool _isInitializing = true;
+    private bool _isArcaconSubscriptionSynchronizationRunning;
 
     public SettingsPage()
     {
@@ -68,6 +69,12 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         VersionTextBlock.Text = $"v{version.Major}.{version.Minor}.{version.Build}";
 
         _isInitializing = false;
+
+        if (e.Parameter is SettingsPageNavigationArguments { StartArcaconSubscriptionSynchronization: true } settingsPageNavigationArguments)
+        {
+            DispatcherQueue.TryEnqueue(async () =>
+                await StartArcaconSubscriptionSynchronizationAsync(settingsPageNavigationArguments.IncludeInactiveArcacons));
+        }
     }
 
     private async void OnThemeComboBoxSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -343,13 +350,18 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
     }
 
     private async void OnSynchronizeArcaconSubscriptionsButtonClicked(object sender, RoutedEventArgs e)
+        => await StartArcaconSubscriptionSynchronizationAsync();
+
+    private async Task StartArcaconSubscriptionSynchronizationAsync(bool? includeInactiveArcacons = null)
     {
-        bool? includeInactiveArcacons = null;
-        for (var synchronizationAttempt = 0; synchronizationAttempt < 3; synchronizationAttempt++)
+        if (_isArcaconSubscriptionSynchronizationRunning) return;
+
+        _isArcaconSubscriptionSynchronizationRunning = true;
+        try
         {
             try
             {
-                var canUseArcaconSynchronization = await EnsureArcaconSynchronizationAvailableAsync();
+                var canUseArcaconSynchronization = await EnsureArcaconSynchronizationAvailableAsync(includeInactiveArcacons);
                 if (!canUseArcaconSynchronization) return;
 
                 includeInactiveArcacons ??= await AskIncludeInactiveArcaconsAsync();
@@ -368,8 +380,13 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
             catch (Exception exception) when (exception is ArcaconLoginException or InvalidOperationException)
             {
                 ManageWindow.HideLoading();
-                var isLoginSuccessful = await ArcaconSessionHelper.ShowArcaconLoginDialogAsync(this);
-                if (!isLoginSuccessful) return;
+                await ArcaconSessionHelper.PromptArcaconLoginPageNavigationAsync(
+                    this,
+                    typeof(SettingsPage),
+                    new SettingsPageNavigationArguments(
+                        StartArcaconSubscriptionSynchronization: true,
+                        IncludeInactiveArcacons: includeInactiveArcacons));
+                return;
             }
             catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
             {
@@ -383,6 +400,10 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
                 await this.ShowDialogAsync("아카콘 동기화 실패", exception.Message);
                 return;
             }
+        }
+        finally
+        {
+            _isArcaconSubscriptionSynchronizationRunning = false;
         }
     }
 
@@ -629,10 +650,18 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         return result == ContentDialogResult.Primary;
     }
 
-    private async Task<bool> EnsureArcaconSynchronizationAvailableAsync()
+    private async Task<bool> EnsureArcaconSynchronizationAvailableAsync(bool? includeInactiveArcacons)
     {
         if (!App.ArcaconClient.IsLoggedIn)
-            return await ArcaconSessionHelper.ShowArcaconLoginDialogAsync(this);
+        {
+            await ArcaconSessionHelper.PromptArcaconLoginPageNavigationAsync(
+                this,
+                typeof(SettingsPage),
+                new SettingsPageNavigationArguments(
+                    StartArcaconSubscriptionSynchronization: true,
+                    IncludeInactiveArcacons: includeInactiveArcacons));
+            return false;
+        }
 
         try
         {
@@ -644,7 +673,14 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         catch (Exception exception) when (exception is ArcaconLoginException or InvalidOperationException)
         {
             ManageWindow.HideLoading();
-            return await ArcaconSessionHelper.ShowArcaconLoginDialogAsync(this);
+            await ArcaconSessionHelper.PromptArcaconLoginPageNavigationAsync(
+                this,
+                typeof(SettingsPage),
+                new SettingsPageNavigationArguments(
+                    StartArcaconSubscriptionSynchronization: true,
+                    IncludeInactiveArcacons: includeInactiveArcacons),
+                isSessionExpired: true);
+            return false;
         }
         catch
         {

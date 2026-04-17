@@ -1,9 +1,11 @@
-﻿using YellowInside.Helpers;
+using YellowInside.Helpers;
+using YellowInside.Models;
 using YellowInside.Pages.Manage.Arcacon;
 using YellowInside.Pages.Manage.Dccon;
 using YellowInside.Pages.Manage.Inven;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
+using Microsoft.UI.Xaml.Navigation;
 using System;
 
 namespace YellowInside.Pages.Manage;
@@ -17,6 +19,14 @@ public sealed partial class SearchPage : Page
     {
         InitializeComponent();
         _previousSelectorBarItem = DcconSelectorBarItem;
+    }
+
+    protected override void OnNavigatedTo(NavigationEventArgs navigationEventArgs)
+    {
+        base.OnNavigatedTo(navigationEventArgs);
+
+        if (navigationEventArgs.Parameter is SearchPageNavigationArguments { OpenArcaconPage: true })
+            NavigateToArcaconContentPage();
     }
 
     private async void OnSelectorBarSelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs selectorBarSelectionChangedEventArgs)
@@ -44,6 +54,15 @@ public sealed partial class SearchPage : Page
     }
 
     private void NavigateToContentPage(Type pageType, object pageParameter) => ContentFrame.Navigate(pageType, pageParameter);
+
+    private void NavigateToArcaconContentPage()
+    {
+        _isRestoringSelection = true;
+        ContentSourceSelectorBar.SelectedItem = ArcaconSelectorBarItem;
+        _isRestoringSelection = false;
+        _previousSelectorBarItem = ArcaconSelectorBarItem;
+        ContentFrame.Navigate(typeof(ArcaconSearchPage));
+    }
 
     private void RestorePreviousSelection(SelectorBar selectorBar)
     {
