@@ -70,10 +70,9 @@ public sealed partial class DcconHomePage : Page
 
     private async Task LoadMoreAsync(bool isHot, CancellationToken cancellationToken = default)
     {
-        await _loadMoreSemaphore.WaitAsync();
+        await _loadMoreSemaphore.WaitAsync(cancellationToken);
         try
         {
-            IsEnabled = false;
             if (isHot) ManageWindow.ShowLoading("인기콘 불러오는 중...");
             else ManageWindow.ShowLoading("최신콘 불러오는 중...");
 
@@ -83,7 +82,7 @@ public sealed partial class DcconHomePage : Page
                 {
                     if (!_hotListHasMore) return;
 
-                    var searchResult = await App.DcconClient.GetHotListAsync(_hotListPage++);
+                    var searchResult = await App.DcconClient.GetHotListAsync(_hotListPage++, cancellationToken);
                     cancellationToken.ThrowIfCancellationRequested();
                     if (_hotListPage >= searchResult.TotalPages) _hotListHasMore = false;
 
@@ -94,7 +93,7 @@ public sealed partial class DcconHomePage : Page
                 {
                     if (!_newListHasMore) return;
 
-                    var searchResult = await App.DcconClient.GetNewListAsync(_newListPage++);
+                    var searchResult = await App.DcconClient.GetNewListAsync(_newListPage++, cancellationToken);
                     cancellationToken.ThrowIfCancellationRequested();
                     if (_newListPage >= searchResult.TotalPages) _newListHasMore = false;
 
@@ -102,11 +101,7 @@ public sealed partial class DcconHomePage : Page
                     foreach (var viewModel in viewModels.Where(x => !NewList.Any(y => x.PackageIdentifier == y.PackageIdentifier))) NewList.Add(viewModel);
                 }
             }
-            finally
-            {
-                IsEnabled = true;
-                ManageWindow.HideLoading();
-            }
+            finally { ManageWindow.HideLoading(); }
         }
         finally { _loadMoreSemaphore.Release(); }
     }
@@ -148,10 +143,7 @@ public sealed partial class DcconHomePage : Page
 
         var isHot = scrollView.Tag as string == "Hot";
         try { await LoadMoreAsync(isHot, _refreshCancellationTokenSource?.Token ?? default); }
-        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
-        {
-            ManageWindow.HideLoading();
-        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException) { ManageWindow.HideLoading(); }
     }
 
     private readonly Dictionary<ScrollView, double> _targetHorizontalOffset = [];
@@ -163,6 +155,7 @@ public sealed partial class DcconHomePage : Page
         if (scrollView == null) return;
 
         if (!_targetHorizontalOffset.ContainsKey(scrollView)) _targetHorizontalOffset.Add(scrollView, scrollView.HorizontalOffset);
+
         _targetHorizontalOffset[scrollView] = Math.Clamp(_targetHorizontalOffset[scrollView] - delta, 0, scrollView.ExtentWidth - scrollView.ViewportWidth);
         scrollView.ScrollTo(_targetHorizontalOffset[scrollView], 0);
 

@@ -58,21 +58,23 @@ public sealed partial class DcconSearchPage : Page
         {
             var searchType = SearchTypeComboBox.SelectedIndex switch
             {
-                1 => SearchType.NickName,
-                2 => SearchType.Tags,
-                _ => SearchType.Title,
+                1 => DcconSearchType.NickName,
+                2 => DcconSearchType.Tags,
+                _ => DcconSearchType.Title,
             };
             var searchSort = SearchSortComboBox.SelectedIndex switch
             {
-                1 => SearchSort.New,
-                _ => SearchSort.Hot,
+                1 => DcconSearchSort.New,
+                _ => DcconSearchSort.Hot,
             };
 
             var searchResult = await App.DcconClient.SearchAsync(_currentQuery, searchType: searchType, sort: searchSort, page: _currentPage);
             foreach (var package in searchResult.Packages)
             {
                 if (!SearchResultList.Any(existing => existing.PackageIdentifier == package.PackageIndex.ToString()))
+                {
                     SearchResultList.Add(new SearchResultViewModel(package, _searchCancellationTokenSource?.Token ?? default));
+                }
             }
 
             if (_currentPage >= searchResult.TotalPages) _hasMorePages = false;
@@ -114,18 +116,12 @@ public sealed partial class DcconSearchPage : Page
         if (!IsScrolledToBottom()) return;
 
         try { await FillViewportAsync(); }
-        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
-        {
-            ManageWindow.HideLoading();
-        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException) { ManageWindow.HideLoading(); }
     }
 
     private async void OnResultScrollViewerSizeChanged(object sender, SizeChangedEventArgs e)
     {
         try { await FillViewportAsync(); }
-        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
-        {
-            ManageWindow.HideLoading();
-        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException) { ManageWindow.HideLoading(); }
     }
 }

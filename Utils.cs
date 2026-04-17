@@ -17,6 +17,7 @@ public static class Utils
     public static string GetImageUrl(ContentSource source, string imagePath)
     {
         if (source == ContentSource.Dccon) return $"https://dcimg5.dcinside.com/dccon.php?no={imagePath}";
+        else if (source == ContentSource.Arcacon) return imagePath;
         else if (source == ContentSource.Inven) return imagePath;
         else throw new NotImplementedException("이미지 URL 생성 미구현됨");
     }
@@ -30,6 +31,30 @@ public static class Utils
                 using var httpClient = new HttpClient();
                 var request = new HttpRequestMessage(HttpMethod.Get, url);
                 request.Headers.Add("Referer", "https://dccon.dcinside.com");
+
+                var response = await httpClient.SendAsync(request);
+                response.EnsureSuccessStatusCode();
+
+                using var stream = await response.Content.ReadAsStreamAsync();
+
+                var taskCompletionSource = new TaskCompletionSource<ImageSource>();
+                dispatcherQueue.TryEnqueue(async () =>
+                {
+                    var bitmapImage = new BitmapImage { AutoPlay = SettingsManager.GifPlaybackEnabled };
+                    await bitmapImage.SetSourceAsync(stream.AsRandomAccessStream());
+                    taskCompletionSource.SetResult(bitmapImage);
+                });
+                return await taskCompletionSource.Task;
+            }
+            catch { return null; }
+        }
+        else if (source == ContentSource.Arcacon)
+        {
+            try
+            {
+                using var httpClient = new HttpClient();
+                var request = new HttpRequestMessage(HttpMethod.Get, url);
+                request.Headers.Add("Referer", "https://arca.live");
 
                 var response = await httpClient.SendAsync(request);
                 response.EnsureSuccessStatusCode();

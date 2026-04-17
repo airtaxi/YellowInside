@@ -4,6 +4,7 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
+  <Project Path="../Arcacon.NET/src/Arcacon.NET.WinRT/Arcacon.NET.WinRT.csproj" />
   <Project Path="../dccon.NET/src/dccon.NET/dccon.NET.csproj" />
   <Project Path="../InvenSticker.NET/src/InvenSticker.NET/InvenSticker.NET.csproj" />
   <Project Path="../YellowInsideLib/YellowInsideLib.csproj" />

@@ -5,11 +5,58 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:converters="using:CommunityToolkit.WinUI.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:local="using:YellowInside.Pages"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:vm="using:YellowInside.ViewModels"
     Padding="12,8,12,12"
     mc:Ignorable="d">
+
+    <Page.Resources>
+        <DataTemplate x:Key="DetailStickerImageTemplate" x:DataType="vm:StickerViewModel">
+            <Border
+                Width="96"
+                Height="96"
+                Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                CornerRadius="6">
+                <Grid>
+                    <Image Source="{x:Bind ImageSource, Mode=OneWay}" Stretch="Uniform" />
+
+                    <Grid
+                        Width="18"
+                        Height="18"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        Visibility="{x:Bind IsSubscribed, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+
+                        <FontIcon
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            FontSize="18"
+                            Foreground="Black"
+                            Glyph="&#xE735;"
+                            Tapped="{x:Bind OnFavoriteSymbolIconTapped}" />
+
+                        <FontIcon
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            FontSize="16"
+                            Foreground="LightGray"
+                            Glyph="&#xE735;"
+                            IsHitTestVisible="False" />
+
+                        <FontIcon
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            FontSize="16"
+                            Foreground="Gold"
+                            Glyph="&#xE735;"
+                            IsHitTestVisible="False"
+                            Visibility="{x:Bind IsFavorite, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                    </Grid>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+    </Page.Resources>
 
     <Page.DataContext>
         <vm:DetailViewModel x:Name="ViewModel" />
@@ -94,14 +141,10 @@
                     Orientation="Horizontal"
                     Spacing="4"
                     Visibility="{x:Bind ViewModel.IsLocalPackage, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                    <Button
-                        Command="{x:Bind ViewModel.EditCommand}"
-                        ToolTipService.ToolTip="수정">
+                    <Button Command="{x:Bind ViewModel.EditCommand}" ToolTipService.ToolTip="수정">
                         <FontIcon Glyph="&#xE70F;" />
                     </Button>
-                    <Button
-                        Command="{x:Bind ViewModel.UnsubscribeCommand}"
-                        ToolTipService.ToolTip="삭제">
+                    <Button Command="{x:Bind ViewModel.UnsubscribeCommand}" ToolTipService.ToolTip="삭제">
                         <FontIcon Glyph="&#xE74D;" />
                     </Button>
                 </StackPanel>
@@ -148,7 +191,7 @@
 
             <!--  스티커 섹션  -->
             <TextBlock Style="{ThemeResource SubtitleTextBlockStyle}" Text="스티커" />
-            <ItemsRepeater ItemsSource="{x:Bind ViewModel.Stickers, Mode=OneWay}">
+            <ItemsRepeater ItemTemplate="{StaticResource DetailStickerImageTemplate}" ItemsSource="{x:Bind ViewModel.Stickers, Mode=OneWay}">
                 <ItemsRepeater.Layout>
                     <UniformGridLayout
                         MinColumnSpacing="8"
@@ -156,57 +199,6 @@
                         MinItemWidth="96"
                         MinRowSpacing="8" />
                 </ItemsRepeater.Layout>
-                <ItemsRepeater.ItemTemplate>
-                    <DataTemplate x:DataType="vm:StickerViewModel">
-                        <Border
-                            Width="96"
-                            Height="96"
-                            Background="{ThemeResource SubtleFillColorSecondaryBrush}"
-                            CornerRadius="6">
-                            <Grid>
-                                <!--  Image  -->
-                                <Image Source="{x:Bind ImageSource, Mode=OneWay}" Stretch="Uniform" />
-
-                                <!--  Favorite Zone  -->
-                                <Grid
-                                    Width="18"
-                                    Height="18"
-                                    HorizontalAlignment="Right"
-                                    VerticalAlignment="Top"
-                                    Visibility="{x:Bind IsSubscribed, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-
-                                    <!--  Favorite Border  -->
-                                    <FontIcon
-                                        HorizontalAlignment="Center"
-                                        VerticalAlignment="Center"
-                                        FontSize="18"
-                                        Foreground="Black"
-                                        Glyph="&#xE735;"
-                                        Tapped="{x:Bind OnFavoriteSymbolIconTapped}" />
-
-                                    <!--  Favorite  -->
-                                    <FontIcon
-                                        HorizontalAlignment="Center"
-                                        VerticalAlignment="Center"
-                                        FontSize="16"
-                                        Foreground="LightGray"
-                                        Glyph="&#xE735;"
-                                        IsHitTestVisible="False" />
-
-                                    <!--  Unfavorite  -->
-                                    <FontIcon
-                                        HorizontalAlignment="Center"
-                                        VerticalAlignment="Center"
-                                        FontSize="16"
-                                        Foreground="Gold"
-                                        Glyph="&#xE735;"
-                                        IsHitTestVisible="False"
-                                        Visibility="{x:Bind IsFavorite, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
-                                </Grid>
-                            </Grid>
-                        </Border>
-                    </DataTemplate>
-                </ItemsRepeater.ItemTemplate>
             </ItemsRepeater>
 
         </StackPanel>

@@ -350,6 +350,31 @@
                             Click="OnPartialImportButtonClicked"
                             Content="일부만 불러오기" />
                     </Grid>
+
+                    <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel
+                            Grid.Column="0"
+                            VerticalAlignment="Center"
+                            Spacing="2">
+                            <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="아카콘 동기화" />
+                            <TextBlock
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Style="{ThemeResource CaptionTextBlockStyle}"
+                                Text="아카라이브에서 구독 중인 아카콘 중 아직 받지 않은 패키지를 다운로드합니다." />
+                        </StackPanel>
+                        <Button
+                            Grid.Column="1"
+                            MinWidth="120"
+                            VerticalAlignment="Center"
+                            Click="OnSynchronizeArcaconSubscriptionsButtonClicked"
+                            Content="동기화" />
+                    </Grid>
                 </StackPanel>
             </Border>
 

@@ -1,3 +1,4 @@
+using Arcacon.NET.Exceptions;
 using YellowInside.Dialogs;
 using YellowInside.Helpers;
 using YellowInside.Managers;
@@ -14,6 +15,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Windows.Services.Store;
 using Windows.Storage.Pickers;
@@ -340,6 +342,50 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         }
     }
 
+    private async void OnSynchronizeArcaconSubscriptionsButtonClicked(object sender, RoutedEventArgs e)
+    {
+        bool? includeInactiveArcacons = null;
+        for (var synchronizationAttempt = 0; synchronizationAttempt < 3; synchronizationAttempt++)
+        {
+            try
+            {
+                var canUseArcaconSynchronization = await EnsureArcaconSynchronizationAvailableAsync();
+                if (!canUseArcaconSynchronization) return;
+
+                includeInactiveArcacons ??= await AskIncludeInactiveArcaconsAsync();
+                if (includeInactiveArcacons is null) return;
+
+                var synchronizedPackageCount = await SynchronizeArcaconSubscriptionsAsync(includeInactiveArcacons.Value);
+                if (synchronizedPackageCount == 0)
+                {
+                    await this.ShowDialogAsync("아카콘 동기화", "동기화할 아카콘이 없습니다.");
+                    return;
+                }
+
+                await this.ShowDialogAsync("아카콘 동기화 완료", $"{synchronizedPackageCount}개의 아카콘을 동기화했습니다.");
+                return;
+            }
+            catch (Exception exception) when (exception is ArcaconLoginException or InvalidOperationException)
+            {
+                ManageWindow.HideLoading();
+                var isLoginSuccessful = await ArcaconSessionHelper.ShowArcaconLoginDialogAsync(this);
+                if (!isLoginSuccessful) return;
+            }
+            catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
+            {
+                ManageWindow.HideLoading();
+                await this.ShowDialogAsync("네트워크 오류", "인터넷 연결을 확인해 주세요.\n오프라인 상태에서는 아카콘을 동기화할 수 없습니다.");
+                return;
+            }
+            catch (Exception exception)
+            {
+                ManageWindow.HideLoading();
+                await this.ShowDialogAsync("아카콘 동기화 실패", exception.Message);
+                return;
+            }
+        }
+    }
+
     private void OnHotkeyToggleSwitchToggled(object sender, RoutedEventArgs e)
     {
         if (_isInitializing) return;
@@ -581,6 +627,70 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         if (result == ContentDialogResult.None) return null;
 
         return result == ContentDialogResult.Primary;
+    }
+
+    private async Task<bool> EnsureArcaconSynchronizationAvailableAsync()
+    {
+        if (!App.ArcaconClient.IsLoggedIn)
+            return await ArcaconSessionHelper.ShowArcaconLoginDialogAsync(this);
+
+        try
+        {
+            ManageWindow.ShowLoading("아카콘 로그인 상태를 확인하는 중...");
+            await App.ArcaconClient.GetNewListAsync();
+            ManageWindow.HideLoading();
+            return true;
+        }
+        catch (Exception exception) when (exception is ArcaconLoginException or InvalidOperationException)
+        {
+            ManageWindow.HideLoading();
+            return await ArcaconSessionHelper.ShowArcaconLoginDialogAsync(this);
+        }
+        catch
+        {
+            ManageWindow.HideLoading();
+            throw;
+        }
+    }
+
+    private async Task<bool?> AskIncludeInactiveArcaconsAsync()
+    {
+        var contentDialogResult = await this.ShowDialogAsync(
+            "미사용 아카콘 포함",
+            "현재 사용하지 않는 아카콘도 함께 동기화할까요?",
+            primaryButtonText: "예",
+            secondaryButtonText: "아니오");
+        if (contentDialogResult == ContentDialogResult.None) return null;
+
+        return contentDialogResult == ContentDialogResult.Primary;
+    }
+
+    private static async Task<int> SynchronizeArcaconSubscriptionsAsync(bool includeInactiveArcacons)
+    {
+        ManageWindow.ShowLoading("아카콘 구독 목록을 불러오는 중...");
+        var subscribedPackages = await App.ArcaconClient.GetSubscribedPackagesAsync(includeInactiveArcacons);
+        var packageIndexesToDownload = subscribedPackages
+            .Where(package => !ContentsManager.IsPackageDownloaded(ContentSource.Arcacon, package.PackageIndex.ToString()))
+            .Select(package => package.PackageIndex)
+            .ToList();
+
+        if (packageIndexesToDownload.Count == 0)
+        {
+            ManageWindow.HideLoading();
+            return 0;
+        }
+
+        for (var packageOrder = 0; packageOrder < packageIndexesToDownload.Count; packageOrder++)
+        {
+            var packageIndex = packageIndexesToDownload[packageOrder];
+            var currentPackageOrder = packageOrder + 1;
+
+            ManageWindow.ShowLoading($"아카콘 동기화 중... {currentPackageOrder}/{packageIndexesToDownload.Count}");
+            await ContentsManager.DownloadArcaconPackageAsync(packageIndex, new Progress<(int Completed, int Total)>(progress => ManageWindow.ShowLoading($"아카콘 동기화 중... {currentPackageOrder}/{packageIndexesToDownload.Count} ({progress.Completed}/{progress.Total})")));
+        }
+
+        ManageWindow.HideLoading();
+        return packageIndexesToDownload.Count;
     }
 
     private static async Task<StorageFile> PickPackageExportFileAsync(string suggestedFileName)

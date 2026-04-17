@@ -1,4 +1,5 @@
-﻿using dccon.NET;
+﻿using Arcacon.NET;
+using dccon.NET;
 using InvenSticker.NET;
 using YellowInside.Managers;
 using YellowInsideLib;
@@ -18,6 +19,7 @@ public partial class App : Application
 {
     private static ManageWindow s_manageWindow;
     private static PopupWindow s_dcconPopupWindow;
+    public static ArcaconClient ArcaconClient { get; } = new ArcaconClient();
     public static DcconClient DcconClient { get; } = new DcconClient();
     public static InvenStickerClient InvenStickerClient { get; } = new InvenStickerClient();
     public static HotkeyManager HotkeyManager { get; } = new();
@@ -104,6 +106,7 @@ public partial class App : Application
 
     public static void Shutdown()
     {
+        ArcaconClient.DisposeAsync().GetAwaiter().GetResult();
         UpdateCheckManager.Stop();
         HotkeyManager.Dispose();
         SessionManager.Instance.Dispose();

@@ -51,7 +51,6 @@ public sealed partial class InvenHomePage : Page
         await _loadMoreSemaphore.WaitAsync();
         try
         {
-            IsEnabled = false;
             if (isHot) ManageWindow.ShowLoading("인기 스티커 불러오는 중...");
             else ManageWindow.ShowLoading("최신 스티커 불러오는 중...");
 
@@ -80,11 +79,7 @@ public sealed partial class InvenHomePage : Page
                     foreach (var viewModel in viewModels.Where(x => !NewList.Any(y => x.PackageIdentifier == y.PackageIdentifier))) NewList.Add(viewModel);
                 }
             }
-            finally
-            {
-                IsEnabled = true;
-                ManageWindow.HideLoading();
-            }
+            finally { ManageWindow.HideLoading(); }
         }
         finally { _loadMoreSemaphore.Release(); }
     }
@@ -126,10 +121,7 @@ public sealed partial class InvenHomePage : Page
 
         var isHot = scrollView.Tag as string == "Hot";
         try { await LoadMoreAsync(isHot, _refreshCancellationTokenSource?.Token ?? default); }
-        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
-        {
-            ManageWindow.HideLoading();
-        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException) { ManageWindow.HideLoading(); }
     }
 
     private readonly Dictionary<ScrollView, double> _targetHorizontalOffset = [];
@@ -141,6 +133,7 @@ public sealed partial class InvenHomePage : Page
         if (scrollView == null) return;
 
         if (!_targetHorizontalOffset.ContainsKey(scrollView)) _targetHorizontalOffset.Add(scrollView, scrollView.HorizontalOffset);
+
         _targetHorizontalOffset[scrollView] = Math.Clamp(_targetHorizontalOffset[scrollView] - delta, 0, scrollView.ExtentWidth - scrollView.ViewportWidth);
         scrollView.ScrollTo(_targetHorizontalOffset[scrollView], 0);
 

@@ -1,4 +1,5 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿using Arcacon.NET.Models;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Messaging;
 using dccon.NET.Models;
 using InvenSticker.NET.Models;
@@ -46,6 +47,18 @@ public partial class SearchResultViewModel : ObservableObject
         WeakReferenceMessenger.Default.Register<FavoritesOrPackagesChangedMessage>(this, OnFavoritesOrPackagesChangedMessageReceived);
     }
 
+    public SearchResultViewModel(ArcaconPackageSummary arcaconPackageSummary, CancellationToken cancellationToken = default)
+    {
+        Source = ContentSource.Arcacon;
+        PackageIdentifier = arcaconPackageSummary.PackageIndex.ToString();
+        Title = arcaconPackageSummary.Title;
+        SellerName = arcaconPackageSummary.SellerName;
+        UpdateFavoriteAndSubscriptionStatus();
+        FetchThumbnail(arcaconPackageSummary.ThumbnailUrl, cancellationToken);
+
+        WeakReferenceMessenger.Default.Register<FavoritesOrPackagesChangedMessage>(this, OnFavoritesOrPackagesChangedMessageReceived);
+    }
+
     public SearchResultViewModel(InvenStickerPackageSummary stickerPackageSummary, CancellationToken cancellationToken = default)
     {
         Source = ContentSource.Inven;
@@ -67,6 +80,22 @@ public partial class SearchResultViewModel : ObservableObject
                 using var httpClient = new HttpClient();
                 var request = new HttpRequestMessage(HttpMethod.Get, url);
                 request.Headers.Add("Referer", "https://dccon.dcinside.com");
+
+                var response = await httpClient.SendAsync(request, cancellationToken);
+                response.EnsureSuccessStatusCode();
+
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var bitmapImage = new BitmapImage() { AutoPlay = SettingsManager.GifPlaybackEnabled };
+                using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                await bitmapImage.SetSourceAsync(stream.AsRandomAccessStream());
+                ThumbnailSource = bitmapImage;
+            }
+            else if (Source == ContentSource.Arcacon)
+            {
+                using var httpClient = new HttpClient();
+                var request = new HttpRequestMessage(HttpMethod.Get, url);
+                request.Headers.Add("Referer", "https://arca.live");
 
                 var response = await httpClient.SendAsync(request, cancellationToken);
                 response.EnsureSuccessStatusCode();

@@ -1,4 +1,5 @@
 ﻿using ABI.System;
+using Arcacon.NET.Models;
 using AngleSharp.Dom;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -81,6 +82,7 @@ public partial class DetailViewModel : ObservableObject
     {
         Source = source;
         PackageIdentifier = packageIdentifier;
+        Stickers = [];
 
         HeaderText = $"{source.GetFriendlyName()} 정보";
 
@@ -97,6 +99,19 @@ public partial class DetailViewModel : ObservableObject
             else
             {
                 await InitializeFromRemoteDcconAsync(packageIdentifier);
+            }
+        }
+        else if (source == ContentSource.Arcacon)
+        {
+            var downloadedPackage = ContentsManager.GetDownloadedPackage(source, packageIdentifier);
+
+            if (downloadedPackage is not null)
+            {
+                await InitializeFromLocalPackageAsync(source, packageIdentifier, downloadedPackage);
+            }
+            else
+            {
+                await InitializeFromRemoteArcaconAsync(packageIdentifier);
             }
         }
         else if (source == ContentSource.Inven)
@@ -138,6 +153,46 @@ public partial class DetailViewModel : ObservableObject
 
         var registerationDateText = DateTime.Parse(detail.RegistrationDate);
         RegisterationDate = registerationDateText.ToString("yyyy년 MM월 dd일 등록");
+
+        var downloadedPackage = ContentsManager.GetDownloadedPackage(Source, packageIdentifier);
+        if (downloadedPackage is not null && !string.IsNullOrEmpty(downloadedPackage.MainImageFileName))
+        {
+            var mainImagePath = ContentsManager.GetMainImagePath(Source, packageIdentifier, downloadedPackage.MainImageFileName);
+            if (File.Exists(mainImagePath))
+                MainImageSource = new BitmapImage(new Uri(mainImagePath)) { AutoPlay = SettingsManager.GifPlaybackEnabled };
+            else
+                await DownloadMainImageSourceAsync();
+        }
+        else
+        {
+            await DownloadMainImageSourceAsync();
+        }
+
+        Stickers = [.. detail.Stickers.Select(sticker => new StickerViewModel(packageIdentifier, sticker))];
+
+        await Parallel.ForEachAsync(Stickers, async (sticker, _) => await sticker.FetchImageAsync());
+    }
+
+    private async Task InitializeFromRemoteArcaconAsync(string packageIdentifier)
+    {
+        var packageIndex = int.Parse(packageIdentifier);
+        var detail = await App.ArcaconClient.GetPackageDetailAsync(packageIndex);
+
+        _mainImagePath = $"https://arca.live/api/emoticon/{packageIndex}/thumb";
+
+        Title = detail.Title;
+        Description = detail.Price == 0 ? "가격 정보 없음" : $"{detail.Price}pt";
+        SellerName = detail.SellerName;
+        Tags = detail.Tags;
+        IconCount = $"{detail.IconCount}개 스티커";
+        SaleCount = detail.SaleCount == 0 ? "판매량 정보 없음" : $"{detail.SaleCount}회 판매됨";
+
+        if (!string.IsNullOrWhiteSpace(detail.RegistrationDate) && DateTime.TryParse(detail.RegistrationDate, out var registrationDateTime))
+            RegisterationDate = registrationDateTime.ToString("yyyy년 MM월 dd일 등록");
+        else if (!string.IsNullOrWhiteSpace(detail.RegistrationDateShort) && DateTime.TryParse(detail.RegistrationDateShort, out var shortRegistrationDateTime))
+            RegisterationDate = shortRegistrationDateTime.ToString("yyyy년 MM월 dd일 등록");
+        else
+            RegisterationDate = detail.RegistrationDate;
 
         var downloadedPackage = ContentsManager.GetDownloadedPackage(Source, packageIdentifier);
         if (downloadedPackage is not null && !string.IsNullOrEmpty(downloadedPackage.MainImageFileName))
@@ -236,13 +291,34 @@ public partial class DetailViewModel : ObservableObject
             try
             {
                 await ContentsManager.DownloadDcconPackageAsync(int.Parse(PackageIdentifier),
-                    new Progress<(int Completed, int Total)>(progress => ManageWindow.ShowLoading($"다운로드중... {progress.Completed}/{progress.Total}")));
-            }
-            finally { ManageWindow.HideLoading(); }
-        }
-        else if (Source == ContentSource.Inven)
-        {
-            ManageWindow.ShowLoading("다운로드중...");
+                     new Progress<(int Completed, int Total)>(progress => ManageWindow.ShowLoading($"다운로드중... {progress.Completed}/{progress.Total}")));
+             }
+             finally { ManageWindow.HideLoading(); }
+         }
+         else if (Source == ContentSource.Arcacon)
+         {
+             var dialogHostElement = ManageWindow.Instance.Content as UIElement
+                 ?? throw new InvalidOperationException("관리 창 콘텐츠를 찾을 수 없습니다.");
+
+             if (await ArcaconSessionHelper.EnsureArcaconSessionAsync(
+                 dialogHostElement,
+                 (pageType, pageParameter) => ManageWindow.Navigate(pageType, pageParameter),
+                 typeof(DetailPage),
+                 (Source, PackageIdentifier)) is null)
+                 return;
+
+             ManageWindow.ShowLoading("다운로드중...");
+             try
+             {
+                 await ContentsManager.DownloadArcaconPackageAsync(
+                     int.Parse(PackageIdentifier),
+                     new Progress<(int Completed, int Total)>(progress => ManageWindow.ShowLoading($"다운로드중... {progress.Completed}/{progress.Total}")));
+             }
+             finally { ManageWindow.HideLoading(); }
+         }
+         else if (Source == ContentSource.Inven)
+         {
+             ManageWindow.ShowLoading("다운로드중...");
             try
             {
                 await ContentsManager.DownloadInvenStickerPackageAsync(int.Parse(PackageIdentifier),

@@ -1,4 +1,5 @@
-﻿using CommunityToolkit.Mvvm.Messaging;
+﻿using Arcacon.NET;
+using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using dccon.NET;
 using InvenSticker.NET;
@@ -380,6 +381,68 @@ public static class ContentsManager
         WeakReferenceMessenger.Default.Send(new FavoritesOrPackagesChangedMessage(ContentSource.Dccon, packageIdentifier));
     }
 
+	public static async Task DownloadArcaconPackageAsync(
+		int packageIndex,
+		IProgress<(int Completed, int Total)> progress = null,
+		CancellationToken cancellationToken = default)
+	{
+		var packageIdentifier = packageIndex.ToString();
+
+		lock (s_lock)
+		{
+			if (s_data.DownloadedPackages.Any(
+				package => package.Source == ContentSource.Arcacon && package.PackageIdentifier == packageIdentifier))
+				return;
+		}
+
+		var detail = await App.ArcaconClient.GetPackageDetailAsync(packageIndex, cancellationToken);
+
+		var packageDirectory = GetPackageDirectory(ContentSource.Arcacon, packageIdentifier);
+		Directory.CreateDirectory(packageDirectory);
+
+		await App.ArcaconClient.DownloadPackageAsync(packageIndex, packageDirectory, progress, cancellationToken);
+
+		var mainImagePath = $"https://arca.live/api/emoticon/{packageIndex}/thumb";
+		var mainImageFileName = await DownloadMainImageAsync(
+			ContentSource.Arcacon, mainImagePath, packageDirectory, cancellationToken);
+
+		var localDirectoryName = ArcaconFileNameHelper.SanitizeFileName(detail.Title);
+
+		var stickerPackage = new StickerPackage
+		{
+			Source = ContentSource.Arcacon,
+			PackageIdentifier = packageIdentifier,
+			Title = detail.Title,
+			Description = detail.Price == 0 ? string.Empty : $"{detail.Price}pt",
+			MainImagePath = mainImagePath,
+			MainImageFileName = mainImageFileName,
+			SellerName = detail.SellerName,
+			RegistrationDate = detail.RegistrationDate,
+			LocalDirectoryName = localDirectoryName,
+			LocalDirectoryPath = Path.Combine(packageDirectory, localDirectoryName),
+			Stickers = [.. detail.Stickers.Select(sticker => new Sticker
+			{
+				Path = sticker.ImageUrl,
+				Title = string.IsNullOrWhiteSpace(sticker.Title) ? $"스티커 {sticker.SortNumber}" : sticker.Title,
+				Extension = sticker.Extension,
+				SortNumber = sticker.SortNumber,
+				ImageUrl = sticker.ImageUrl,
+				FileName = ArcaconFileNameHelper.GetStickerFileName(sticker),
+			})],
+			Tags = [.. detail.Tags],
+		};
+
+		lock (s_lock)
+		{
+			s_data.DownloadedPackages.Add(stickerPackage);
+		}
+
+		await SaveAsync();
+
+		PackagesChanged?.Invoke();
+		WeakReferenceMessenger.Default.Send(new FavoritesOrPackagesChangedMessage(ContentSource.Arcacon, packageIdentifier));
+	}
+
 	public static async Task DownloadInvenStickerPackageAsync(
 		int packageId,
 		IProgress<(int Completed, int Total)> progress = null,
@@ -650,6 +713,8 @@ public static class ContentsManager
 		var request = new HttpRequestMessage(HttpMethod.Get, imageUrl);
 		if (source == ContentSource.Dccon)
 			request.Headers.Add("Referer", "https://dccon.dcinside.com");
+		else if (source == ContentSource.Arcacon)
+			request.Headers.Add("Referer", "https://arca.live");
 
 		var response = await s_httpClient.SendAsync(request, cancellationToken);
 		response.EnsureSuccessStatusCode();

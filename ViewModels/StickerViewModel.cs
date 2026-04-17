@@ -1,4 +1,5 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿using Arcacon.NET.Models;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Messaging;
 using dccon.NET.Models;
 using InvenSticker.NET.Models;
@@ -51,6 +52,16 @@ public partial class StickerViewModel : ObservableObject
         WeakReferenceMessenger.Default.Register<FavoritesOrPackagesChangedMessage>(this, OnFavoritesOrPackagesChangedMessageReceived);
     }
 
+    public StickerViewModel(string packageIdentifier, ArcaconSticker arcaconSticker)
+    {
+        _packageIdentifier = packageIdentifier;
+        _source = ContentSource.Arcacon;
+        _path = arcaconSticker.ImageUrl;
+
+        UpdateFavoriteAndSubscriptionStatus();
+        WeakReferenceMessenger.Default.Register<FavoritesOrPackagesChangedMessage>(this, OnFavoritesOrPackagesChangedMessageReceived);
+    }
+
 
     public StickerViewModel(ContentSource source, string packageIdentifier, Models.Sticker sticker)
     {
@@ -61,6 +72,7 @@ public partial class StickerViewModel : ObservableObject
         UpdateFavoriteAndSubscriptionStatus();
         WeakReferenceMessenger.Default.Register<FavoritesOrPackagesChangedMessage>(this, OnFavoritesOrPackagesChangedMessageReceived);
     }
+
     public async Task FetchImageAsync()
     {
         // If the package is subscribed, we can get the image from local storage. Otherwise, we need to fetch it from the web.
@@ -105,4 +117,5 @@ public partial class StickerViewModel : ObservableObject
         if (IsFavorite) await ContentsManager.RemoveFavoriteAsync(_source, _packageIdentifier, _path);
         else await ContentsManager.AddFavoriteAsync(_source, _packageIdentifier, _path);
     }
+
 }

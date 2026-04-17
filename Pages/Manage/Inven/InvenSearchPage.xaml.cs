@@ -72,7 +72,9 @@ public sealed partial class InvenSearchPage : Page
             foreach (var package in searchResult.Packages)
             {
                 if (!SearchResultList.Any(existing => existing.PackageIdentifier == package.PackageId.ToString()))
+                {
                     SearchResultList.Add(new SearchResultViewModel(package, _searchCancellationTokenSource?.Token ?? default));
+                }
             }
 
             if (_currentPage >= searchResult.TotalPages) _hasMorePages = false;
@@ -114,18 +116,12 @@ public sealed partial class InvenSearchPage : Page
         if (!IsScrolledToBottom()) return;
 
         try { await FillViewportAsync(); }
-        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
-        {
-            ManageWindow.HideLoading();
-        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException) { ManageWindow.HideLoading(); }
     }
 
     private async void OnResultScrollViewerSizeChanged(object sender, SizeChangedEventArgs e)
     {
         try { await FillViewportAsync(); }
-        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
-        {
-            ManageWindow.HideLoading();
-        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException) { ManageWindow.HideLoading(); }
     }
 }

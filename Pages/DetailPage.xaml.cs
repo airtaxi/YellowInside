@@ -1,12 +1,13 @@
-﻿using YellowInside.Helpers;
-using YellowInside.Models;
-using YellowInside.Pages.Manage;
-using YellowInside.ViewModels;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 using System;
 using System.Net.Http;
 using System.Threading.Tasks;
+using YellowInside.Helpers;
+using YellowInside.Models;
+using YellowInside.Pages.Manage;
+using YellowInside.ViewModels;
 
 namespace YellowInside.Pages;
 
@@ -19,6 +20,16 @@ public sealed partial class DetailPage : Page
         base.OnNavigatedTo(e);
 
         (ContentSource source, string packageIdentifier) = (ValueTuple<ContentSource, string>)e.Parameter;
+        var isDownloadedArcaconPackage = source == ContentSource.Arcacon && ContentsManager.IsPackageDownloaded(source, packageIdentifier);
+        if (source == ContentSource.Arcacon && !isDownloadedArcaconPackage)
+        {
+            if (await ArcaconSessionHelper.EnsureArcaconSessionAsync(
+                this,
+                (pageType, pageParameter) => ManageWindow.Navigate(pageType, pageParameter),
+                typeof(DetailPage),
+                (source, packageIdentifier)) is null)
+                return;
+        }
 
         var viewModel = DataContext as DetailViewModel;
         ManageWindow.ShowLoading("상세 정보 불러오는 중...");
