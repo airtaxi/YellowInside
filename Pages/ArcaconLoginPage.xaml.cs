@@ -15,20 +15,29 @@ public sealed partial class ArcaconLoginPage : Page
     private ArcaconLoginPageNavigationArguments _navigationArguments = CreateDefaultNavigationArguments();
     private CancellationTokenSource _loginCancellationTokenSource;
     private bool _isLoggingIn;
+    private bool _isLoginStartPending;
+    private bool _isPageLoaded;
 
-    public ArcaconLoginPage() => InitializeComponent();
+    public ArcaconLoginPage()
+    {
+        InitializeComponent();
+        Loaded += OnPageLoaded;
+        Unloaded += OnPageUnloaded;
+    }
 
-    protected override async void OnNavigatedTo(NavigationEventArgs navigationEventArgs)
+    protected override void OnNavigatedTo(NavigationEventArgs navigationEventArgs)
     {
         base.OnNavigatedTo(navigationEventArgs);
 
         _navigationArguments = navigationEventArgs.Parameter as ArcaconLoginPageNavigationArguments
             ?? CreateDefaultNavigationArguments();
-        await StartLoginAsync();
+        _isLoginStartPending = true;
+        TryStartLoginWhenReady();
     }
 
     protected override void OnNavigatedFrom(NavigationEventArgs navigationEventArgs)
     {
+        _isLoginStartPending = false;
         _loginCancellationTokenSource?.Cancel();
         _loginCancellationTokenSource?.Dispose();
         _loginCancellationTokenSource = null;
@@ -36,8 +45,25 @@ public sealed partial class ArcaconLoginPage : Page
         base.OnNavigatedFrom(navigationEventArgs);
     }
 
+    private void OnPageLoaded(object sender, RoutedEventArgs routedEventArgs)
+    {
+        _isPageLoaded = true;
+        TryStartLoginWhenReady();
+    }
+
+    private void OnPageUnloaded(object sender, RoutedEventArgs routedEventArgs) => _isPageLoaded = false;
+
+    private void TryStartLoginWhenReady()
+    {
+        if (!_isPageLoaded || !_isLoginStartPending) return;
+
+        _isLoginStartPending = false;
+        DispatcherQueue.TryEnqueue(async () => await StartLoginAsync());
+    }
+
     private async Task StartLoginAsync()
     {
+        if (!_isPageLoaded) return;
         if (_isLoggingIn) return;
 
         _isLoggingIn = true;
