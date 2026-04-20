@@ -165,7 +165,6 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         openPicker.FileTypeFilter.Add(".yip");
         openPicker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
 
-        InitializeWithWindow.Initialize(openPicker, ManageWindow.Instance.GetWindowHandle());
 
         var file = await openPicker.PickSingleFileAsync();
         if (file is null) return;
@@ -259,8 +258,6 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         var openPicker = new FileOpenPicker(XamlRoot.ContentIslandEnvironment.AppWindowId);
         openPicker.FileTypeFilter.Add(".yip");
         openPicker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
-
-        InitializeWithWindow.Initialize(openPicker, ManageWindow.Instance.GetWindowHandle());
 
         var file = await openPicker.PickSingleFileAsync();
         if (file is null) return;
@@ -427,8 +424,6 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         savePicker.SuggestedFileName = "YellowInside_SendMethod";
         savePicker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
 
-        InitializeWithWindow.Initialize(savePicker, ManageWindow.Instance.GetWindowHandle());
-
         var file = await savePicker.PickSaveFileAsync();
         if (file is null) return;
 
@@ -445,8 +440,6 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         var openPicker = new FileOpenPicker(XamlRoot.ContentIslandEnvironment.AppWindowId);
         openPicker.FileTypeFilter.Add(".yic");
         openPicker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
-
-        InitializeWithWindow.Initialize(openPicker, ManageWindow.Instance.GetWindowHandle());
 
         var file = await openPicker.PickSingleFileAsync();
         if (file is null) return;
@@ -481,8 +474,6 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         savePicker.FileTypeChoices.Add("텍스트 파일", [".txt"]);
         savePicker.SuggestedFileName = $"YellowInside_Log_{DateTime.Now:yyyyMMdd_HHmmss}";
         savePicker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
-
-        InitializeWithWindow.Initialize(savePicker, ManageWindow.Instance.GetWindowHandle());
 
         var file = await savePicker.PickSaveFileAsync();
         if (file is null) return;
@@ -735,8 +726,6 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         savePicker.FileTypeChoices.Add("YellowInside 패키지", [".yip"]);
         savePicker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
         savePicker.SuggestedFileName = suggestedFileName;
-
-        InitializeWithWindow.Initialize(savePicker, ManageWindow.Instance.GetWindowHandle());
 
         return await savePicker.PickSaveFileAsync();
     }

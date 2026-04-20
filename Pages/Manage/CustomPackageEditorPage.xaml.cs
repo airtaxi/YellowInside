@@ -162,8 +162,6 @@ public sealed partial class CustomPackageEditorPage : Page
         openPicker.FileTypeFilter.Add(".webp");
         openPicker.SuggestedStartLocation = PickerLocationId.PicturesLibrary;
 
-        InitializeWithWindow.Initialize(openPicker, ManageWindow.Instance.GetWindowHandle());
-
         var file = await openPicker.PickSingleFileAsync();
         if (file is null) return;
 
@@ -182,8 +180,6 @@ public sealed partial class CustomPackageEditorPage : Page
         openPicker.FileTypeFilter.Add(".gif");
         openPicker.FileTypeFilter.Add(".webp");
         openPicker.SuggestedStartLocation = PickerLocationId.PicturesLibrary;
-
-        InitializeWithWindow.Initialize(openPicker, ManageWindow.Instance.GetWindowHandle());
 
         var files = await openPicker.PickMultipleFilesAsync();
         if (files is null || files.Count == 0) return;
