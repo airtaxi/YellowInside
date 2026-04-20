@@ -3,12 +3,12 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Navigation;
+using Microsoft.Windows.Storage.Pickers;
 using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Windows.Storage.Pickers;
 using Windows.Storage.Streams;
 using Windows.System;
 using WinRT.Interop;
@@ -154,7 +154,7 @@ public sealed partial class CustomPackageEditorPage : Page
 
     private async void OnSelectMainImageButtonClicked(object sender, RoutedEventArgs e)
     {
-        var openPicker = new FileOpenPicker();
+        var openPicker = new FileOpenPicker(XamlRoot.ContentIslandEnvironment.AppWindowId);
         openPicker.FileTypeFilter.Add(".png");
         openPicker.FileTypeFilter.Add(".jpg");
         openPicker.FileTypeFilter.Add(".jpeg");
@@ -168,14 +168,14 @@ public sealed partial class CustomPackageEditorPage : Page
         if (file is null) return;
 
         _mainImageFilePath = file.Path;
-        MainImageFileNameTextBlock.Text = file.Name;
+        MainImageFileNameTextBlock.Text = Path.GetFileName(file.Path);
         MainImagePreview.Source = new BitmapImage(new Uri(file.Path));
         UpdateSaveButtonState();
     }
 
     private async void OnAddStickersButtonClicked(object sender, RoutedEventArgs e)
     {
-        var openPicker = new FileOpenPicker();
+        var openPicker = new FileOpenPicker(XamlRoot.ContentIslandEnvironment.AppWindowId);
         openPicker.FileTypeFilter.Add(".png");
         openPicker.FileTypeFilter.Add(".jpg");
         openPicker.FileTypeFilter.Add(".jpeg");
@@ -195,7 +195,7 @@ public sealed partial class CustomPackageEditorPage : Page
             StickerFiles.Add(new StickerFileItem
             {
                 SourceFilePath = file.Path,
-                DisplayName = Path.GetFileNameWithoutExtension(file.Name),
+                DisplayName = Path.GetFileNameWithoutExtension(file.Path),
                 Thumbnail = new BitmapImage(new Uri(file.Path)),
             });
         }
