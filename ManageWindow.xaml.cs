@@ -7,6 +7,7 @@ using System;
 using System.Runtime.InteropServices;
 using WinUIEx;
 using TitleBar = Microsoft.UI.Xaml.Controls.TitleBar;
+using CommunityToolkit.Mvvm.Input;
 
 namespace YellowInside;
 
@@ -122,7 +123,8 @@ public sealed partial class ManageWindow : WindowEx, IRecipient<LaunchOnStartupC
         else LaunchOnStartupMenuFlyoutItem.Text = "시스템 시작 시 자동 실행 설정";
     }
 
-    private void OnOpenManageWindowMenuFlyoutItemClicked(object sender, RoutedEventArgs e) => App.ShowManageWindow();
+    [RelayCommand]
+    private void OpenManageWindow() => App.ShowManageWindow();
     private void OnCloseProgramMenuFlyoutItemClicked(object sender, RoutedEventArgs e) => Environment.Exit(0);
     
     private void OnLaunchOnStartupMenuFlyoutItemClicked(object sender, RoutedEventArgs e)

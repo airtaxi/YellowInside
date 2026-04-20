@@ -24,15 +24,17 @@
         <tb:TaskbarIcon
             x:Name="TaskbarIcon"
             ContextMenuMode="SecondWindow"
+            LeftClickCommand="{x:Bind OpenManageWindowCommand}"
             MenuActivation="RightClick"
-            NoLeftClickDelay="True">
+            NoLeftClickDelay="True"
+            ToolTipText="옐로우 인사이드">
             <tb:TaskbarIcon.IconSource>
                 <tb:GeneratedIconSource BackgroundSource="ms-appx:///Assets/Icon.png" />
             </tb:TaskbarIcon.IconSource>
             <tb:TaskbarIcon.ContextFlyout>
                 <MenuFlyout AreOpenCloseAnimationsEnabled="True">
                     <MenuFlyoutItem IsEnabled="False" Text="제작자: 이호원 (airtaxi)" />
-                    <MenuFlyoutItem Click="OnOpenManageWindowMenuFlyoutItemClicked" Text="관리 창 열기" />
+                    <MenuFlyoutItem Command="{x:Bind OpenManageWindowCommand}" Text="관리 창 열기" />
                     <MenuFlyoutItem
                         x:Name="LaunchOnStartupMenuFlyoutItem"
                         Click="OnLaunchOnStartupMenuFlyoutItemClicked"
