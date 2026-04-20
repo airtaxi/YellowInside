@@ -14,7 +14,7 @@
 		<EnableMsixTooling>true</EnableMsixTooling>
 		<PublishAot>true</PublishAot>
 		<DefineConstants>DISABLE_XAML_GENERATED_MAIN</DefineConstants>
-		<DefaultLanguage>en</DefaultLanguage>
+		<DefaultLanguage>ko</DefaultLanguage>
 		<ApplicationIcon>Assets\Icon.ico</ApplicationIcon>
 		<AppxPackageSigningEnabled>true</AppxPackageSigningEnabled>
 		<PackageCertificateKeyFile>YellowInsideCert.pfx</PackageCertificateKeyFile>
@@ -24,6 +24,7 @@
 		<AppxAutoIncrementPackageRevision>True</AppxAutoIncrementPackageRevision>
 		<GenerateTestArtifacts>True</GenerateTestArtifacts>
 		<AppxBundle>Always</AppxBundle>
+		<AppxBundleAutoResourcePackageQualifiers>Scale</AppxBundleAutoResourcePackageQualifiers>
 		<HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
 		<AppxBundlePlatforms>x86|x64|arm64</AppxBundlePlatforms>
 	</PropertyGroup>
