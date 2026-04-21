@@ -7,11 +7,14 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Navigation;
 using System;
+using Windows.Storage;
 
 namespace YellowInside.Pages.Manage;
 
 public sealed partial class HomePage : Page
 {
+    private const string SettingsKeyContentSourceSupportTipDismissed = "ManageContentSourceSupportTipDismissed";
+
     private bool _isRestoringSelection;
     private SelectorBarItem _previousSelectorBarItem;
 
@@ -19,6 +22,8 @@ public sealed partial class HomePage : Page
     {
         InitializeComponent();
         _previousSelectorBarItem = DcconSelectorBarItem;
+        ContentSourceSupportTeachingTip.Target = ContentSourceSelectorBar;
+        Loaded += OnPageLoaded;
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs navigationEventArgs)
@@ -69,5 +74,18 @@ public sealed partial class HomePage : Page
         _isRestoringSelection = true;
         selectorBar.SelectedItem = _previousSelectorBarItem;
         _isRestoringSelection = false;
+    }
+
+    private void OnPageLoaded(object sender, Microsoft.UI.Xaml.RoutedEventArgs routedEventArgs)
+    {
+        var localSettings = ApplicationData.Current.LocalSettings;
+        if (localSettings.Values.ContainsKey(SettingsKeyContentSourceSupportTipDismissed)) return;
+        ContentSourceSupportTeachingTip.IsOpen = true;
+    }
+
+    private void OnContentSourceSupportTeachingTipActionButtonClicked(TeachingTip sender, object args)
+    {
+        ApplicationData.Current.LocalSettings.Values[SettingsKeyContentSourceSupportTipDismissed] = true;
+        ContentSourceSupportTeachingTip.IsOpen = false;
     }
 }
