@@ -1,13 +1,14 @@
-﻿using YellowInside.Messages;
-using YellowInside.Pages;
+﻿using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
+using H.NotifyIcon;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using System;
 using System.Runtime.InteropServices;
 using WinUIEx;
+using YellowInside.Messages;
+using YellowInside.Pages;
 using TitleBar = Microsoft.UI.Xaml.Controls.TitleBar;
-using CommunityToolkit.Mvvm.Input;
 
 namespace YellowInside;
 
@@ -47,8 +48,13 @@ public sealed partial class ManageWindow : WindowEx, IRecipient<LaunchOnStartupC
 
         WeakReferenceMessenger.Default.Register(this);
 
+        // 시스템 자동시작에 의한 경우 Activate()가 불리지 않기 때문에 XAML에서 Command를 바인딩할 수 없어서 코드에서 직접 바인딩
+        TaskbarIcon.LeftClickCommand = OpenManageWindowCommand;
+        OpenManageWindowMenuFlyoutItem.Command = OpenManageWindowCommand;
+
         _subclassprocedure = WindowSubclassProc;
         SetWindowSubclass(this.GetWindowHandle(), _subclassprocedure, 1, 0);
+
 
         AppFrame.Navigated += OnAppFrameNavigated;
         AppFrame.Navigate(typeof(ManagePage));
