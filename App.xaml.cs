@@ -1,9 +1,9 @@
 ﻿using Arcacon.NET;
 using dccon.NET;
+using ImageMagick;
 using InvenSticker.NET;
-using YellowInside.Managers;
-using YellowInsideLib;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Shapes;
 using Microsoft.Windows.AppLifecycle;
 using System;
 using System.Diagnostics;
@@ -11,7 +11,10 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using Windows.ApplicationModel;
+using YellowInside.Managers;
+using YellowInsideLib;
 using AppInstance = Microsoft.Windows.AppLifecycle.AppInstance;
+using Path = System.IO.Path;
 
 namespace YellowInside;
 
@@ -43,14 +46,18 @@ public partial class App : Application
     {
         InitializeComponent();
 
+        var magickNetPath = MagickNET.GetEnvironmentVariable("Path");
+        var ffmpegPath = Path.Combine(AppContext.BaseDirectory, "ffmpeg");
+        MagickNET.SetEnvironmentVariable("Path", @$"{magickNetPath};{ffmpegPath}");
+
         UnhandledException += OnUnhandledException;
         AppDomain.CurrentDomain.UnhandledException += OnAppDomainUnhandledException;
         TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
 
         var manager = SessionManager.Instance;
-        manager.InfoLog += (text) => { Debug.WriteLine(text); Managers.FileLogManager.WriteInfo(text); };
-        manager.WarnLog += (text) => { Debug.WriteLine(text); Managers.FileLogManager.WriteWarn(text); };
-        manager.ErrorLog += (text) => { Debug.WriteLine(text); Managers.FileLogManager.WriteError(text); };
+        manager.InfoLog += (text) => { Debug.WriteLine(text); FileLogManager.WriteInfo(text); };
+        manager.WarnLog += (text) => { Debug.WriteLine(text); FileLogManager.WriteWarn(text); };
+        manager.ErrorLog += (text) => { Debug.WriteLine(text); FileLogManager.WriteError(text); };
         manager.DcconButtonClicked += OnDcconButtonClicked;
 
         var buttonIconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "dccon.png");
@@ -92,7 +99,7 @@ public partial class App : Application
 
         var message = builder.ToString();
         Debug.WriteLine(message);
-        Managers.FileLogManager.WriteError(message);
+        FileLogManager.WriteError(message);
     }
 
     public static void ShowManageWindow()
