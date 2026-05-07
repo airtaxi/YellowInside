@@ -18,6 +18,7 @@ public static class SettingsManager
     private const string HotkeyModifiersKey = "HotkeyModifiers";
     private const string HotkeyKeyKey = "HotkeyKey";
     private const string LastSeenVersionKey = "LastSeenVersion";
+    private const string UseAnimatedPngWebpConversionEnabledKey = "UseAnimatedPngWebpConversionEnabled";
 
     private static readonly ApplicationDataContainer s_localSettings =
         ApplicationData.Current.LocalSettings;
@@ -26,6 +27,12 @@ public static class SettingsManager
     {
         get => s_localSettings.Values[GifPlaybackKey] is bool value && value;
         set => s_localSettings.Values[GifPlaybackKey] = value;
+    }
+
+    public static bool UseAnimatedPngWebpConversionEnabled
+    {
+        get => s_localSettings.Values[UseAnimatedPngWebpConversionEnabledKey] is bool value && value;
+        set => s_localSettings.Values[UseAnimatedPngWebpConversionEnabledKey] = value;
     }
 
     public static AppThemeSetting Theme

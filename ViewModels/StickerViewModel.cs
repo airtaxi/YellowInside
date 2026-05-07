@@ -82,7 +82,7 @@ public partial class StickerViewModel : ObservableObject
             if (package != null)
             {
                 var sticker = package.Stickers.FirstOrDefault(x => x.Path == _path);
-                var imagePath = ContentsManager.GetStickerImagePath(_source, _packageIdentifier, package.LocalDirectoryName, sticker.FileName);
+                var imagePath = ContentsManager.GetStickerImagePath(_source, _packageIdentifier, package.LocalDirectoryName, sticker);
                 ManageWindow.Instance.DispatcherQueue.TryEnqueue(() => { ImageSource = new BitmapImage(new Uri(imagePath)) { AutoPlay = SettingsManager.GifPlaybackEnabled }; });
                 return;
             }

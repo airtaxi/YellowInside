@@ -13,6 +13,7 @@ using Windows.Storage.Streams;
 using Windows.System;
 using WinRT.Interop;
 using WinUIEx;
+using YellowInside.Helpers;
 using YellowInside.Models;
 
 namespace YellowInside.Pages.Manage;
@@ -104,8 +105,7 @@ public sealed partial class CustomPackageEditorPage : Page
                 ContentSource.Local, _packageIdentifier, package.LocalDirectoryName, sticker.FileName);
 
             BitmapImage thumbnail = null;
-            if (File.Exists(stickerFilePath))
-                thumbnail = await LoadBitmapWithoutLockingAsync(stickerFilePath);
+            if (File.Exists(stickerFilePath)) thumbnail = await LoadBitmapWithoutLockingAsync(stickerFilePath);
 
             StickerFiles.Add(new StickerFileItem
             {
@@ -235,11 +235,13 @@ public sealed partial class CustomPackageEditorPage : Page
 
     private async void OnSaveButtonClicked(object sender, RoutedEventArgs e)
     {
-        if (_mode == CustomPackageEditorMode.Edit)
+        var savedPackageIdentifier = _packageIdentifier;
+
+        try
         {
-            ManageWindow.ShowLoading("사용자 지정콘 수정 중...");
-            try
+            if (_mode == CustomPackageEditorMode.Edit)
             {
+                ManageWindow.ShowLoading("사용자 지정콘 수정 중...");
                 var stickerEntries = StickerFiles
                     .Select(item => (item.SourceFilePath, item.IsExisting, item.OriginalStickerPath, item.OriginalFileName))
                     .ToList();
@@ -253,15 +255,11 @@ public sealed partial class CustomPackageEditorPage : Page
                     [.. Tags],
                     stickerEntries);
             }
-            finally { ManageWindow.HideLoading(); }
-        }
-        else
-        {
-            ManageWindow.ShowLoading("사용자 지정콘 추가 중...");
-            try
+            else
             {
+                ManageWindow.ShowLoading("사용자 지정콘 추가 중...");
                 var stickerSourcePaths = StickerFiles.Select(item => item.SourceFilePath).ToList();
-                await ContentsManager.AddCustomPackageAsync(
+                savedPackageIdentifier = await ContentsManager.AddCustomPackageAsync(
                     TitleTextBox.Text.Trim(),
                     DescriptionTextBox.Text.Trim(),
                     _mainImageFilePath,
@@ -270,9 +268,51 @@ public sealed partial class CustomPackageEditorPage : Page
                     [.. Tags],
                     stickerSourcePaths);
             }
-            finally { ManageWindow.HideLoading(); }
         }
+        catch (Exception exception)
+        {
+            App.LogException("CustomPackageSave", exception);
+            await this.ShowDialogAsync("저장 실패", exception.Message);
+            return;
+        }
+        finally { ManageWindow.HideLoading(); }
+
+        await ConvertCustomPackageAnimatedPngToWebpAsync(savedPackageIdentifier);
 
         if (Frame.CanGoBack) Frame.GoBack();
+    }
+
+    private async Task ConvertCustomPackageAnimatedPngToWebpAsync(string packageIdentifier)
+    {
+        if (!SettingsManager.UseAnimatedPngWebpConversionEnabled) return;
+        if (string.IsNullOrEmpty(packageIdentifier)) return;
+
+        try
+        {
+            ManageWindow.ShowLoading("움짤 PNG를 검색하는 중...");
+            var progress = new ActionProgress<AnimatedPngToWebpPackageConversionProgress>(conversionProgress =>
+                ManageWindow.ShowLoading(CreateAnimatedPngToWebpProgressMessage(conversionProgress), conversionProgress.ProgressPercentage));
+            await Task.Run(async () => await ContentsManager.ConvertAnimatedPngStickersToWebpAsync([(ContentSource.Local, packageIdentifier)], progress));
+        }
+        catch (Exception exception)
+        {
+            App.LogException("AnimatedPngToWebpConversion", exception);
+            await this.ShowDialogAsync(
+                "WebP 변환 실패",
+                "움직이는 PNG를 WebP로 바꾸는 중 문제가 발생했습니다.\n저장된 원본 PNG는 그대로 사용할 수 있습니다.");
+        }
+        finally { ManageWindow.HideLoading(); }
+    }
+
+    private static string CreateAnimatedPngToWebpProgressMessage(AnimatedPngToWebpPackageConversionProgress progress)
+    {
+        var progressCountText = progress.TotalCount > 0 ? $"{progress.CompletedCount}/{progress.TotalCount}" : string.Empty;
+        return progress.Stage switch
+        {
+            AnimatedPngToWebpPackageConversionStage.Searching => $"움짤 PNG 검색 중... {progressCountText}",
+            AnimatedPngToWebpPackageConversionStage.Converting => $"WebP 변환 중... {progressCountText}",
+            AnimatedPngToWebpPackageConversionStage.Saving => "변환 결과 저장 중...",
+            _ => "WebP 변환 준비 중...",
+        };
     }
 }

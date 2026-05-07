@@ -219,7 +219,7 @@ public partial class PopupViewModel : ObservableObject
             if (sticker is null) continue;
 
             var imagePath = ContentsManager.GetStickerImagePath(
-                favorite.Source, favorite.PackageIdentifier, package.LocalDirectoryName, sticker.FileName);
+                favorite.Source, favorite.PackageIdentifier, package.LocalDirectoryName, sticker);
             if (!File.Exists(imagePath)) continue;
 
             Stickers.Add(new PopupStickerViewModel
@@ -250,7 +250,7 @@ public partial class PopupViewModel : ObservableObject
             if (sticker is null) continue;
 
             var imagePath = ContentsManager.GetStickerImagePath(
-                entry.Source, entry.PackageIdentifier, package.LocalDirectoryName, sticker.FileName);
+                entry.Source, entry.PackageIdentifier, package.LocalDirectoryName, sticker);
             if (!File.Exists(imagePath)) continue;
 
             Stickers.Add(new PopupStickerViewModel
@@ -273,7 +273,7 @@ public partial class PopupViewModel : ObservableObject
         foreach (var sticker in package.Stickers)
         {
             var imagePath = ContentsManager.GetStickerImagePath(
-                package.Source, package.PackageIdentifier, package.LocalDirectoryName, sticker.FileName);
+                package.Source, package.PackageIdentifier, package.LocalDirectoryName, sticker);
             if (!File.Exists(imagePath)) continue;
 
             Stickers.Add(new PopupStickerViewModel

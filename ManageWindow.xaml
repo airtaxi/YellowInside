@@ -71,13 +71,30 @@
                 VerticalAlignment="Center"
                 Spacing="8">
                 <ProgressRing
+                    x:Name="LoadingProgressRing"
                     Width="80"
                     Height="80"
                     IsIndeterminate="True" />
                 <TextBlock
                     x:Name="LoadingTextBlock"
+                    MaxWidth="420"
                     HorizontalAlignment="Center"
-                    FontWeight="Bold" />
+                    FontWeight="Bold"
+                    TextAlignment="Center"
+                    TextWrapping="WrapWholeWords" />
+                <ProgressBar
+                    x:Name="LoadingProgressBar"
+                    Width="240"
+                    Maximum="100"
+                    Minimum="0"
+                    Visibility="Collapsed" />
+                <TextBlock
+                    x:Name="LoadingProgressTextBlock"
+                    HorizontalAlignment="Center"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    Style="{ThemeResource CaptionTextBlockStyle}"
+                    TextAlignment="Center"
+                    Visibility="Collapsed" />
             </StackPanel>
         </Grid>
     </Grid>

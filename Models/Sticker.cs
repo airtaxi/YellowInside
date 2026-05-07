@@ -22,4 +22,7 @@ public class Sticker
 
 	/// <summary>로컬에 저장된 파일명 (확장자 포함)</summary>
 	public string FileName { get; set; } = string.Empty;
+
+	/// <summary>WebP로 변환된 파일명 (확장자 포함)</summary>
+	public string WebpFileName { get; set; } = string.Empty;
 }

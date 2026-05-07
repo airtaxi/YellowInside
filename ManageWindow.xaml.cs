@@ -84,8 +84,7 @@ public sealed partial class ManageWindow : WindowEx, IRecipient<LaunchOnStartupC
                 return 0;
 
             case WM_CLOSE:
-                if (_forceClose || _systemShutdown)
-                    break;
+                if (_forceClose || _systemShutdown) break;
                 this.Hide();
                 return 0;
         }
@@ -98,7 +97,9 @@ public sealed partial class ManageWindow : WindowEx, IRecipient<LaunchOnStartupC
         DispatcherQueue.TryEnqueue(UpdateLaunchOnStartupMenuFlyoutItemText);
     }
 
-    public static void ShowLoading(string message)
+    public static void ShowLoading(string message) => ShowLoading(message, null);
+
+    public static void ShowLoading(string message, double? progressPercentage)
     {
         Instance.DispatcherQueue.TryEnqueue(() =>
         {
@@ -110,6 +111,22 @@ public sealed partial class ManageWindow : WindowEx, IRecipient<LaunchOnStartupC
                 Instance.LoadingTextBlock.Visibility = Visibility.Visible;
             }
             else Instance.LoadingTextBlock.Visibility = Visibility.Collapsed;
+
+            if (progressPercentage.HasValue)
+            {
+                var clampedProgressPercentage = Math.Clamp(progressPercentage.Value, 0, 100);
+                Instance.LoadingProgressRing.Visibility = Visibility.Collapsed;
+                Instance.LoadingProgressBar.Visibility = Visibility.Visible;
+                Instance.LoadingProgressBar.Value = clampedProgressPercentage;
+                Instance.LoadingProgressTextBlock.Visibility = Visibility.Visible;
+                Instance.LoadingProgressTextBlock.Text = $"{clampedProgressPercentage:0.0}%";
+            }
+            else
+            {
+                Instance.LoadingProgressRing.Visibility = Visibility.Visible;
+                Instance.LoadingProgressBar.Visibility = Visibility.Collapsed;
+                Instance.LoadingProgressTextBlock.Visibility = Visibility.Collapsed;
+            }
         });
     }
 
@@ -119,6 +136,9 @@ public sealed partial class ManageWindow : WindowEx, IRecipient<LaunchOnStartupC
         {
             Instance.LoadingGrid.Visibility = Visibility.Collapsed;
             Instance.LoadingTextBlock.Visibility = Visibility.Collapsed;
+            Instance.LoadingProgressRing.Visibility = Visibility.Visible;
+            Instance.LoadingProgressBar.Visibility = Visibility.Collapsed;
+            Instance.LoadingProgressTextBlock.Visibility = Visibility.Collapsed;
             Instance.AppFrame.IsEnabled = true;
         });
     }
@@ -142,8 +162,7 @@ public sealed partial class ManageWindow : WindowEx, IRecipient<LaunchOnStartupC
 
     private void OnAppTitleBarBackRequested(TitleBar sender, object args)
     {
-        if (AppFrame.Content is ArcaconLoginPage)
-            return;
+        if (AppFrame.Content is ArcaconLoginPage) return;
 
         if (AppFrame.CanGoBack)
         {
@@ -172,8 +191,7 @@ public sealed partial class ManageWindow : WindowEx, IRecipient<LaunchOnStartupC
 
     public static void GoBack()
     {
-        if (Instance.AppFrame.Content is ArcaconLoginPage)
-            return;
+        if (Instance.AppFrame.Content is ArcaconLoginPage) return;
 
         if (Instance.AppFrame.CanGoBack) Instance.AppFrame.GoBack();
     }

@@ -62,8 +62,7 @@ public static class ContentsManager
 			if (deserialized is not null) s_data = deserialized;
 		}
 
-		if (MigratePackageIdentifiers())
-			await SaveAsync();
+		if (MigratePackageIdentifiers()) await SaveAsync();
 	}
 
 	/// <summary>
@@ -123,7 +122,7 @@ public static class ContentsManager
 	/// <summary>
 	/// 사용자 지정 패키지를 추가합니다.
 	/// </summary>
-	public static async Task AddCustomPackageAsync(
+	public static async Task<string> AddCustomPackageAsync(
 		string title,
 		string description,
 		string mainImageSourcePath,
@@ -190,6 +189,7 @@ public static class ContentsManager
 
 		PackagesChanged?.Invoke();
 		WeakReferenceMessenger.Default.Send(new FavoritesOrPackagesChangedMessage(ContentSource.Local, packageIdentifier));
+		return packageIdentifier;
 	}
 
 	/// <summary>
@@ -217,8 +217,13 @@ public static class ContentsManager
 
 		// Collect old sticker info for orphan cleanup and favorite/history pruning
 		var oldStickerFileNames = package.Stickers.Select(sticker => sticker.FileName).ToHashSet();
+		var oldStickerWebpFileNames = package.Stickers
+			.Select(sticker => sticker.WebpFileName)
+			.Where(webpFileName => !string.IsNullOrWhiteSpace(webpFileName))
+			.ToHashSet();
 		var oldStickerPaths = package.Stickers.Select(sticker => sticker.Path).ToHashSet();
 		var keptStickerFileNames = new HashSet<string>();
+		var keptStickerWebpFileNames = new HashSet<string>();
 		var keptStickerPaths = new HashSet<string>();
 
 		// Build new sticker list (copy new files first, before metadata update)
@@ -233,6 +238,7 @@ public static class ContentsManager
 				var existingSticker = package.Stickers.FirstOrDefault(sticker => sticker.Path == entry.OriginalStickerPath);
 				if (existingSticker is not null)
 				{
+					if (!string.IsNullOrWhiteSpace(existingSticker.WebpFileName)) keptStickerWebpFileNames.Add(existingSticker.WebpFileName);
 					newStickers.Add(new Sticker
 					{
 						Path = existingSticker.Path,
@@ -240,6 +246,7 @@ public static class ContentsManager
 						Extension = existingSticker.Extension,
 						SortNumber = index,
 						FileName = existingSticker.FileName,
+						WebpFileName = existingSticker.WebpFileName,
 					});
 				}
 			}
@@ -289,6 +296,13 @@ public static class ContentsManager
 		{
 			var orphanedFilePath = Path.Combine(stickersDirectory, orphanedFileName);
 			try { if (File.Exists(orphanedFilePath)) File.Delete(orphanedFilePath); }
+			catch { }
+		}
+
+		foreach (var orphanedWebpFileName in oldStickerWebpFileNames.Except(keptStickerWebpFileNames))
+		{
+			var orphanedWebpFilePath = Path.Combine(stickersDirectory, orphanedWebpFileName);
+			try { if (File.Exists(orphanedWebpFilePath)) File.Delete(orphanedWebpFilePath); }
 			catch { }
 		}
 
@@ -403,13 +417,14 @@ public static class ContentsManager
 		var packageDirectory = GetPackageDirectory(ContentSource.Arcacon, packageIdentifier);
 		Directory.CreateDirectory(packageDirectory);
 
-		await App.ArcaconClient.DownloadPackageAsync(packageIndex, packageDirectory, progress, cancellationToken);
+		var localDirectoryName = ArcaconFileNameHelper.SanitizeFileName(detail.Title);
+		var stickerDirectory = Path.Combine(packageDirectory, localDirectoryName);
+		Directory.CreateDirectory(stickerDirectory);
+		var stickers = await DownloadArcaconStickerFilesAsync(detail.Stickers, stickerDirectory, progress, cancellationToken);
 
 		var mainImagePath = $"https://arca.live/api/emoticon/{packageIndex}/thumb";
 		var mainImageFileName = await DownloadMainImageAsync(
 			ContentSource.Arcacon, mainImagePath, packageDirectory, cancellationToken);
-
-		var localDirectoryName = ArcaconFileNameHelper.SanitizeFileName(detail.Title);
 
 		var stickerPackage = new StickerPackage
 		{
@@ -422,16 +437,8 @@ public static class ContentsManager
 			SellerName = detail.SellerName,
 			RegistrationDate = detail.RegistrationDate,
 			LocalDirectoryName = localDirectoryName,
-			LocalDirectoryPath = Path.Combine(packageDirectory, localDirectoryName),
-			Stickers = [.. detail.Stickers.Select(sticker => new Sticker
-			{
-				Path = sticker.ImageUrl,
-				Title = string.IsNullOrWhiteSpace(sticker.Title) ? $"스티커 {sticker.SortNumber}" : sticker.Title,
-				Extension = sticker.Extension,
-				SortNumber = sticker.SortNumber,
-				ImageUrl = sticker.ImageUrl,
-				FileName = ArcaconFileNameHelper.GetStickerFileName(sticker),
-			})],
+			LocalDirectoryPath = stickerDirectory,
+			Stickers = stickers,
 			Tags = [.. detail.Tags],
 		};
 
@@ -592,6 +599,142 @@ public static class ContentsManager
 		}
 	}
 
+	public static Task<AnimatedPngToWebpPackageConversionResult> ConvertAnimatedPngStickersToWebpAsync(
+		IProgress<AnimatedPngToWebpPackageConversionProgress> progress = null,
+		CancellationToken cancellationToken = default)
+		=> ConvertAnimatedPngStickersToWebpAsync(null, progress, cancellationToken);
+
+	public static async Task<AnimatedPngToWebpPackageConversionResult> ConvertAnimatedPngStickersToWebpAsync(
+		IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> selectedPackageKeys,
+		IProgress<AnimatedPngToWebpPackageConversionProgress> progress = null,
+		CancellationToken cancellationToken = default)
+	{
+		var conversionCandidates = new List<AnimatedPngStickerConversionCandidate>();
+		var convertedPackageKeys = new HashSet<(ContentSource Source, string PackageIdentifier)>();
+		var alreadyConvertedCount = 0;
+		var notTargetCount = 0;
+		var failedCount = 0;
+		List<AnimatedPngStickerConversionCandidate> stickerCandidates;
+
+		lock (s_lock)
+		{
+			var selectedPackageKeySet = selectedPackageKeys is null ? null : selectedPackageKeys.ToHashSet();
+			stickerCandidates = s_data.DownloadedPackages
+				.Where(package => selectedPackageKeySet is null || selectedPackageKeySet.Contains((package.Source, package.PackageIdentifier)))
+				.SelectMany(package => package.Stickers.Select(sticker => CreateAnimatedPngStickerConversionCandidate(package, sticker)))
+				.ToList();
+		}
+
+		for (var stickerCandidateIndex = 0; stickerCandidateIndex < stickerCandidates.Count; stickerCandidateIndex++)
+		{
+			cancellationToken.ThrowIfCancellationRequested();
+
+			var stickerCandidate = stickerCandidates[stickerCandidateIndex];
+			progress?.Report(new AnimatedPngToWebpPackageConversionProgress(
+				AnimatedPngToWebpPackageConversionStage.Searching,
+				stickerCandidateIndex + 1,
+				stickerCandidates.Count,
+				stickerCandidate.Package.Title,
+				stickerCandidate.Sticker.FileName));
+
+			if (!Path.GetExtension(stickerCandidate.Sticker.FileName).Equals(".png", StringComparison.OrdinalIgnoreCase))
+			{
+				notTargetCount++;
+				continue;
+			}
+
+			if (!File.Exists(stickerCandidate.SourceFilePath))
+			{
+				failedCount++;
+				App.LogException(
+					"AnimatedPngToWebpConversion",
+					new FileNotFoundException("스티커 원본 파일을 찾을 수 없습니다.", stickerCandidate.SourceFilePath));
+				continue;
+			}
+
+			if (!string.IsNullOrWhiteSpace(stickerCandidate.Sticker.WebpFileName) && File.Exists(stickerCandidate.WebpFilePath))
+			{
+				alreadyConvertedCount++;
+				continue;
+			}
+
+			if (!AnimatedPngToWebpConversionManager.IsAnimatedPng(stickerCandidate.SourceFilePath))
+			{
+				notTargetCount++;
+				continue;
+			}
+
+			conversionCandidates.Add(stickerCandidate);
+		}
+
+		var convertedCount = 0;
+		for (var conversionCandidateIndex = 0; conversionCandidateIndex < conversionCandidates.Count; conversionCandidateIndex++)
+		{
+			cancellationToken.ThrowIfCancellationRequested();
+
+			var conversionCandidate = conversionCandidates[conversionCandidateIndex];
+			progress?.Report(new AnimatedPngToWebpPackageConversionProgress(
+				AnimatedPngToWebpPackageConversionStage.Converting,
+				conversionCandidateIndex,
+				conversionCandidates.Count,
+				conversionCandidate.Package.Title,
+				conversionCandidate.Sticker.FileName));
+
+			try
+			{
+				AnimatedPngToWebpConversionManager.ConvertAnimatedPngToWebp(
+					conversionCandidate.SourceFilePath,
+					conversionCandidate.WebpFilePath,
+					cancellationToken);
+
+				lock (s_lock) conversionCandidate.Sticker.WebpFileName = conversionCandidate.WebpFileName;
+				convertedPackageKeys.Add((conversionCandidate.Package.Source, conversionCandidate.Package.PackageIdentifier));
+				convertedCount++;
+			}
+			catch (Exception exception)
+			{
+				failedCount++;
+				App.LogException("AnimatedPngToWebpConversion", exception);
+			}
+
+			progress?.Report(new AnimatedPngToWebpPackageConversionProgress(
+				AnimatedPngToWebpPackageConversionStage.Converting,
+				conversionCandidateIndex + 1,
+				conversionCandidates.Count,
+				conversionCandidate.Package.Title,
+				conversionCandidate.Sticker.FileName));
+		}
+
+		if (convertedCount > 0)
+		{
+			progress?.Report(new AnimatedPngToWebpPackageConversionProgress(
+				AnimatedPngToWebpPackageConversionStage.Saving,
+				0,
+				1,
+				string.Empty,
+				string.Empty));
+
+			await SaveAsync();
+
+			PackagesChanged?.Invoke();
+			foreach (var packageKey in convertedPackageKeys) WeakReferenceMessenger.Default.Send(new FavoritesOrPackagesChangedMessage(packageKey.Source, packageKey.PackageIdentifier));
+
+			progress?.Report(new AnimatedPngToWebpPackageConversionProgress(
+				AnimatedPngToWebpPackageConversionStage.Saving,
+				1,
+				1,
+				string.Empty,
+				string.Empty));
+		}
+
+		return new AnimatedPngToWebpPackageConversionResult(
+			stickerCandidates.Count,
+			convertedCount,
+			alreadyConvertedCount,
+			notTargetCount,
+			failedCount);
+	}
+
 	/// <summary>
 	/// 특정 패키지가 다운로드되어 있는지 확인합니다.
 	/// </summary>
@@ -706,8 +849,7 @@ public static class ContentsManager
 			var reordered = new List<StickerPackage>(s_data.DownloadedPackages.Count);
 			foreach (var key in newOrder)
 			{
-				if (packagesByKey.Remove(key, out var package))
-					reordered.Add(package);
+				if (packagesByKey.Remove(key, out var package)) reordered.Add(package);
 			}
 			reordered.AddRange(packagesByKey.Values);
 
@@ -738,8 +880,7 @@ public static class ContentsManager
 		HistoryManager.RemoveByPackage(source, packageIdentifier);
 
 		var packageDirectory = GetPackageDirectory(source, packageIdentifier);
-		if (Directory.Exists(packageDirectory))
-			Directory.Delete(packageDirectory, recursive: true);
+		if (Directory.Exists(packageDirectory)) Directory.Delete(packageDirectory, recursive: true);
 
 		await SaveAsync();
 
@@ -755,6 +896,17 @@ public static class ContentsManager
 	public static string GetStickerImagePath(ContentSource source, string packageIdentifier, string localDirectoryName, string fileName)
 		=> Path.Combine(GetPackageDirectory(source, packageIdentifier), localDirectoryName, fileName);
 
+	public static string GetStickerImagePath(ContentSource source, string packageIdentifier, string localDirectoryName, Sticker sticker)
+	{
+		if (SettingsManager.UseAnimatedPngWebpConversionEnabled && !string.IsNullOrWhiteSpace(sticker.WebpFileName))
+		{
+			var webpImagePath = GetStickerImagePath(source, packageIdentifier, localDirectoryName, sticker.WebpFileName);
+			if (File.Exists(webpImagePath)) return webpImagePath;
+		}
+
+		return GetStickerImagePath(source, packageIdentifier, localDirectoryName, sticker.FileName);
+	}
+
     /// <summary>
     /// 패키지의 메인 이미지 로컬 파일 경로를 반환합니다.
     /// </summary>
@@ -763,6 +915,14 @@ public static class ContentsManager
 
     private static string GetPackageDirectory(ContentSource source, string packageIdentifier)
 		=> Path.Combine(s_basePath, source.ToString(), packageIdentifier);
+
+	private static AnimatedPngStickerConversionCandidate CreateAnimatedPngStickerConversionCandidate(StickerPackage package, Sticker sticker)
+	{
+		var webpFileName = $"{Path.GetFileNameWithoutExtension(sticker.FileName)}.webp";
+		var sourceFilePath = GetStickerImagePath(package.Source, package.PackageIdentifier, package.LocalDirectoryName, sticker.FileName);
+		var webpFilePath = GetStickerImagePath(package.Source, package.PackageIdentifier, package.LocalDirectoryName, webpFileName);
+		return new AnimatedPngStickerConversionCandidate(package, sticker, sourceFilePath, webpFileName, webpFilePath);
+	}
 
 	private static async Task<int> SynchronizeDcconPackageAsync(
 		string packageIdentifier,
@@ -813,13 +973,15 @@ public static class ContentsManager
 
 		var stickerDirectory = EnsurePackageStickerDirectory(ContentSource.Arcacon, packageIdentifier, package);
 		var synchronizedStickerCount = 0;
+		var synchronizedStickers = new List<Sticker>();
 
 		foreach (var sticker in additionalStickers)
 		{
-			var fileName = ArcaconFileNameHelper.GetStickerFileName(sticker);
-			var filePath = Path.Combine(stickerDirectory, fileName);
 			var imageData = await App.ArcaconClient.DownloadStickerAsync(sticker, cancellationToken);
+			var fileName = ArcaconFileNameHelper.GetStickerFileName(sticker, imageData);
+			var filePath = Path.Combine(stickerDirectory, fileName);
 			await File.WriteAllBytesAsync(filePath, imageData, cancellationToken);
+			synchronizedStickers.Add(CreateSticker(sticker, fileName));
 
 			synchronizedStickerCount++;
 			progress?.Report((synchronizedStickerCount, additionalStickers.Count));
@@ -828,7 +990,7 @@ public static class ContentsManager
 		lock (s_lock)
 		{
 			ApplyArcaconPackageMetadata(package, detail, packageIndex);
-			AddSynchronizedStickers(package, additionalStickers.Select(CreateSticker));
+			AddSynchronizedStickers(package, synchronizedStickers);
 		}
 
 		return synchronizedStickerCount;
@@ -905,6 +1067,36 @@ public static class ContentsManager
 		package.Stickers = [.. package.Stickers.OrderBy(sticker => sticker.SortNumber)];
 	}
 
+	private static async Task<List<Sticker>> DownloadArcaconStickerFilesAsync(
+		IReadOnlyList<ArcaconSticker> stickers,
+		string stickerDirectory,
+		IProgress<(int Completed, int Total)> progress,
+		CancellationToken cancellationToken)
+	{
+		var downloadedStickers = new Sticker[stickers.Count];
+		var downloadedStickerCount = 0;
+		using var semaphore = new SemaphoreSlim(4);
+		var tasks = stickers.Select(async (sticker, stickerIndex) =>
+		{
+			await semaphore.WaitAsync(cancellationToken);
+			try
+			{
+				var imageData = await App.ArcaconClient.DownloadStickerAsync(sticker, cancellationToken);
+				var fileName = ArcaconFileNameHelper.GetStickerFileName(sticker, imageData);
+				var filePath = Path.Combine(stickerDirectory, fileName);
+				await File.WriteAllBytesAsync(filePath, imageData, cancellationToken);
+				downloadedStickers[stickerIndex] = CreateSticker(sticker, fileName);
+
+				var completedCount = Interlocked.Increment(ref downloadedStickerCount);
+				progress?.Report((completedCount, stickers.Count));
+			}
+			finally { semaphore.Release(); }
+		}).ToList();
+
+		await Task.WhenAll(tasks);
+		return [.. downloadedStickers];
+	}
+
 	private static Sticker CreateSticker(DcconSticker sticker) => new()
 	{
 		Path = sticker.Path,
@@ -915,14 +1107,14 @@ public static class ContentsManager
 		FileName = DcconFileNameHelper.GetStickerFileName(sticker),
 	};
 
-	private static Sticker CreateSticker(ArcaconSticker sticker) => new()
+	private static Sticker CreateSticker(ArcaconSticker sticker, string fileName) => new()
 	{
 		Path = sticker.ImageUrl,
 		Title = string.IsNullOrWhiteSpace(sticker.Title) ? $"스티커 {sticker.SortNumber}" : sticker.Title,
-		Extension = sticker.Extension,
+		Extension = Path.GetExtension(fileName).TrimStart('.'),
 		SortNumber = sticker.SortNumber,
 		ImageUrl = sticker.ImageUrl,
-		FileName = ArcaconFileNameHelper.GetStickerFileName(sticker),
+		FileName = fileName,
 	};
 
 	private static Sticker CreateSticker(InvenStickerImage sticker, int index) => new()
@@ -977,10 +1169,8 @@ public static class ContentsManager
 
 		var imageUrl = Utils.GetImageUrl(source, mainImagePath);
 		var request = new HttpRequestMessage(HttpMethod.Get, imageUrl);
-		if (source == ContentSource.Dccon)
-			request.Headers.Add("Referer", "https://dccon.dcinside.com");
-		else if (source == ContentSource.Arcacon)
-			request.Headers.Add("Referer", "https://arca.live");
+		if (source == ContentSource.Dccon) request.Headers.Add("Referer", "https://dccon.dcinside.com");
+		else if (source == ContentSource.Arcacon) request.Headers.Add("Referer", "https://arca.live");
 
 		var response = await s_httpClient.SendAsync(request, cancellationToken);
 		response.EnsureSuccessStatusCode();
@@ -1019,8 +1209,7 @@ public static class ContentsManager
 		bool exportFavorites = true,
 		CancellationToken cancellationToken = default)
 	{
-		if (File.Exists(destinationFilePath))
-			File.Delete(destinationFilePath);
+		if (File.Exists(destinationFilePath)) File.Delete(destinationFilePath);
 
 		var temporaryDirectory = Path.Combine(Path.GetTempPath(), $"YellowInside_Export_{Guid.NewGuid():N}");
 		try
@@ -1032,8 +1221,7 @@ public static class ContentsManager
 			HashSet<(ContentSource Source, string PackageIdentifier)> selectedPackageKeySet = null;
 			lock (s_lock)
 			{
-				if (selectedPackageKeys is not null)
-					selectedPackageKeySet = [.. selectedPackageKeys];
+				if (selectedPackageKeys is not null) selectedPackageKeySet = [.. selectedPackageKeys];
 
 				var exportData = new ContentsManagerData
 				{
@@ -1071,8 +1259,7 @@ public static class ContentsManager
 		}
 		finally
 		{
-			if (Directory.Exists(temporaryDirectory))
-				Directory.Delete(temporaryDirectory, recursive: true);
+			if (Directory.Exists(temporaryDirectory)) Directory.Delete(temporaryDirectory, recursive: true);
 		}
 	}
 
@@ -1264,8 +1451,7 @@ public static class ContentsManager
 
 					var targetDirectory = GetPackageDirectory(package.Source, package.PackageIdentifier);
 
-					if (selectedPackageKeys is not null && Directory.Exists(targetDirectory))
-						Directory.Delete(targetDirectory, recursive: true);
+					if (selectedPackageKeys is not null && Directory.Exists(targetDirectory)) Directory.Delete(targetDirectory, recursive: true);
 					else if (Directory.Exists(targetDirectory)) continue;
 
 					var importedPackageDirectory = Path.Combine(
@@ -1324,6 +1510,13 @@ public static class ContentsManager
 		}
 	}
 
+	private sealed record AnimatedPngStickerConversionCandidate(
+		StickerPackage Package,
+		Sticker Sticker,
+		string SourceFilePath,
+		string WebpFileName,
+		string WebpFilePath);
+
 	private static async Task SaveAsync()
 	{
 		string json;
@@ -1335,3 +1528,28 @@ public static class ContentsManager
 		await File.WriteAllTextAsync(s_dataFilePath, json);
 	}
 }
+
+public enum AnimatedPngToWebpPackageConversionStage
+{
+	Searching,
+	Converting,
+	Saving,
+}
+
+public sealed record AnimatedPngToWebpPackageConversionProgress(
+	AnimatedPngToWebpPackageConversionStage Stage,
+	int CompletedCount,
+	int TotalCount,
+	string PackageTitle,
+	string FileName)
+{
+	public double? ProgressPercentage
+		=> TotalCount > 0 ? Math.Clamp(CompletedCount * 100d / TotalCount, 0d, 100d) : null;
+}
+
+public sealed record AnimatedPngToWebpPackageConversionResult(
+	int TotalStickerCount,
+	int ConvertedCount,
+	int AlreadyConvertedCount,
+	int NotTargetCount,
+	int FailedCount);

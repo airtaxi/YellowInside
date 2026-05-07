@@ -58,6 +58,8 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
 
         GifPlaybackToggleSwitch.IsOn = SettingsManager.GifPlaybackEnabled;
         GifWarningInfoBar.IsOpen = SettingsManager.GifPlaybackEnabled;
+        UseAnimatedPngWebpConversionToggleSwitch.IsOn = SettingsManager.UseAnimatedPngWebpConversionEnabled;
+        UpdateAnimatedPngToWebpConversionControls();
 
         LaunchOnStartupToggleSwitch.IsOn = App.LaunchOnStartup;
 
@@ -95,8 +97,7 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
     {
         var elementTheme = SettingsManager.GetElementTheme();
 
-        if (ManageWindow.Instance?.Content is FrameworkElement manageWindowContent)
-            manageWindowContent.RequestedTheme = elementTheme;
+        if (ManageWindow.Instance?.Content is FrameworkElement manageWindowContent) manageWindowContent.RequestedTheme = elementTheme;
 
         // PopupWindow is transient; it will pick up the theme when next created.
     }
@@ -107,6 +108,40 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
 
         SettingsManager.GifPlaybackEnabled = GifPlaybackToggleSwitch.IsOn;
         GifWarningInfoBar.IsOpen = GifPlaybackToggleSwitch.IsOn;
+    }
+
+    private async void OnUseAnimatedPngWebpConversionToggleSwitchToggled(object sender, RoutedEventArgs e)
+    {
+        if (_isInitializing) return;
+
+        if (!UseAnimatedPngWebpConversionToggleSwitch.IsOn)
+        {
+            SettingsManager.UseAnimatedPngWebpConversionEnabled = false;
+            UpdateAnimatedPngToWebpConversionControls();
+            return;
+        }
+
+        var canUseAnimatedPngWebpConversion = await EnsureFFmpegBinaryAvailableForAnimatedPngToWebpConversionAsync();
+        if (!canUseAnimatedPngWebpConversion)
+        {
+            _isInitializing = true;
+            UseAnimatedPngWebpConversionToggleSwitch.IsOn = false;
+            _isInitializing = false;
+            SettingsManager.UseAnimatedPngWebpConversionEnabled = false;
+            UpdateAnimatedPngToWebpConversionControls();
+            return;
+        }
+
+        SettingsManager.UseAnimatedPngWebpConversionEnabled = true;
+        UpdateAnimatedPngToWebpConversionControls();
+    }
+
+    private async void OnConvertAnimatedPngToWebpButtonClicked(object sender, RoutedEventArgs e)
+    {
+        if (!UseAnimatedPngWebpConversionToggleSwitch.IsOn) return;
+        if (!await EnsureFFmpegBinaryAvailableForAnimatedPngToWebpConversionAsync()) return;
+
+        await RunAnimatedPngToWebpConversionAsync(showCompletionDialog: true);
     }
 
     private void OnLaunchOnStartupToggleSwitchToggled(object sender, RoutedEventArgs e)
@@ -202,21 +237,24 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
             return;
         }
 
+        AnimatedPngToWebpPackageConversionResult animatedPngToWebpPackageConversionResult = null;
         try
         {
             if (replaceAll && !await ConfirmReplaceImportAsync(file.Path)) return;
 
             ManageWindow.ShowLoading("패키지를 불러오는 중...");
             await Task.Run(async () => await ContentsManager.ImportAsync(file.Path, replaceAll, importFavorites));
-            ManageWindow.HideLoading();
-
-            await this.ShowDialogAsync("불러오기 완료", "패키지를 성공적으로 불러왔습니다.");
         }
         catch (Exception exception)
         {
-            ManageWindow.HideLoading();
+            App.LogException("PackageImport", exception);
             await this.ShowDialogAsync("불러오기 실패", exception.Message);
+            return;
         }
+        finally { ManageWindow.HideLoading(); }
+
+        animatedPngToWebpPackageConversionResult = await RunAutomaticAnimatedPngToWebpConversionAsync();
+        await this.ShowDialogAsync("불러오기 완료", CreatePackageImportCompletionMessage(animatedPngToWebpPackageConversionResult));
     }
 
     private async void OnPartialExportButtonClicked(object sender, RoutedEventArgs e)
@@ -284,8 +322,7 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
             Directory.CreateDirectory(temporaryDirectory);
             await Task.Run(() => ContentsManager.ExtractMainImagesFromImportFile(file.Path, packages, temporaryDirectory));
 
-            foreach (var package in packages)
-                importItems.Add(await PartialPackageImportListViewModel.CreateAsync(package, temporaryDirectory));
+            foreach (var package in packages) importItems.Add(await PartialPackageImportListViewModel.CreateAsync(package, temporaryDirectory));
         }
         finally
         {
@@ -331,19 +368,22 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
             return;
         }
 
+        AnimatedPngToWebpPackageConversionResult animatedPngToWebpPackageConversionResult = null;
         try
         {
             ManageWindow.ShowLoading("선택한 패키지를 불러오는 중...");
             await Task.Run(async () => await ContentsManager.ImportAsync(file.Path, replaceAll: false, importFavorites, selectedPackageKeys));
-            ManageWindow.HideLoading();
-
-            await this.ShowDialogAsync("불러오기 완료", "선택한 패키지를 성공적으로 불러왔습니다.");
         }
         catch (Exception exception)
         {
-            ManageWindow.HideLoading();
+            App.LogException("PartialPackageImport", exception);
             await this.ShowDialogAsync("불러오기 실패", exception.Message);
+            return;
         }
+        finally { ManageWindow.HideLoading(); }
+
+        animatedPngToWebpPackageConversionResult = await RunAutomaticAnimatedPngToWebpConversionAsync(selectedPackageKeys);
+        await this.ShowDialogAsync("불러오기 완료", CreatePackageImportCompletionMessage(animatedPngToWebpPackageConversionResult, isPartialImport: true));
     }
 
     private async void OnSynchronizeArcaconSubscriptionsButtonClicked(object sender, RoutedEventArgs e)
@@ -411,10 +451,8 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         SettingsManager.HotkeyEnabled = HotkeyToggleSwitch.IsOn;
         UpdateHotkeyVisibility();
 
-        if (HotkeyToggleSwitch.IsOn)
-            App.HotkeyManager.Start(SettingsManager.HotkeyModifiers, SettingsManager.HotkeyKey);
-        else
-            App.HotkeyManager.Stop();
+        if (HotkeyToggleSwitch.IsOn) App.HotkeyManager.Start(SettingsManager.HotkeyModifiers, SettingsManager.HotkeyKey);
+        else App.HotkeyManager.Stop();
     }
 
     private async void OnExportSendMethodButtonClicked(object sender, RoutedEventArgs e)
@@ -484,6 +522,138 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
             await this.ShowDialogAsync("로그 다운로드 완료", "로그 파일을 성공적으로 저장했습니다.");
         }
         catch (Exception exception) { await this.ShowDialogAsync("로그 다운로드 실패", exception.Message); }
+    }
+
+    private void UpdateAnimatedPngToWebpConversionControls()
+        => ConvertAnimatedPngToWebpButton.IsEnabled = SettingsManager.UseAnimatedPngWebpConversionEnabled;
+
+    private async Task<bool> EnsureFFmpegBinaryAvailableForAnimatedPngToWebpConversionAsync()
+    {
+        if (FFmpegBinaryHelper.IsFFmpegBinaryAvailable()) return true;
+
+        var dialogResult = await this.ShowDialogAsync(
+            "변환 도구 다운로드",
+            "움직이는 PNG를 용량이 더 작은 WebP로 바꾸려면 변환 도구를 한 번 내려받아야 합니다.\n처음 한 번만 준비하면 이후에는 바로 사용할 수 있습니다.",
+            primaryButtonText: "다운로드",
+            secondaryButtonText: "취소");
+        if (dialogResult != ContentDialogResult.Primary) return false;
+
+        try
+        {
+            ManageWindow.ShowLoading("변환 도구 다운로드를 준비하는 중...");
+            var progress = new ActionProgress<FFmpegBinaryProgress>(ffmpegBinaryProgress =>
+            {
+                if (ffmpegBinaryProgress.Stage == FFmpegBinaryProgressStage.Completed) return;
+                ManageWindow.ShowLoading(CreateFFmpegBinaryProgressMessage(ffmpegBinaryProgress), ffmpegBinaryProgress.ProgressPercentage);
+            });
+            await FFmpegBinaryHelper.EnsureFFmpegBinaryAsync(progress);
+            return true;
+        }
+        catch (Exception exception)
+        {
+            App.LogException("FFmpegBinaryDownload", exception);
+            await this.ShowDialogAsync(
+                "변환 도구 다운로드 실패",
+                "변환 도구를 준비하지 못했습니다.\n인터넷 연결을 확인한 뒤 다시 시도해 주세요.");
+            return false;
+        }
+        finally { ManageWindow.HideLoading(); }
+    }
+
+    private async Task<AnimatedPngToWebpPackageConversionResult> RunAutomaticAnimatedPngToWebpConversionAsync(
+        IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> selectedPackageKeys = null)
+    {
+        if (!SettingsManager.UseAnimatedPngWebpConversionEnabled) return null;
+        if (!await EnsureFFmpegBinaryAvailableForAnimatedPngToWebpConversionAsync()) return null;
+
+        return await RunAnimatedPngToWebpConversionAsync(selectedPackageKeys);
+    }
+
+    private async Task<AnimatedPngToWebpPackageConversionResult> RunAnimatedPngToWebpConversionAsync(
+        IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> selectedPackageKeys = null,
+        bool showCompletionDialog = false)
+    {
+        try
+        {
+            ManageWindow.ShowLoading("움짤 PNG를 검색하는 중...");
+            var progress = new ActionProgress<AnimatedPngToWebpPackageConversionProgress>(conversionProgress =>
+                ManageWindow.ShowLoading(CreateAnimatedPngToWebpProgressMessage(conversionProgress), conversionProgress.ProgressPercentage));
+            var conversionResult = await Task.Run(async () => await ContentsManager.ConvertAnimatedPngStickersToWebpAsync(selectedPackageKeys, progress));
+
+            if (showCompletionDialog) await this.ShowDialogAsync("WebP 변환 완료", CreateAnimatedPngToWebpCompletionMessage(conversionResult));
+
+            return conversionResult;
+        }
+        catch (Exception exception)
+        {
+            App.LogException("AnimatedPngToWebpConversion", exception);
+            await this.ShowDialogAsync(
+                "WebP 변환 실패",
+                "움직이는 PNG를 WebP로 바꾸는 중 문제가 발생했습니다.\n일부 파일이 사용 중이거나 손상되었을 수 있습니다.");
+            return null;
+        }
+        finally { ManageWindow.HideLoading(); }
+    }
+
+    private static string CreateFFmpegBinaryProgressMessage(FFmpegBinaryProgress progress)
+    {
+        var byteCountText = progress.TotalByteCount.HasValue
+            ? $"{FormatByteCount(progress.CompletedByteCount)} / {FormatByteCount(progress.TotalByteCount.Value)}"
+            : FormatByteCount(progress.CompletedByteCount);
+
+        return progress.Stage switch
+        {
+            FFmpegBinaryProgressStage.Downloading => $"변환 도구 다운로드 중... {byteCountText}",
+            FFmpegBinaryProgressStage.Extracting => $"변환 도구 압축 해제 중... {byteCountText}",
+            FFmpegBinaryProgressStage.Completed => "변환 도구 준비 완료",
+            _ => "변환 도구 준비 중...",
+        };
+    }
+
+    private static string CreateAnimatedPngToWebpProgressMessage(AnimatedPngToWebpPackageConversionProgress progress)
+    {
+        var progressCountText = progress.TotalCount > 0 ? $"{progress.CompletedCount}/{progress.TotalCount}" : string.Empty;
+        var currentTargetText = string.IsNullOrWhiteSpace(progress.PackageTitle)
+            ? string.Empty
+            : $" - {progress.PackageTitle}";
+
+        return progress.Stage switch
+        {
+            AnimatedPngToWebpPackageConversionStage.Searching => $"움짤 PNG 검색 중... {progressCountText}{currentTargetText}",
+            AnimatedPngToWebpPackageConversionStage.Converting => $"WebP 변환 중... {progressCountText}{currentTargetText}",
+            AnimatedPngToWebpPackageConversionStage.Saving => "변환 결과 저장 중...",
+            _ => "WebP 변환 준비 중...",
+        };
+    }
+
+    private static string CreateAnimatedPngToWebpCompletionMessage(AnimatedPngToWebpPackageConversionResult conversionResult)
+    {
+        if (conversionResult is null) return "변환 작업을 완료하지 못했습니다.";
+        if (conversionResult.TotalStickerCount == 0) return "받아진 패키지가 없습니다.";
+
+        return $"변환됨: {conversionResult.ConvertedCount}개\n이미 변환됨: {conversionResult.AlreadyConvertedCount}개\n변환 대상 아님: {conversionResult.NotTargetCount}개\n실패: {conversionResult.FailedCount}개";
+    }
+
+    private static string CreatePackageImportCompletionMessage(
+        AnimatedPngToWebpPackageConversionResult conversionResult,
+        bool isPartialImport = false)
+    {
+        var baseMessage = isPartialImport
+            ? "선택한 패키지를 성공적으로 불러왔습니다."
+            : "패키지를 성공적으로 불러왔습니다.";
+        if (conversionResult is null) return baseMessage;
+
+        return $"{baseMessage}\n\nWebP 변환 결과\n{CreateAnimatedPngToWebpCompletionMessage(conversionResult)}";
+    }
+
+    private static string FormatByteCount(long byteCount)
+    {
+        const double kiloByte = 1024d;
+        const double megaByte = kiloByte * 1024d;
+
+        return byteCount >= megaByte
+            ? $"{byteCount / megaByte:0.0}MB"
+            : $"{byteCount / kiloByte:0.0}KB";
     }
 
     private void UpdateHotkeyVisibility()
@@ -558,8 +728,7 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         SettingsManager.HotkeyKey = capturedKey;
         PopulateHotkeyKeyVisuals(HotkeyDisplayPanel, capturedModifiers, capturedKey);
 
-        if (SettingsManager.HotkeyEnabled)
-            App.HotkeyManager.UpdateHotkey(capturedModifiers, capturedKey);
+        if (SettingsManager.HotkeyEnabled) App.HotkeyManager.UpdateHotkey(capturedModifiers, capturedKey);
     }
 
     private static bool IsVirtualKeyDown(VirtualKey key) =>
@@ -692,32 +861,32 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         return contentDialogResult == ContentDialogResult.Primary;
     }
 
-    private static async Task<int> SynchronizeArcaconSubscriptionsAsync(bool includeInactiveArcacons)
+    private async Task<int> SynchronizeArcaconSubscriptionsAsync(bool includeInactiveArcacons)
     {
-        ManageWindow.ShowLoading("아카콘 구독 목록을 불러오는 중...");
-        var subscribedPackages = await App.ArcaconClient.GetSubscribedPackagesAsync(includeInactiveArcacons);
-        var packageIndexesToDownload = subscribedPackages
-            .Where(package => !ContentsManager.IsPackageDownloaded(ContentSource.Arcacon, package.PackageIndex.ToString()))
-            .Select(package => package.PackageIndex)
-            .ToList();
-
-        if (packageIndexesToDownload.Count == 0)
+        try
         {
-            ManageWindow.HideLoading();
-            return 0;
+            ManageWindow.ShowLoading("아카콘 구독 목록을 불러오는 중...");
+            var subscribedPackages = await App.ArcaconClient.GetSubscribedPackagesAsync(includeInactiveArcacons);
+            var packageIndexesToDownload = subscribedPackages
+                .Where(package => !ContentsManager.IsPackageDownloaded(ContentSource.Arcacon, package.PackageIndex.ToString()))
+                .Select(package => package.PackageIndex)
+                .ToList();
+
+            if (packageIndexesToDownload.Count == 0) return 0;
+
+            for (var packageOrder = 0; packageOrder < packageIndexesToDownload.Count; packageOrder++)
+            {
+                var packageIndex = packageIndexesToDownload[packageOrder];
+                var currentPackageOrder = packageOrder + 1;
+
+                ManageWindow.ShowLoading($"아카콘 동기화 중... {currentPackageOrder}/{packageIndexesToDownload.Count}");
+                await ContentsManager.DownloadArcaconPackageAsync(packageIndex, new Progress<(int Completed, int Total)>(progress => ManageWindow.ShowLoading($"아카콘 동기화 중... {currentPackageOrder}/{packageIndexesToDownload.Count} ({progress.Completed}/{progress.Total})")));
+                await RunAutomaticAnimatedPngToWebpConversionAsync([(ContentSource.Arcacon, packageIndex.ToString())]);
+            }
+
+            return packageIndexesToDownload.Count;
         }
-
-        for (var packageOrder = 0; packageOrder < packageIndexesToDownload.Count; packageOrder++)
-        {
-            var packageIndex = packageIndexesToDownload[packageOrder];
-            var currentPackageOrder = packageOrder + 1;
-
-            ManageWindow.ShowLoading($"아카콘 동기화 중... {currentPackageOrder}/{packageIndexesToDownload.Count}");
-            await ContentsManager.DownloadArcaconPackageAsync(packageIndex, new Progress<(int Completed, int Total)>(progress => ManageWindow.ShowLoading($"아카콘 동기화 중... {currentPackageOrder}/{packageIndexesToDownload.Count} ({progress.Completed}/{progress.Total})")));
-        }
-
-        ManageWindow.HideLoading();
-        return packageIndexesToDownload.Count;
+        finally { ManageWindow.HideLoading(); }
     }
 
     private async Task<PickFileResult> PickPackageExportFileAsync(string suggestedFileName)

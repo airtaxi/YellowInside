@@ -11,6 +11,7 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using Windows.ApplicationModel;
+using YellowInside.Helpers;
 using YellowInside.Managers;
 using YellowInsideLib;
 using AppInstance = Microsoft.Windows.AppLifecycle.AppInstance;
@@ -47,7 +48,7 @@ public partial class App : Application
         InitializeComponent();
 
         var magickNetPath = MagickNET.GetEnvironmentVariable("Path");
-        var ffmpegPath = Path.Combine(AppContext.BaseDirectory, "ffmpeg");
+        var ffmpegPath = FFmpegBinaryHelper.FFmpegDirectoryPath;
         MagickNET.SetEnvironmentVariable("Path", @$"{magickNetPath};{ffmpegPath}");
 
         UnhandledException += OnUnhandledException;
@@ -82,7 +83,7 @@ public partial class App : Application
         e.SetObserved();
     }
 
-    private static void LogException(string source, Exception exception)
+    public static void LogException(string source, Exception exception)
     {
         var builder = new StringBuilder();
         builder.Append($"[{source}] ");

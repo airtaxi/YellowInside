@@ -6,7 +6,6 @@ using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using dccon.NET.Models;
 using InvenSticker.NET.Models;
-using Microsoft.Windows.ApplicationModel.Resources;
 using YellowInside.Helpers;
 using YellowInside.Messages;
 using YellowInside.Models;
@@ -36,15 +35,13 @@ namespace YellowInside.ViewModels;
 
 public partial class DetailViewModel : ObservableObject
 {
-    private static readonly ResourceLoader s_resourceLoader = new();
-
     public ContentSource Source { get; private set; }
 
     public string PackageIdentifier { get; private set; }
 
     public bool CanRefreshPackage => Source != ContentSource.Local && IsSubscribed;
 
-    public string RefreshSubscribedPackageToolTip => GetResourceString("DetailRefreshSubscribedPackageToolTip");
+    public string RefreshSubscribedPackageToolTip => "새 스티커 확인";
 
     [ObservableProperty]
     public partial string HeaderText { get; private set; }
@@ -168,15 +165,10 @@ public partial class DetailViewModel : ObservableObject
         if (downloadedPackage is not null && !string.IsNullOrEmpty(downloadedPackage.MainImageFileName))
         {
             var mainImagePath = ContentsManager.GetMainImagePath(Source, packageIdentifier, downloadedPackage.MainImageFileName);
-            if (File.Exists(mainImagePath))
-                MainImageSource = new BitmapImage(new Uri(mainImagePath)) { AutoPlay = SettingsManager.GifPlaybackEnabled };
-            else
-                await DownloadMainImageSourceAsync();
+            if (File.Exists(mainImagePath)) MainImageSource = new BitmapImage(new Uri(mainImagePath)) { AutoPlay = SettingsManager.GifPlaybackEnabled };
+            else await DownloadMainImageSourceAsync();
         }
-        else
-        {
-            await DownloadMainImageSourceAsync();
-        }
+        else await DownloadMainImageSourceAsync();
 
         Stickers = [.. detail.Stickers.Select(sticker => new StickerViewModel(packageIdentifier, sticker))];
 
@@ -197,8 +189,7 @@ public partial class DetailViewModel : ObservableObject
         IconCount = $"{detail.IconCount}개 스티커";
         SaleCount = detail.SaleCount == 0 ? "판매량 정보 없음" : $"{detail.SaleCount}회 판매됨";
 
-        if (!string.IsNullOrWhiteSpace(detail.RegistrationDate) && DateTime.TryParse(detail.RegistrationDate, out var registrationDateTime))
-            RegisterationDate = registrationDateTime.ToString("yyyy년 MM월 dd일 등록");
+        if (!string.IsNullOrWhiteSpace(detail.RegistrationDate) && DateTime.TryParse(detail.RegistrationDate, out var registrationDateTime)) RegisterationDate = registrationDateTime.ToString("yyyy년 MM월 dd일 등록");
         else if (!string.IsNullOrWhiteSpace(detail.RegistrationDateShort) && DateTime.TryParse(detail.RegistrationDateShort, out var shortRegistrationDateTime))
             RegisterationDate = shortRegistrationDateTime.ToString("yyyy년 MM월 dd일 등록");
         else
@@ -208,8 +199,7 @@ public partial class DetailViewModel : ObservableObject
         if (downloadedPackage is not null && !string.IsNullOrEmpty(downloadedPackage.MainImageFileName))
         {
             var mainImagePath = ContentsManager.GetMainImagePath(Source, packageIdentifier, downloadedPackage.MainImageFileName);
-            if (File.Exists(mainImagePath))
-                MainImageSource = new BitmapImage(new Uri(mainImagePath)) { AutoPlay = SettingsManager.GifPlaybackEnabled };
+            if (File.Exists(mainImagePath)) MainImageSource = new BitmapImage(new Uri(mainImagePath)) { AutoPlay = SettingsManager.GifPlaybackEnabled };
             else
                 await DownloadMainImageSourceAsync();
         }
@@ -237,15 +227,13 @@ public partial class DetailViewModel : ObservableObject
         IconCount = $"{detail.Images.Count}개 스티커";
         SaleCount = detail.SalesCount == 0 ? "판매량 정보 없음" : $"{detail.SalesCount}회 판매됨";
 
-        if (!string.IsNullOrEmpty(detail.RegistrationDate) && DateTime.TryParse(detail.RegistrationDate, out var registrationDateTime))
-            RegisterationDate = registrationDateTime.ToString("yyyy년 MM월 dd일 등록");
+        if (!string.IsNullOrEmpty(detail.RegistrationDate) && DateTime.TryParse(detail.RegistrationDate, out var registrationDateTime)) RegisterationDate = registrationDateTime.ToString("yyyy년 MM월 dd일 등록");
 
         var downloadedPackage = ContentsManager.GetDownloadedPackage(Source, packageIdentifier);
         if (downloadedPackage is not null && !string.IsNullOrEmpty(downloadedPackage.MainImageFileName))
         {
             var mainImagePath = ContentsManager.GetMainImagePath(Source, packageIdentifier, downloadedPackage.MainImageFileName);
-            if (File.Exists(mainImagePath))
-                MainImageSource = new BitmapImage(new Uri(mainImagePath)) { AutoPlay = SettingsManager.GifPlaybackEnabled };
+            if (File.Exists(mainImagePath)) MainImageSource = new BitmapImage(new Uri(mainImagePath)) { AutoPlay = SettingsManager.GifPlaybackEnabled };
             else
                 await DownloadMainImageSourceAsync();
         }
@@ -270,8 +258,7 @@ public partial class DetailViewModel : ObservableObject
 
         if (!string.IsNullOrEmpty(package.RegistrationDate))
         {
-            if (DateTime.TryParse(package.RegistrationDate, out var registrationDateTime))
-                RegisterationDate = registrationDateTime.ToString("yyyy년 MM월 dd일 등록");
+            if (DateTime.TryParse(package.RegistrationDate, out var registrationDateTime)) RegisterationDate = registrationDateTime.ToString("yyyy년 MM월 dd일 등록");
             else
                 RegisterationDate = package.RegistrationDate;
         }
@@ -279,8 +266,7 @@ public partial class DetailViewModel : ObservableObject
         if (!string.IsNullOrEmpty(package.MainImageFileName))
         {
             var mainImagePath = ContentsManager.GetMainImagePath(source, packageIdentifier, package.MainImageFileName);
-            if (File.Exists(mainImagePath))
-                MainImageSource = new BitmapImage(new Uri(mainImagePath)) { AutoPlay = SettingsManager.GifPlaybackEnabled };
+            if (File.Exists(mainImagePath)) MainImageSource = new BitmapImage(new Uri(mainImagePath)) { AutoPlay = SettingsManager.GifPlaybackEnabled };
         }
 
         Stickers = [.. package.Stickers.Select(sticker => new StickerViewModel(source, packageIdentifier, sticker))];
@@ -292,21 +278,21 @@ public partial class DetailViewModel : ObservableObject
 
     private async Task<int?> GetAdditionalStickerCountAsync(UIElement dialogHostElement)
     {
-        ManageWindow.ShowLoading(GetResourceString("DetailRefreshCheckingLoadingMessage"));
+        ManageWindow.ShowLoading("새 스티커 확인 중...");
         try { return await ContentsManager.GetAdditionalStickerCountAsync(Source, PackageIdentifier); }
         catch (System.Exception exception) when (exception is HttpRequestException or TaskCanceledException)
         {
             ManageWindow.HideLoading();
             await dialogHostElement.ShowDialogAsync(
-                GetResourceString("DetailRefreshNetworkErrorTitle"),
-                GetResourceString("DetailRefreshNetworkErrorMessage"));
+                "네트워크 오류",
+                "인터넷 연결을 확인해 주세요.\n오프라인 상태에서는 패키지를 새로고침할 수 없습니다.");
             return null;
         }
         catch (System.Exception exception)
         {
             ManageWindow.HideLoading();
             await dialogHostElement.ShowDialogAsync(
-                GetResourceString("DetailRefreshFailureTitle"),
+                "새로고침 실패",
                 exception.Message);
             return null;
         }
@@ -315,38 +301,68 @@ public partial class DetailViewModel : ObservableObject
 
     private async Task<int?> SynchronizeSubscribedPackageAsync(UIElement dialogHostElement)
     {
-        ManageWindow.ShowLoading(GetResourceString("DetailRefreshSyncLoadingMessage"));
+        ManageWindow.ShowLoading("새 스티커 받는 중...");
         try
         {
-            return await ContentsManager.SynchronizeDownloadedPackageAsync(
+            var synchronizedStickerCount = await ContentsManager.SynchronizeDownloadedPackageAsync(
                 Source,
                 PackageIdentifier,
                 new Progress<(int Completed, int Total)>(progress => ManageWindow.ShowLoading(
-                    FormatResourceString("DetailRefreshSyncProgressLoadingMessageFormat", progress.Completed, progress.Total))));
+                    $"새 스티커 받는 중... {progress.Completed}/{progress.Total}")));
+            if (synchronizedStickerCount > 0) await ConvertDownloadedPackageAnimatedPngToWebpAsync(dialogHostElement);
+            return synchronizedStickerCount;
         }
         catch (System.Exception exception) when (exception is HttpRequestException or TaskCanceledException)
         {
             ManageWindow.HideLoading();
             await dialogHostElement.ShowDialogAsync(
-                GetResourceString("DetailRefreshNetworkErrorTitle"),
-                GetResourceString("DetailRefreshNetworkErrorMessage"));
+                "네트워크 오류",
+                "인터넷 연결을 확인해 주세요.\n오프라인 상태에서는 패키지를 새로고침할 수 없습니다.");
             return null;
         }
         catch (System.Exception exception)
         {
             ManageWindow.HideLoading();
             await dialogHostElement.ShowDialogAsync(
-                GetResourceString("DetailRefreshFailureTitle"),
+                "새로고침 실패",
                 exception.Message);
             return null;
         }
         finally { ManageWindow.HideLoading(); }
     }
 
-    private static string GetResourceString(string resourceIdentifier) => s_resourceLoader.GetString(resourceIdentifier);
+    private async Task ConvertDownloadedPackageAnimatedPngToWebpAsync(UIElement dialogHostElement)
+    {
+        if (!SettingsManager.UseAnimatedPngWebpConversionEnabled) return;
 
-    private static string FormatResourceString(string resourceIdentifier, params object[] arguments)
-        => string.Format(CultureInfo.CurrentCulture, GetResourceString(resourceIdentifier), arguments);
+        try
+        {
+            ManageWindow.ShowLoading("움짤 PNG를 검색하는 중...");
+            var progress = new ActionProgress<AnimatedPngToWebpPackageConversionProgress>(conversionProgress =>
+                ManageWindow.ShowLoading(CreateAnimatedPngToWebpProgressMessage(conversionProgress), conversionProgress.ProgressPercentage));
+            await Task.Run(async () => await ContentsManager.ConvertAnimatedPngStickersToWebpAsync([(Source, PackageIdentifier)], progress));
+        }
+        catch (System.Exception exception)
+        {
+            App.LogException("AnimatedPngToWebpConversion", exception);
+            await dialogHostElement.ShowDialogAsync(
+                "WebP 변환 실패",
+                "움직이는 PNG를 WebP로 바꾸는 중 문제가 발생했습니다.\n다운로드된 원본 파일은 그대로 사용할 수 있습니다.");
+        }
+        finally { ManageWindow.HideLoading(); }
+    }
+
+    private static string CreateAnimatedPngToWebpProgressMessage(AnimatedPngToWebpPackageConversionProgress progress)
+    {
+        var progressCountText = progress.TotalCount > 0 ? $"{progress.CompletedCount}/{progress.TotalCount}" : string.Empty;
+        return progress.Stage switch
+        {
+            AnimatedPngToWebpPackageConversionStage.Searching => $"움짤 PNG 검색 중... {progressCountText}",
+            AnimatedPngToWebpPackageConversionStage.Converting => $"WebP 변환 중... {progressCountText}",
+            AnimatedPngToWebpPackageConversionStage.Saving => "변환 결과 저장 중...",
+            _ => "WebP 변환 준비 중...",
+        };
+    }
 
     private void UpdateSubscriptionStatus()
     {
@@ -357,6 +373,9 @@ public partial class DetailViewModel : ObservableObject
     [RelayCommand]
     public async Task Subscribe()
     {
+        var dialogHostElement = ManageWindow.Instance.Content as UIElement
+            ?? throw new System.InvalidOperationException("관리 창 콘텐츠를 찾을 수 없습니다.");
+
         if (Source == ContentSource.Dccon)
         {
             ManageWindow.ShowLoading("다운로드중...");
@@ -367,12 +386,11 @@ public partial class DetailViewModel : ObservableObject
                     new Progress<(int Completed, int Total)>(progress => ManageWindow.ShowLoading($"다운로드중... {progress.Completed}/{progress.Total}")));
             }
             finally { ManageWindow.HideLoading(); }
+
+            await ConvertDownloadedPackageAnimatedPngToWebpAsync(dialogHostElement);
         }
         else if (Source == ContentSource.Arcacon)
         {
-            var dialogHostElement = ManageWindow.Instance.Content as UIElement
-                ?? throw new InvalidOperationException("관리 창 콘텐츠를 찾을 수 없습니다.");
-
             var arcaconSession = await ArcaconSessionHelper.EnsureArcaconSessionAsync(
                 dialogHostElement,
                 (pageType, pageParameter) => ManageWindow.Navigate(pageType, pageParameter),
@@ -388,6 +406,8 @@ public partial class DetailViewModel : ObservableObject
                     new Progress<(int Completed, int Total)>(progress => ManageWindow.ShowLoading($"다운로드중... {progress.Completed}/{progress.Total}")));
             }
             finally { ManageWindow.HideLoading(); }
+
+            await ConvertDownloadedPackageAnimatedPngToWebpAsync(dialogHostElement);
         }
         else if (Source == ContentSource.Inven)
         {
@@ -399,6 +419,8 @@ public partial class DetailViewModel : ObservableObject
                     new Progress<(int Completed, int Total)>(progress => ManageWindow.ShowLoading($"다운로드중... {progress.Completed}/{progress.Total}")));
             }
             finally { ManageWindow.HideLoading(); }
+
+            await ConvertDownloadedPackageAnimatedPngToWebpAsync(dialogHostElement);
         }
     }
 
@@ -408,7 +430,7 @@ public partial class DetailViewModel : ObservableObject
         if (!CanRefreshPackage) return;
 
         var dialogHostElement = ManageWindow.Instance.Content as UIElement
-            ?? throw new InvalidOperationException("관리 창 콘텐츠를 찾을 수 없습니다.");
+            ?? throw new System.InvalidOperationException("관리 창 콘텐츠를 찾을 수 없습니다.");
 
         if (Source == ContentSource.Arcacon)
         {
@@ -426,16 +448,16 @@ public partial class DetailViewModel : ObservableObject
         if (additionalStickerCount == 0)
         {
             await dialogHostElement.ShowDialogAsync(
-                GetResourceString("DetailRefreshNoNewStickerTitle"),
-                GetResourceString("DetailRefreshNoNewStickerMessage"));
+                "새로고침",
+                "패키지에 새로 추가된 스티커가 없습니다.");
             return;
         }
 
         var dialogResult = await dialogHostElement.ShowDialogAsync(
-            GetResourceString("DetailRefreshSyncTitle"),
-            FormatResourceString("DetailRefreshSyncMessageFormat", additionalStickerCount),
-            GetResourceString("DetailRefreshSyncPrimaryButtonText"),
-            GetResourceString("DetailRefreshSyncSecondaryButtonText"));
+            "새 스티커 동기화",
+            $"{additionalStickerCount}개의 새 스티커가 있습니다.\n지금 동기화하시겠습니까?",
+            "동기화",
+            "나중에");
         if (dialogResult != ContentDialogResult.Primary) return;
 
         var synchronizedStickerCount = await SynchronizeSubscribedPackageAsync(dialogHostElement);
@@ -444,15 +466,15 @@ public partial class DetailViewModel : ObservableObject
         if (synchronizedStickerCount == 0)
         {
             await dialogHostElement.ShowDialogAsync(
-                GetResourceString("DetailRefreshNoNewStickerTitle"),
-                GetResourceString("DetailRefreshNoNewStickerMessage"));
+                "새로고침",
+                "패키지에 새로 추가된 스티커가 없습니다.");
             return;
         }
 
         await InitializeAsync(Source, PackageIdentifier);
         await dialogHostElement.ShowDialogAsync(
-            GetResourceString("DetailRefreshSyncCompletedTitle"),
-            FormatResourceString("DetailRefreshSyncCompletedMessageFormat", synchronizedStickerCount));
+            "동기화 완료",
+            $"{synchronizedStickerCount}개의 새 스티커를 동기화했습니다.");
     }
 
     [RelayCommand]

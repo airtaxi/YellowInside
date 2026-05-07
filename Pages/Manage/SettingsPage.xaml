@@ -60,38 +60,80 @@
                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                 BorderThickness="1"
                 CornerRadius="8">
-                <Grid ColumnSpacing="16">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <StackPanel
-                        Grid.Column="0"
-                        VerticalAlignment="Center"
-                        Spacing="2">
-                        <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="GIF 재생" />
-                        <TextBlock
-                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                            Style="{ThemeResource CaptionTextBlockStyle}"
-                            Text="스티커 미리보기에서 GIF 애니메이션을 재생합니다." />
-                        <InfoBar
-                            x:Name="GifWarningInfoBar"
-                            Margin="0,8,0,0"
-                            CornerRadius="8"
-                            IsClosable="False"
-                            IsOpen="False"
-                            Message="GIF 재생을 활성화하면 GIF를 재생하는 동안 CPU 사용량이 매우 높아질 수 있습니다."
-                            Severity="Warning" />
-                    </StackPanel>
-                    <ToggleSwitch
-                        x:Name="GifPlaybackToggleSwitch"
-                        Grid.Column="1"
-                        MinWidth="0"
-                        VerticalAlignment="Top"
-                        OffContent="끔"
-                        OnContent="켬"
-                        Toggled="OnGifPlaybackToggleSwitchToggled" />
-                </Grid>
+                <StackPanel Spacing="16">
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel
+                            Grid.Column="0"
+                            VerticalAlignment="Center"
+                            Spacing="2">
+                            <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="GIF 재생" />
+                            <TextBlock
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Style="{ThemeResource CaptionTextBlockStyle}"
+                                Text="스티커 미리보기에서 GIF 애니메이션을 재생합니다." />
+                            <InfoBar
+                                x:Name="GifWarningInfoBar"
+                                Margin="0,8,0,0"
+                                CornerRadius="8"
+                                IsClosable="False"
+                                IsOpen="False"
+                                Message="GIF 재생을 활성화하면 GIF를 재생하는 동안 CPU 사용량이 매우 높아질 수 있습니다."
+                                Severity="Warning" />
+                        </StackPanel>
+                        <ToggleSwitch
+                            x:Name="GifPlaybackToggleSwitch"
+                            Grid.Column="1"
+                            MinWidth="0"
+                            VerticalAlignment="Top"
+                            OffContent="끔"
+                            OnContent="켬"
+                            Toggled="OnGifPlaybackToggleSwitchToggled" />
+                    </Grid>
+
+                    <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel
+                            Grid.Column="0"
+                            VerticalAlignment="Center"
+                            Spacing="2">
+                            <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="움짤 PNG를 WebP로 사용" />
+                            <TextBlock
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Style="{ThemeResource CaptionTextBlockStyle}"
+                                Text="움직이는 PNG 스티커를 더 작은 WebP 파일로 함께 만들어 사용합니다. 끄면 원본 PNG를 사용합니다."
+                                TextWrapping="WrapWholeWords" />
+                        </StackPanel>
+                        <StackPanel
+                            Grid.Column="1"
+                            VerticalAlignment="Center"
+                            Orientation="Horizontal"
+                            Spacing="8">
+                            <Button
+                                x:Name="ConvertAnimatedPngToWebpButton"
+                                MinWidth="120"
+                                AutomationProperties.Name="받아진 패키지 WebP 변환"
+                                Click="OnConvertAnimatedPngToWebpButtonClicked"
+                                Content="변환하기"
+                                IsEnabled="False" />
+                            <ToggleSwitch
+                                x:Name="UseAnimatedPngWebpConversionToggleSwitch"
+                                MinWidth="0"
+                                AutomationProperties.Name="움짤 PNG를 WebP로 사용"
+                                OffContent="끔"
+                                OnContent="켬"
+                                Toggled="OnUseAnimatedPngWebpConversionToggleSwitchToggled" />
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
             </Border>
 
             <!--  단축키  -->
