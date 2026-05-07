@@ -45,4 +45,51 @@
   <data name="AppDescription" xml:space="preserve">
     <value>A program that enables the use of DCCon in instant messengers.</value>
   </data>
+  <data name="DetailRefreshCheckingLoadingMessage" xml:space="preserve">
+    <value>Checking for new stickers...</value>
+  </data>
+  <data name="DetailRefreshFailureTitle" xml:space="preserve">
+    <value>Refresh failed</value>
+  </data>
+  <data name="DetailRefreshNetworkErrorMessage" xml:space="preserve">
+    <value>Please check your internet connection.
+You cannot refresh packages while offline.</value>
+  </data>
+  <data name="DetailRefreshNetworkErrorTitle" xml:space="preserve">
+    <value>Network error</value>
+  </data>
+  <data name="DetailRefreshNoNewStickerMessage" xml:space="preserve">
+    <value>There are no newly added stickers in this package.</value>
+  </data>
+  <data name="DetailRefreshNoNewStickerTitle" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="DetailRefreshSubscribedPackageToolTip" xml:space="preserve">
+    <value>Check for new stickers</value>
+  </data>
+  <data name="DetailRefreshSyncCompletedMessageFormat" xml:space="preserve">
+    <value>Synchronized {0} new stickers.</value>
+  </data>
+  <data name="DetailRefreshSyncCompletedTitle" xml:space="preserve">
+    <value>Sync complete</value>
+  </data>
+  <data name="DetailRefreshSyncLoadingMessage" xml:space="preserve">
+    <value>Downloading new stickers...</value>
+  </data>
+  <data name="DetailRefreshSyncMessageFormat" xml:space="preserve">
+    <value>There are {0} new stickers.
+Sync them now?</value>
+  </data>
+  <data name="DetailRefreshSyncPrimaryButtonText" xml:space="preserve">
+    <value>Sync</value>
+  </data>
+  <data name="DetailRefreshSyncProgressLoadingMessageFormat" xml:space="preserve">
+    <value>Downloading new stickers... {0}/{1}</value>
+  </data>
+  <data name="DetailRefreshSyncSecondaryButtonText" xml:space="preserve">
+    <value>Later</value>
+  </data>
+  <data name="DetailRefreshSyncTitle" xml:space="preserve">
+    <value>Sync new stickers</value>
+  </data>
 </root>

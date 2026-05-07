@@ -114,9 +114,11 @@
                 </StackPanel>
 
                 <!--  구독 (온라인 소스)  -->
-                <Grid
+                <StackPanel
                     Grid.Column="1"
                     HorizontalAlignment="Right"
+                    Orientation="Horizontal"
+                    Spacing="4"
                     VerticalAlignment="Top"
                     Visibility="{x:Bind ViewModel.IsLocalPackage, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=True}">
                     <Button
@@ -126,12 +128,18 @@
                         <FontIcon Glyph="&#xEA8F;" />
                     </Button>
                     <Button
+                        Command="{x:Bind ViewModel.RefreshSubscribedPackageCommand}"
+                        ToolTipService.ToolTip="{x:Bind ViewModel.RefreshSubscribedPackageToolTip, Mode=OneWay}"
+                        Visibility="{x:Bind ViewModel.CanRefreshPackage, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <FontIcon Glyph="&#xE72C;" />
+                    </Button>
+                    <Button
                         Command="{x:Bind ViewModel.UnsubscribeCommand}"
                         ToolTipService.ToolTip="구독 해제"
                         Visibility="{x:Bind ViewModel.IsSubscribed, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                         <FontIcon Glyph="&#xE7ED;" />
                     </Button>
-                </Grid>
+                </StackPanel>
 
                 <!--  수정 / 삭제 (사용자 지정콘)  -->
                 <StackPanel

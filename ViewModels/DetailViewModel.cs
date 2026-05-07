@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using dccon.NET.Models;
 using InvenSticker.NET.Models;
+using Microsoft.Windows.ApplicationModel.Resources;
 using YellowInside.Helpers;
 using YellowInside.Messages;
 using YellowInside.Models;
@@ -19,6 +20,7 @@ using Microsoft.UI.Xaml.Media.Imaging;
 using System;
 using System.Buffers.Text;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -34,9 +36,15 @@ namespace YellowInside.ViewModels;
 
 public partial class DetailViewModel : ObservableObject
 {
+    private static readonly ResourceLoader s_resourceLoader = new();
+
     public ContentSource Source { get; private set; }
 
     public string PackageIdentifier { get; private set; }
+
+    public bool CanRefreshPackage => Source != ContentSource.Local && IsSubscribed;
+
+    public string RefreshSubscribedPackageToolTip => GetResourceString("DetailRefreshSubscribedPackageToolTip");
 
     [ObservableProperty]
     public partial string HeaderText { get; private set; }
@@ -69,6 +77,7 @@ public partial class DetailViewModel : ObservableObject
     public partial List<StickerViewModel> Stickers { get; private set; }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanRefreshPackage))]
     public partial bool IsSubscribed { get; private set; }
 
     [ObservableProperty]
@@ -83,6 +92,7 @@ public partial class DetailViewModel : ObservableObject
         Source = source;
         PackageIdentifier = packageIdentifier;
         Stickers = [];
+        IsLocalPackage = false;
 
         HeaderText = $"{source.GetFriendlyName()} 정보";
 
@@ -280,52 +290,169 @@ public partial class DetailViewModel : ObservableObject
 
     private async Task DownloadMainImageSourceAsync() => MainImageSource = await Utils.GenerateImageSourceAsync(ManageWindow.Instance.DispatcherQueue, Source, Utils.GetImageUrl(Source, _mainImagePath));
 
-    private void UpdateSubscriptionStatus() => IsSubscribed = ContentsManager.IsPackageDownloaded(Source, PackageIdentifier);
+    private async Task<int?> GetAdditionalStickerCountAsync(UIElement dialogHostElement)
+    {
+        ManageWindow.ShowLoading(GetResourceString("DetailRefreshCheckingLoadingMessage"));
+        try { return await ContentsManager.GetAdditionalStickerCountAsync(Source, PackageIdentifier); }
+        catch (System.Exception exception) when (exception is HttpRequestException or TaskCanceledException)
+        {
+            ManageWindow.HideLoading();
+            await dialogHostElement.ShowDialogAsync(
+                GetResourceString("DetailRefreshNetworkErrorTitle"),
+                GetResourceString("DetailRefreshNetworkErrorMessage"));
+            return null;
+        }
+        catch (System.Exception exception)
+        {
+            ManageWindow.HideLoading();
+            await dialogHostElement.ShowDialogAsync(
+                GetResourceString("DetailRefreshFailureTitle"),
+                exception.Message);
+            return null;
+        }
+        finally { ManageWindow.HideLoading(); }
+    }
+
+    private async Task<int?> SynchronizeSubscribedPackageAsync(UIElement dialogHostElement)
+    {
+        ManageWindow.ShowLoading(GetResourceString("DetailRefreshSyncLoadingMessage"));
+        try
+        {
+            return await ContentsManager.SynchronizeDownloadedPackageAsync(
+                Source,
+                PackageIdentifier,
+                new Progress<(int Completed, int Total)>(progress => ManageWindow.ShowLoading(
+                    FormatResourceString("DetailRefreshSyncProgressLoadingMessageFormat", progress.Completed, progress.Total))));
+        }
+        catch (System.Exception exception) when (exception is HttpRequestException or TaskCanceledException)
+        {
+            ManageWindow.HideLoading();
+            await dialogHostElement.ShowDialogAsync(
+                GetResourceString("DetailRefreshNetworkErrorTitle"),
+                GetResourceString("DetailRefreshNetworkErrorMessage"));
+            return null;
+        }
+        catch (System.Exception exception)
+        {
+            ManageWindow.HideLoading();
+            await dialogHostElement.ShowDialogAsync(
+                GetResourceString("DetailRefreshFailureTitle"),
+                exception.Message);
+            return null;
+        }
+        finally { ManageWindow.HideLoading(); }
+    }
+
+    private static string GetResourceString(string resourceIdentifier) => s_resourceLoader.GetString(resourceIdentifier);
+
+    private static string FormatResourceString(string resourceIdentifier, params object[] arguments)
+        => string.Format(CultureInfo.CurrentCulture, GetResourceString(resourceIdentifier), arguments);
+
+    private void UpdateSubscriptionStatus()
+    {
+        IsSubscribed = ContentsManager.IsPackageDownloaded(Source, PackageIdentifier);
+        OnPropertyChanged(nameof(CanRefreshPackage));
+    }
 
     [RelayCommand]
     public async Task Subscribe()
     {
-        if(Source == ContentSource.Dccon)
+        if (Source == ContentSource.Dccon)
         {
             ManageWindow.ShowLoading("다운로드중...");
             try
             {
-                await ContentsManager.DownloadDcconPackageAsync(int.Parse(PackageIdentifier),
-                     new Progress<(int Completed, int Total)>(progress => ManageWindow.ShowLoading($"다운로드중... {progress.Completed}/{progress.Total}")));
-             }
-             finally { ManageWindow.HideLoading(); }
-         }
-         else if (Source == ContentSource.Arcacon)
-         {
-             var dialogHostElement = ManageWindow.Instance.Content as UIElement
-                 ?? throw new InvalidOperationException("관리 창 콘텐츠를 찾을 수 없습니다.");
-
-             if (await ArcaconSessionHelper.EnsureArcaconSessionAsync(
-                 dialogHostElement,
-                 (pageType, pageParameter) => ManageWindow.Navigate(pageType, pageParameter),
-                 typeof(DetailPage),
-                 (Source, PackageIdentifier)) is null)
-                 return;
-
-             ManageWindow.ShowLoading("다운로드중...");
-             try
-             {
-                 await ContentsManager.DownloadArcaconPackageAsync(
-                     int.Parse(PackageIdentifier),
-                     new Progress<(int Completed, int Total)>(progress => ManageWindow.ShowLoading($"다운로드중... {progress.Completed}/{progress.Total}")));
-             }
-             finally { ManageWindow.HideLoading(); }
-         }
-         else if (Source == ContentSource.Inven)
-         {
-             ManageWindow.ShowLoading("다운로드중...");
-            try
-            {
-                await ContentsManager.DownloadInvenStickerPackageAsync(int.Parse(PackageIdentifier),
+                await ContentsManager.DownloadDcconPackageAsync(
+                    int.Parse(PackageIdentifier, CultureInfo.InvariantCulture),
                     new Progress<(int Completed, int Total)>(progress => ManageWindow.ShowLoading($"다운로드중... {progress.Completed}/{progress.Total}")));
             }
             finally { ManageWindow.HideLoading(); }
         }
+        else if (Source == ContentSource.Arcacon)
+        {
+            var dialogHostElement = ManageWindow.Instance.Content as UIElement
+                ?? throw new InvalidOperationException("관리 창 콘텐츠를 찾을 수 없습니다.");
+
+            var arcaconSession = await ArcaconSessionHelper.EnsureArcaconSessionAsync(
+                dialogHostElement,
+                (pageType, pageParameter) => ManageWindow.Navigate(pageType, pageParameter),
+                typeof(DetailPage),
+                (Source, PackageIdentifier));
+            if (arcaconSession is null) return;
+
+            ManageWindow.ShowLoading("다운로드중...");
+            try
+            {
+                await ContentsManager.DownloadArcaconPackageAsync(
+                    int.Parse(PackageIdentifier, CultureInfo.InvariantCulture),
+                    new Progress<(int Completed, int Total)>(progress => ManageWindow.ShowLoading($"다운로드중... {progress.Completed}/{progress.Total}")));
+            }
+            finally { ManageWindow.HideLoading(); }
+        }
+        else if (Source == ContentSource.Inven)
+        {
+            ManageWindow.ShowLoading("다운로드중...");
+            try
+            {
+                await ContentsManager.DownloadInvenStickerPackageAsync(
+                    int.Parse(PackageIdentifier, CultureInfo.InvariantCulture),
+                    new Progress<(int Completed, int Total)>(progress => ManageWindow.ShowLoading($"다운로드중... {progress.Completed}/{progress.Total}")));
+            }
+            finally { ManageWindow.HideLoading(); }
+        }
+    }
+
+    [RelayCommand]
+    public async Task RefreshSubscribedPackage()
+    {
+        if (!CanRefreshPackage) return;
+
+        var dialogHostElement = ManageWindow.Instance.Content as UIElement
+            ?? throw new InvalidOperationException("관리 창 콘텐츠를 찾을 수 없습니다.");
+
+        if (Source == ContentSource.Arcacon)
+        {
+            var arcaconSession = await ArcaconSessionHelper.EnsureArcaconSessionAsync(
+                dialogHostElement,
+                (pageType, pageParameter) => ManageWindow.Navigate(pageType, pageParameter),
+                typeof(DetailPage),
+                (Source, PackageIdentifier));
+            if (arcaconSession is null) return;
+        }
+
+        var additionalStickerCount = await GetAdditionalStickerCountAsync(dialogHostElement);
+        if (additionalStickerCount is null) return;
+
+        if (additionalStickerCount == 0)
+        {
+            await dialogHostElement.ShowDialogAsync(
+                GetResourceString("DetailRefreshNoNewStickerTitle"),
+                GetResourceString("DetailRefreshNoNewStickerMessage"));
+            return;
+        }
+
+        var dialogResult = await dialogHostElement.ShowDialogAsync(
+            GetResourceString("DetailRefreshSyncTitle"),
+            FormatResourceString("DetailRefreshSyncMessageFormat", additionalStickerCount),
+            GetResourceString("DetailRefreshSyncPrimaryButtonText"),
+            GetResourceString("DetailRefreshSyncSecondaryButtonText"));
+        if (dialogResult != ContentDialogResult.Primary) return;
+
+        var synchronizedStickerCount = await SynchronizeSubscribedPackageAsync(dialogHostElement);
+        if (synchronizedStickerCount is null) return;
+
+        if (synchronizedStickerCount == 0)
+        {
+            await dialogHostElement.ShowDialogAsync(
+                GetResourceString("DetailRefreshNoNewStickerTitle"),
+                GetResourceString("DetailRefreshNoNewStickerMessage"));
+            return;
+        }
+
+        await InitializeAsync(Source, PackageIdentifier);
+        await dialogHostElement.ShowDialogAsync(
+            GetResourceString("DetailRefreshSyncCompletedTitle"),
+            FormatResourceString("DetailRefreshSyncCompletedMessageFormat", synchronizedStickerCount));
     }
 
     [RelayCommand]

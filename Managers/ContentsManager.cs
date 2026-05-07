@@ -1,7 +1,9 @@
 ﻿using Arcacon.NET;
+using Arcacon.NET.Models;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using dccon.NET;
+using dccon.NET.Models;
 using InvenSticker.NET;
 using InvenSticker.NET.Models;
 using YellowInside.Messages;
@@ -10,6 +12,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Globalization;
 using System.IO.Compression;
 using System.Net.Http;
 using System.Text.Json;
@@ -504,6 +507,69 @@ public static class ContentsManager
 	}
 
 	/// <summary>
+	/// 원격 패키지에 로컬에 없는 새 스티커가 몇 개 있는지 확인합니다.
+	/// </summary>
+	public static async Task<int> GetAdditionalStickerCountAsync(
+		ContentSource source,
+		string packageIdentifier,
+		CancellationToken cancellationToken = default)
+	{
+		var package = GetDownloadedPackage(source, packageIdentifier)
+			?? throw new InvalidOperationException("다운로드된 패키지를 찾을 수 없습니다.");
+		var existingStickerPaths = GetExistingStickerPaths(package);
+
+		if (source == ContentSource.Dccon)
+		{
+			var packageIndex = int.Parse(packageIdentifier, CultureInfo.InvariantCulture);
+			var detail = await s_dcconClient.GetPackageDetailAsync(packageIndex, cancellationToken);
+			return detail.Stickers.Count(sticker => !existingStickerPaths.Contains(sticker.Path));
+		}
+		else if (source == ContentSource.Arcacon)
+		{
+			var packageIndex = int.Parse(packageIdentifier, CultureInfo.InvariantCulture);
+			var detail = await App.ArcaconClient.GetPackageDetailAsync(packageIndex, cancellationToken);
+			return detail.Stickers.Count(sticker => !existingStickerPaths.Contains(sticker.ImageUrl));
+		}
+		else if (source == ContentSource.Inven)
+		{
+			var packageIdentifierAsInteger = int.Parse(packageIdentifier, CultureInfo.InvariantCulture);
+			var detail = await s_stickerClient.GetDetailAsync(packageIdentifierAsInteger, cancellationToken);
+			return detail.Images.Count(sticker => !existingStickerPaths.Contains(sticker.Url));
+		}
+
+		return 0;
+	}
+
+	/// <summary>
+	/// 다운로드된 패키지에 원격으로 추가된 스티커를 내려받고 로컬 메타데이터를 갱신합니다.
+	/// </summary>
+	public static async Task<int> SynchronizeDownloadedPackageAsync(
+		ContentSource source,
+		string packageIdentifier,
+		IProgress<(int Completed, int Total)> progress = null,
+		CancellationToken cancellationToken = default)
+	{
+		var package = GetDownloadedPackage(source, packageIdentifier)
+			?? throw new InvalidOperationException("다운로드된 패키지를 찾을 수 없습니다.");
+
+		var synchronizedStickerCount = source switch
+		{
+			ContentSource.Dccon => await SynchronizeDcconPackageAsync(packageIdentifier, package, progress, cancellationToken),
+			ContentSource.Arcacon => await SynchronizeArcaconPackageAsync(packageIdentifier, package, progress, cancellationToken),
+			ContentSource.Inven => await SynchronizeInvenStickerPackageAsync(packageIdentifier, package, progress, cancellationToken),
+			_ => 0
+		};
+
+		if (synchronizedStickerCount == 0) return 0;
+
+		await SaveAsync();
+
+		PackagesChanged?.Invoke();
+		WeakReferenceMessenger.Default.Send(new FavoritesOrPackagesChangedMessage(source, packageIdentifier));
+		return synchronizedStickerCount;
+	}
+
+	/// <summary>
 	/// 다운로드된 패키지 목록을 반환합니다.
 	/// </summary>
 	public static IReadOnlyList<StickerPackage> GetDownloadedPackages(ContentSource? source = null)
@@ -697,6 +763,206 @@ public static class ContentsManager
 
     private static string GetPackageDirectory(ContentSource source, string packageIdentifier)
 		=> Path.Combine(s_basePath, source.ToString(), packageIdentifier);
+
+	private static async Task<int> SynchronizeDcconPackageAsync(
+		string packageIdentifier,
+		StickerPackage package,
+		IProgress<(int Completed, int Total)> progress,
+		CancellationToken cancellationToken)
+	{
+		var packageIndex = int.Parse(packageIdentifier, CultureInfo.InvariantCulture);
+		var detail = await s_dcconClient.GetPackageDetailAsync(packageIndex, cancellationToken);
+		var existingStickerPaths = GetExistingStickerPaths(package);
+		var additionalStickers = detail.Stickers.Where(sticker => !existingStickerPaths.Contains(sticker.Path)).ToList();
+		if (additionalStickers.Count == 0) return 0;
+
+		var stickerDirectory = EnsurePackageStickerDirectory(ContentSource.Dccon, packageIdentifier, package);
+		var synchronizedStickerCount = 0;
+
+		foreach (var sticker in additionalStickers)
+		{
+			var fileName = DcconFileNameHelper.GetStickerFileName(sticker);
+			var filePath = Path.Combine(stickerDirectory, fileName);
+			var imageData = await s_dcconClient.DownloadStickerAsync(sticker, cancellationToken);
+			await File.WriteAllBytesAsync(filePath, imageData, cancellationToken);
+
+			synchronizedStickerCount++;
+			progress?.Report((synchronizedStickerCount, additionalStickers.Count));
+		}
+
+		lock (s_lock)
+		{
+			ApplyDcconPackageMetadata(package, detail);
+			AddSynchronizedStickers(package, additionalStickers.Select(CreateSticker));
+		}
+
+		return synchronizedStickerCount;
+	}
+
+	private static async Task<int> SynchronizeArcaconPackageAsync(
+		string packageIdentifier,
+		StickerPackage package,
+		IProgress<(int Completed, int Total)> progress,
+		CancellationToken cancellationToken)
+	{
+		var packageIndex = int.Parse(packageIdentifier, CultureInfo.InvariantCulture);
+		var detail = await App.ArcaconClient.GetPackageDetailAsync(packageIndex, cancellationToken);
+		var existingStickerPaths = GetExistingStickerPaths(package);
+		var additionalStickers = detail.Stickers.Where(sticker => !existingStickerPaths.Contains(sticker.ImageUrl)).ToList();
+		if (additionalStickers.Count == 0) return 0;
+
+		var stickerDirectory = EnsurePackageStickerDirectory(ContentSource.Arcacon, packageIdentifier, package);
+		var synchronizedStickerCount = 0;
+
+		foreach (var sticker in additionalStickers)
+		{
+			var fileName = ArcaconFileNameHelper.GetStickerFileName(sticker);
+			var filePath = Path.Combine(stickerDirectory, fileName);
+			var imageData = await App.ArcaconClient.DownloadStickerAsync(sticker, cancellationToken);
+			await File.WriteAllBytesAsync(filePath, imageData, cancellationToken);
+
+			synchronizedStickerCount++;
+			progress?.Report((synchronizedStickerCount, additionalStickers.Count));
+		}
+
+		lock (s_lock)
+		{
+			ApplyArcaconPackageMetadata(package, detail, packageIndex);
+			AddSynchronizedStickers(package, additionalStickers.Select(CreateSticker));
+		}
+
+		return synchronizedStickerCount;
+	}
+
+	private static async Task<int> SynchronizeInvenStickerPackageAsync(
+		string packageIdentifier,
+		StickerPackage package,
+		IProgress<(int Completed, int Total)> progress,
+		CancellationToken cancellationToken)
+	{
+		var packageIdentifierAsInteger = int.Parse(packageIdentifier, CultureInfo.InvariantCulture);
+		var detail = await s_stickerClient.GetDetailAsync(packageIdentifierAsInteger, cancellationToken);
+		var existingStickerPaths = GetExistingStickerPaths(package);
+		var additionalStickers = detail.Images
+			.Select((sticker, index) => (Sticker: sticker, Index: index))
+			.Where(stickerContext => !existingStickerPaths.Contains(stickerContext.Sticker.Url))
+			.ToList();
+		if (additionalStickers.Count == 0) return 0;
+
+		var stickerDirectory = EnsurePackageStickerDirectory(ContentSource.Inven, packageIdentifier, package);
+		var synchronizedStickerCount = 0;
+
+		foreach (var stickerContext in additionalStickers)
+		{
+			var fileName = InvenStickerFileNameHelper.GetStickerFileName(stickerContext.Sticker, stickerContext.Index);
+			var filePath = Path.Combine(stickerDirectory, fileName);
+			var imageData = await s_stickerClient.DownloadImageAsync(stickerContext.Sticker, cancellationToken);
+			await File.WriteAllBytesAsync(filePath, imageData, cancellationToken);
+
+			synchronizedStickerCount++;
+			progress?.Report((synchronizedStickerCount, additionalStickers.Count));
+		}
+
+		lock (s_lock)
+		{
+			ApplyInvenStickerPackageMetadata(package, detail);
+			AddSynchronizedStickers(package, additionalStickers.Select(stickerContext => CreateSticker(stickerContext.Sticker, stickerContext.Index)));
+		}
+
+		return synchronizedStickerCount;
+	}
+
+	private static HashSet<string> GetExistingStickerPaths(StickerPackage package)
+		=> package.Stickers.Select(sticker => sticker.Path).ToHashSet(StringComparer.Ordinal);
+
+	private static string EnsurePackageStickerDirectory(ContentSource source, string packageIdentifier, StickerPackage package)
+	{
+		var packageDirectory = GetPackageDirectory(source, packageIdentifier);
+		if (string.IsNullOrWhiteSpace(package.LocalDirectoryName)) package.LocalDirectoryName = GetSafeLocalDirectoryName(source, packageIdentifier, package.Title);
+
+		var stickerDirectory = Path.Combine(packageDirectory, package.LocalDirectoryName);
+		Directory.CreateDirectory(stickerDirectory);
+		package.LocalDirectoryPath = stickerDirectory;
+		return stickerDirectory;
+	}
+
+	private static string GetSafeLocalDirectoryName(ContentSource source, string packageIdentifier, string title)
+	{
+		var safeDirectoryName = source switch
+		{
+			ContentSource.Dccon => DcconFileNameHelper.SanitizeFileName(title),
+			ContentSource.Arcacon => ArcaconFileNameHelper.SanitizeFileName(title),
+			ContentSource.Inven => InvenStickerFileNameHelper.SanitizeFileName(title),
+			_ => title
+		};
+
+		return string.IsNullOrWhiteSpace(safeDirectoryName) ? packageIdentifier : safeDirectoryName;
+	}
+
+	private static void AddSynchronizedStickers(StickerPackage package, IEnumerable<Sticker> stickers)
+	{
+		package.Stickers.AddRange(stickers);
+		package.Stickers = [.. package.Stickers.OrderBy(sticker => sticker.SortNumber)];
+	}
+
+	private static Sticker CreateSticker(DcconSticker sticker) => new()
+	{
+		Path = sticker.Path,
+		Title = sticker.Title,
+		Extension = sticker.Extension,
+		SortNumber = sticker.SortNumber,
+		ImageUrl = sticker.ImageUrl,
+		FileName = DcconFileNameHelper.GetStickerFileName(sticker),
+	};
+
+	private static Sticker CreateSticker(ArcaconSticker sticker) => new()
+	{
+		Path = sticker.ImageUrl,
+		Title = string.IsNullOrWhiteSpace(sticker.Title) ? $"스티커 {sticker.SortNumber}" : sticker.Title,
+		Extension = sticker.Extension,
+		SortNumber = sticker.SortNumber,
+		ImageUrl = sticker.ImageUrl,
+		FileName = ArcaconFileNameHelper.GetStickerFileName(sticker),
+	};
+
+	private static Sticker CreateSticker(InvenStickerImage sticker, int index) => new()
+	{
+		Path = sticker.Url,
+		Extension = sticker.Extension,
+		SortNumber = index,
+		ImageUrl = sticker.Url,
+		FileName = InvenStickerFileNameHelper.GetStickerFileName(sticker, index),
+	};
+
+	private static void ApplyDcconPackageMetadata(StickerPackage package, DcconPackageDetail detail)
+	{
+		package.Title = detail.Title;
+		package.Description = detail.Description;
+		package.MainImagePath = detail.MainImagePath;
+		package.SellerName = detail.SellerName;
+		package.RegistrationDate = detail.RegistrationDate;
+		package.Tags = [.. detail.Tags];
+	}
+
+	private static void ApplyArcaconPackageMetadata(StickerPackage package, ArcaconPackageDetail detail, int packageIndex)
+	{
+		package.Title = detail.Title;
+		package.Description = detail.Price == 0 ? string.Empty : $"{detail.Price}pt";
+		package.MainImagePath = $"https://arca.live/api/emoticon/{packageIndex}/thumb";
+		package.SellerName = detail.SellerName;
+		package.RegistrationDate = detail.RegistrationDate;
+		package.Tags = [.. detail.Tags];
+	}
+
+	private static void ApplyInvenStickerPackageMetadata(StickerPackage package, InvenStickerPackageDetail detail)
+	{
+		package.Title = detail.Title;
+		package.Description = detail.PriceInfo;
+		package.MainImagePath = detail.ThumbnailUrl;
+		package.SellerName = detail.AuthorName;
+		package.RegistrationDate = detail.RegistrationDate;
+		package.Tags = [.. detail.Tags];
+	}
 
 	/// <summary>
 	/// 메인 이미지를 다운로드하여 패키지 디렉토리에 저장합니다.
