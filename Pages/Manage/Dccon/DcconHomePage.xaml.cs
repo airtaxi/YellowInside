@@ -1,31 +1,31 @@
-using YellowInside.Helpers;
-using YellowInside.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Navigation;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Collections.Generic;
+using YellowInside.Helpers;
+using YellowInside.ViewModels;
 
 namespace YellowInside.Pages.Manage.Dccon;
 
 public sealed partial class DcconHomePage : Page
 {
-    private int _hotListPage = 1;
-    private int _newListPage = 1;
-    private bool _hotListHasMore = true;
-    private bool _newListHasMore = true;
+    private int _newListPageNumber = 1;
+    private bool _hasMoreNewListPages = true;
     private bool _isLoaded;
     private readonly SemaphoreSlim _loadMoreSemaphore = new(1, 1);
     private CancellationTokenSource _refreshCancellationTokenSource;
+    private readonly Dictionary<ScrollView, double> _targetHorizontalOffsetsByScrollView = [];
+
     private ObservableCollection<SearchResultViewModel> DailyPopularList { get; } = [];
     private ObservableCollection<SearchResultViewModel> WeeklyPopularList { get; } = [];
-    private ObservableCollection<SearchResultViewModel> HotList { get; } = [];
+    private ObservableCollection<SearchResultViewModel> MonthlyPopularList { get; } = [];
     private ObservableCollection<SearchResultViewModel> NewList { get; } = [];
 
     public DcconHomePage() => InitializeComponent();
@@ -36,92 +36,97 @@ public sealed partial class DcconHomePage : Page
         _refreshCancellationTokenSource = new CancellationTokenSource();
         var cancellationToken = _refreshCancellationTokenSource.Token;
 
+        _newListPageNumber = 1;
+        _hasMoreNewListPages = true;
+
         DailyPopularList.Clear();
         WeeklyPopularList.Clear();
-
-        ManageWindow.ShowLoading("일간 인기 디시콘 불러오는 중...");
-        try
-        {
-            var dailyPopularList = await App.DcconClient.GetDailyPopularAsync();
-            cancellationToken.ThrowIfCancellationRequested();
-            foreach (var dailyPopular in dailyPopularList) DailyPopularList.Add(new SearchResultViewModel(dailyPopular, cancellationToken));
-        }
-        finally { ManageWindow.HideLoading(); }
-
-        ManageWindow.ShowLoading("주간 인기 디시콘 불러오는 중...");
-        try
-        {
-            var weeklyPopularList = await App.DcconClient.GetWeeklyPopularAsync();
-            cancellationToken.ThrowIfCancellationRequested();
-            foreach (var weeklyPopular in weeklyPopularList) WeeklyPopularList.Add(new SearchResultViewModel(weeklyPopular, cancellationToken));
-        }
-        finally { ManageWindow.HideLoading(); }
-
-        _hotListPage = 1;
-        _newListPage = 1;
-        HotList.Clear();
+        MonthlyPopularList.Clear();
         NewList.Clear();
 
-        await LoadMoreAsync(true, cancellationToken);
-        await LoadMoreAsync(false, cancellationToken);
+        await LoadPopularPackagesAsync(
+            "일간 인기 디시콘 불러오는 중...",
+            async () => (await App.DcconClient.GetDailyPopularAsync()).Select(package => new SearchResultViewModel(package, cancellationToken)),
+            DailyPopularList,
+            cancellationToken);
+        await LoadPopularPackagesAsync(
+            "주간 인기 디시콘 불러오는 중...",
+            async () => (await App.DcconClient.GetWeeklyPopularAsync()).Select(package => new SearchResultViewModel(package, cancellationToken)),
+            WeeklyPopularList,
+            cancellationToken);
+        await LoadPopularPackagesAsync(
+            "월간 인기 디시콘 불러오는 중...",
+            async () => (await App.DcconClient.GetMonthlyPopularAsync()).Select(package => new SearchResultViewModel(package, cancellationToken)),
+            MonthlyPopularList,
+            cancellationToken);
+
+        await LoadMoreNewListAsync(cancellationToken);
 
         _isLoaded = true;
     }
 
-    private async Task LoadMoreAsync(bool isHot, CancellationToken cancellationToken = default)
+    private static void AddPackagesToTargetList(ObservableCollection<SearchResultViewModel> targetList, IEnumerable<SearchResultViewModel> viewModels)
+    {
+        foreach (var viewModel in viewModels.Where(viewModel => !targetList.Any(existingViewModel => existingViewModel.PackageIdentifier == viewModel.PackageIdentifier)))
+        {
+            targetList.Add(viewModel);
+        }
+    }
+
+    private static async Task LoadPopularPackagesAsync(
+        string loadingMessage,
+        Func<Task<IEnumerable<SearchResultViewModel>>> getPopularPackageViewModelsAsync,
+        ObservableCollection<SearchResultViewModel> targetList,
+        CancellationToken cancellationToken)
+    {
+        ManageWindow.ShowLoading(loadingMessage);
+        try
+        {
+            var viewModels = await getPopularPackageViewModelsAsync();
+            cancellationToken.ThrowIfCancellationRequested();
+
+            AddPackagesToTargetList(targetList, viewModels);
+        }
+        finally { ManageWindow.HideLoading(); }
+    }
+
+    private async Task LoadMoreNewListAsync(CancellationToken cancellationToken = default)
     {
         await _loadMoreSemaphore.WaitAsync(cancellationToken);
         try
         {
-            if (isHot) ManageWindow.ShowLoading("인기콘 불러오는 중...");
-            else ManageWindow.ShowLoading("최신콘 불러오는 중...");
-
+            ManageWindow.ShowLoading("최신 디시콘 불러오는 중...");
             try
             {
-                if (isHot)
-                {
-                    if (!_hotListHasMore) return;
+                if (!_hasMoreNewListPages) return;
 
-                    var searchResult = await App.DcconClient.GetHotListAsync(_hotListPage++, cancellationToken);
-                    cancellationToken.ThrowIfCancellationRequested();
-                    if (_hotListPage >= searchResult.TotalPages) _hotListHasMore = false;
+                var searchResult = await App.DcconClient.GetNewListAsync(_newListPageNumber++, cancellationToken);
+                cancellationToken.ThrowIfCancellationRequested();
 
-                    var viewModels = searchResult.Packages.Select(c => new SearchResultViewModel(c, cancellationToken));
-                    foreach (var viewModel in viewModels.Where(x => !HotList.Any(y => x.PackageIdentifier == y.PackageIdentifier))) HotList.Add(viewModel);
-                }
-                else
-                {
-                    if (!_newListHasMore) return;
+                if (_newListPageNumber > searchResult.TotalPages) _hasMoreNewListPages = false;
 
-                    var searchResult = await App.DcconClient.GetNewListAsync(_newListPage++, cancellationToken);
-                    cancellationToken.ThrowIfCancellationRequested();
-                    if (_newListPage >= searchResult.TotalPages) _newListHasMore = false;
-
-                    var viewModels = searchResult.Packages.Select(c => new SearchResultViewModel(c, cancellationToken));
-                    foreach (var viewModel in viewModels.Where(x => !NewList.Any(y => x.PackageIdentifier == y.PackageIdentifier))) NewList.Add(viewModel);
-                }
+                AddPackagesToTargetList(NewList, searchResult.Packages.Select(package => new SearchResultViewModel(package, cancellationToken)));
             }
             finally { ManageWindow.HideLoading(); }
         }
         finally { _loadMoreSemaphore.Release(); }
     }
 
-    protected override async void OnNavigatedTo(NavigationEventArgs e)
+    protected override async void OnNavigatedTo(NavigationEventArgs navigationEventArgs)
     {
-        base.OnNavigatedTo(e);
+        base.OnNavigatedTo(navigationEventArgs);
 
-        if (!_isLoaded)
+        if (_isLoaded) return;
+
+        try { await RefreshAsync(); }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
         {
-            try { await RefreshAsync(); }
-            catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
-            {
-                ManageWindow.HideLoading();
-                await this.ShowDialogAsync("네트워크 오류", "인터넷 연결을 확인해 주세요.\n오프라인 상태에서는 홈 목록을 불러올 수 없습니다.");
-            }
+            ManageWindow.HideLoading();
+            await this.ShowDialogAsync("네트워크 오류", "인터넷 연결을 확인해 주세요.\n오프라인 상태에서는 홈 목록을 불러올 수 없습니다.");
         }
     }
 
-    private async void OnRefreshButtonClicked(object sender, RoutedEventArgs e)
+    private async void OnRefreshButtonClicked(object sender, RoutedEventArgs routedEventArgs)
     {
         try { await RefreshAsync(); }
         catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
@@ -131,34 +136,31 @@ public sealed partial class DcconHomePage : Page
         }
     }
 
-    private async void OnScrollViewViewChanged(ScrollView scrollView, object args)
+    private async void OnScrollViewViewChanged(ScrollView scrollView, object eventArguments)
     {
-        var isHorizontalScrollReached = scrollView.HorizontalOffset + scrollView.ViewportWidth >= scrollView.ExtentWidth;
-        if (!isHorizontalScrollReached) return;
+        var hasReachedHorizontalScrollEnd = scrollView.HorizontalOffset + scrollView.ViewportWidth >= scrollView.ExtentWidth;
+        if (!hasReachedHorizontalScrollEnd) return;
 
         var isLoadMoreInProgress = _loadMoreSemaphore.CurrentCount == 0;
         if (isLoadMoreInProgress) return;
 
         scrollView.ScrollTo(scrollView.HorizontalOffset - 1, 0);
 
-        var isHot = scrollView.Tag as string == "Hot";
-        try { await LoadMoreAsync(isHot, _refreshCancellationTokenSource?.Token ?? default); }
+        try { await LoadMoreNewListAsync(_refreshCancellationTokenSource?.Token ?? default); }
         catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException) { ManageWindow.HideLoading(); }
     }
 
-    private readonly Dictionary<ScrollView, double> _targetHorizontalOffset = [];
-    private void OnScrollViewPointerWheelChanged(object sender, PointerRoutedEventArgs e)
+    private void OnScrollViewPointerWheelChanged(object sender, PointerRoutedEventArgs pointerRoutedEventArgs)
     {
-        var delta = e.GetCurrentPoint(null).Properties.MouseWheelDelta;
+        var mouseWheelDelta = pointerRoutedEventArgs.GetCurrentPoint(null).Properties.MouseWheelDelta;
 
-        var scrollView = sender as ScrollView;
-        if (scrollView == null) return;
+        if (sender is not ScrollView scrollView) return;
 
-        if (!_targetHorizontalOffset.ContainsKey(scrollView)) _targetHorizontalOffset.Add(scrollView, scrollView.HorizontalOffset);
+        if (!_targetHorizontalOffsetsByScrollView.ContainsKey(scrollView)) _targetHorizontalOffsetsByScrollView.Add(scrollView, scrollView.HorizontalOffset);
 
-        _targetHorizontalOffset[scrollView] = Math.Clamp(_targetHorizontalOffset[scrollView] - delta, 0, scrollView.ExtentWidth - scrollView.ViewportWidth);
-        scrollView.ScrollTo(_targetHorizontalOffset[scrollView], 0);
+        _targetHorizontalOffsetsByScrollView[scrollView] = Math.Clamp(_targetHorizontalOffsetsByScrollView[scrollView] - mouseWheelDelta, 0, scrollView.ExtentWidth - scrollView.ViewportWidth);
+        scrollView.ScrollTo(_targetHorizontalOffsetsByScrollView[scrollView], 0);
 
-        e.Handled = true;
+        pointerRoutedEventArgs.Handled = true;
     }
 }

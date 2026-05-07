@@ -110,17 +110,15 @@
                 HorizontalAlignment="Left"
                 VerticalAlignment="Bottom"
                 Style="{ThemeResource SubtitleTextBlockStyle}"
-                Text="인기 디시콘" />
+                Text="월간 인기 디시콘" />
             <ScrollView
                 Grid.Row="1"
                 Height="112"
                 ContentOrientation="Horizontal"
                 HorizontalScrollBarVisibility="Hidden"
                 HorizontalScrollMode="Enabled"
-                PointerWheelChanged="OnScrollViewPointerWheelChanged"
-                Tag="Hot"
-                ViewChanged="OnScrollViewViewChanged">
-                <ItemsRepeater ItemsSource="{x:Bind HotList}">
+                PointerWheelChanged="OnScrollViewPointerWheelChanged">
+                <ItemsRepeater ItemsSource="{x:Bind MonthlyPopularList}">
                     <ItemsRepeater.Layout>
                         <StackLayout Orientation="Horizontal" Spacing="8" />
                     </ItemsRepeater.Layout>
@@ -159,7 +157,6 @@
                 HorizontalScrollBarVisibility="Hidden"
                 HorizontalScrollMode="Enabled"
                 PointerWheelChanged="OnScrollViewPointerWheelChanged"
-                Tag="New"
                 ViewChanged="OnScrollViewViewChanged">
                 <ItemsRepeater ItemsSource="{x:Bind NewList}">
                     <ItemsRepeater.Layout>
