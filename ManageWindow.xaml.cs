@@ -203,7 +203,9 @@ public sealed partial class ManageWindow : WindowEx, IRecipient<LaunchOnStartupC
 
     private void UpdateTitleBarNavigationState(Type currentPageType)
     {
-        AppTitleBar.IsPaneToggleButtonVisible = currentPageType == typeof(ManagePage);
-        AppTitleBar.IsBackButtonVisible = currentPageType == typeof(ArcaconLoginPage) || AppFrame.CanGoBack;
+        var isArcaconLoginPage = currentPageType == typeof(ArcaconLoginPage);
+
+        AppTitleBar.IsPaneToggleButtonVisible = !isArcaconLoginPage && currentPageType == typeof(ManagePage);
+        AppTitleBar.IsBackButtonVisible = isArcaconLoginPage || AppFrame.CanGoBack;
     }
 }

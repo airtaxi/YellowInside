@@ -71,16 +71,20 @@ public static class ArcaconSessionHelper
         var (cancellationReturnPageType, cancellationReturnPageParameter) = NormalizeArcaconLoginCancellationReturnPage(returnPageType);
         var hasDifferentCancellationReturnPage = cancellationReturnPageType != normalizedReturnPageType
             || !Equals(cancellationReturnPageParameter, normalizedReturnPageParameter);
+        var useBackStackOnLoginSuccess = returnPageType != typeof(ManagePage) && returnPageType == normalizedReturnPageType;
+        var navigationArguments = hasDifferentCancellationReturnPage
+            ? new ArcaconLoginPageNavigationArguments(
+                normalizedReturnPageType,
+                normalizedReturnPageParameter,
+                cancellationReturnPageType,
+                cancellationReturnPageParameter,
+                useBackStackOnLoginSuccess)
+            : new ArcaconLoginPageNavigationArguments(
+                normalizedReturnPageType,
+                normalizedReturnPageParameter,
+                UseBackStackOnLoginSuccess: useBackStackOnLoginSuccess);
 
-        ManageWindow.NavigateAndClearBackStack(
-            typeof(ArcaconLoginPage),
-            hasDifferentCancellationReturnPage
-                ? new ArcaconLoginPageNavigationArguments(
-                    normalizedReturnPageType,
-                    normalizedReturnPageParameter,
-                    cancellationReturnPageType,
-                    cancellationReturnPageParameter)
-                : new ArcaconLoginPageNavigationArguments(normalizedReturnPageType, normalizedReturnPageParameter));
+        ManageWindow.Navigate(typeof(ArcaconLoginPage), navigationArguments);
     }
 
     private static (Type ReturnPageType, object ReturnPageParameter) NormalizeArcaconLoginSuccessReturnPage(Type returnPageType, object returnPageParameter)

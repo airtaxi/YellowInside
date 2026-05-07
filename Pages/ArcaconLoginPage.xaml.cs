@@ -100,6 +100,12 @@ public sealed partial class ArcaconLoginPage : Page
             if (loginCancellationToken.IsCancellationRequested) return;
 
             StatusTextBlock.Text = "로그인 완료. 페이지로 이동하는 중...";
+            if (_navigationArguments.UseBackStackOnLoginSuccess && Frame.CanGoBack)
+            {
+                Frame.GoBack();
+                return;
+            }
+
             ManageWindow.NavigateAndClearBackStack(_navigationArguments.ReturnPageType, _navigationArguments.ReturnPageParameter);
         }
         catch (OperationCanceledException)
