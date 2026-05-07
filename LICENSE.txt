@@ -19,3 +19,21 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+Third-party notices
+
+This project's source code remains licensed under the MIT License above.
+
+FFmpeg
+
+Yellow Inside can download FFmpeg binaries at runtime for animated image
+conversion. FFmpeg is a separate third-party component and is not covered by
+this project's MIT License.
+
+The FFmpeg binaries downloaded by Yellow Inside are LGPL shared builds and are
+licensed under the GNU Lesser General Public License (LGPL) version 2.1 or
+later, as described by the FFmpeg project.
+
+FFmpeg project: https://ffmpeg.org/
+FFmpeg license and legal information: https://ffmpeg.org/legal.html
+LGPL 2.1 text: https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html

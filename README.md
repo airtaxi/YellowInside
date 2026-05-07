@@ -20,6 +20,12 @@
 
 이 프로젝트는 [MIT 라이선스](LICENSE.txt)로 배포됩니다.
 
+움짤 PNG를 WebP로 변환하는 기능은 실행 중 FFmpeg 바이너리를 별도로 내려받아 사용할 수 있습니다. FFmpeg는 이 프로젝트의 MIT 라이선스에 포함되지 않는 별도 서드파티 구성 요소이며, 앱은 LGPL shared 빌드를 사용합니다.
+
+- FFmpeg: https://ffmpeg.org/
+- FFmpeg 라이선스 안내: https://ffmpeg.org/legal.html
+- GNU Lesser General Public License 2.1: https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html
+
 ## 면책 조항 (Disclaimer)
 
 본 애플리케이션은 (주)카카오와 어떠한 제휴나 연관 관계도 없습니다. 본 애플리케이션은 메신저의 내부 코드를 수정하거나 역공학하지 않으며, Windows API를 통한 UI 후킹만을 사용하여 동작합니다. 이는 일반적인 Windows 자동화 기법의 범위 내에 해당합니다.
