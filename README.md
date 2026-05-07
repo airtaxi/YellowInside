@@ -20,6 +20,8 @@
 
 이 프로젝트는 [MIT 라이선스](LICENSE.txt)로 배포됩니다.
 
+직접 참조하는 NuGet 패키지 및 실행 중 내려받는 서드파티 구성 요소의 고지는 [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt)를 참고하세요.
+
 움짤 PNG를 WebP로 변환하는 기능은 실행 중 FFmpeg 바이너리를 별도로 내려받아 사용할 수 있습니다. FFmpeg는 이 프로젝트의 MIT 라이선스에 포함되지 않는 별도 서드파티 구성 요소이며, 앱은 LGPL shared 빌드를 사용합니다.
 
 - FFmpeg: https://ffmpeg.org/

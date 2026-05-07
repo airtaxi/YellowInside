@@ -1,0 +1,108 @@
+Third-party notices for Yellow Inside
+
+Yellow Inside is licensed under the MIT License. See LICENSE.txt.
+
+This file lists third-party components that Yellow Inside directly references
+or downloads. For NuGet packages, only direct PackageReference entries from
+YellowInside.csproj are listed. Transitive NuGet dependencies are intentionally
+not listed here.
+
+
+Runtime-downloaded component
+----------------------------
+
+FFmpeg
+Project: https://ffmpeg.org/
+License: GNU Lesser General Public License (LGPL) version 2.1 or later
+License information: https://ffmpeg.org/legal.html
+LGPL 2.1 text: https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html
+
+Yellow Inside can download LGPL shared FFmpeg builds at runtime for animated
+image conversion. FFmpeg is a separate third-party component and is not covered
+by Yellow Inside's MIT License.
+
+
+Direct NuGet package references
+-------------------------------
+
+Arcacon.NET.WinRT 0.3.2
+Authors: Howon Lee
+License: MIT
+Repository: https://github.com/airtaxi/Arcacon.NET
+
+CommunityToolkit.Mvvm 8.4.2
+Authors: Microsoft
+License: MIT
+Project: https://github.com/CommunityToolkit/dotnet
+Repository: https://github.com/CommunityToolkit/dotnet
+Copyright: (c) .NET Foundation and Contributors. All rights reserved.
+
+CommunityToolkit.WinUI.Controls.Primitives 8.2.251219
+Authors: Microsoft.Toolkit
+License: MIT
+Project: https://github.com/CommunityToolkit/Windows
+Repository: https://github.com/CommunityToolkit/Windows
+Copyright: (c) .NET Foundation and Contributors. All rights reserved.
+
+CommunityToolkit.WinUI.Converters 8.2.251219
+Authors: Microsoft.Toolkit
+License: MIT
+Project: https://github.com/CommunityToolkit/Windows
+Repository: https://github.com/CommunityToolkit/Windows
+Copyright: (c) .NET Foundation and Contributors. All rights reserved.
+
+dccon.NET 0.6.0
+Authors: 이호원
+License: MIT
+Project: https://github.com/airtaxi/dccon.NET
+Repository: https://github.com/airtaxi/dccon.NET
+
+DevWinUI.Controls 9.9.4
+Authors: Mahdi Hosseini
+License: MIT
+Project: https://github.com/ghost1372/DevWinUI
+Repository: https://github.com/ghost1372/DevWinUI
+Copyright: Copyright (c) 2021-2026 - Mahdi Hosseini
+
+H.NotifyIcon.WinUI 2.4.1
+Authors: havendv
+License: MIT
+Project: https://github.com/HavenDV/H.NotifyIcon
+Repository: https://github.com/HavenDV/H.NotifyIcon
+
+InvenSticker.NET 0.4.0
+Authors: 이호원
+License: MIT
+Project: https://github.com/airtaxi/InvenSticker.NET
+Repository: https://github.com/airtaxi/InvenSticker.NET
+
+Magick.NET-Q16-AnyCPU 14.13.0
+Authors: Dirk Lemstra
+License: Apache-2.0
+Project: https://github.com/dlemstra/Magick.NET
+Repository: https://github.com/dlemstra/Magick.NET
+Copyright: Copyright 2013-2026 Dirk Lemstra
+
+Microsoft.Windows.SDK.BuildTools 10.0.28000.1839
+Authors: Microsoft
+License information: https://aka.ms/WinSDKLicenseURL
+Project: https://aka.ms/WinSDKProjectURL
+Copyright: © Microsoft Corporation. All rights reserved.
+
+Microsoft.WindowsAppSDK 2.0.1
+Authors: Microsoft
+License: Microsoft Windows App SDK license.txt included in the NuGet package
+Project: https://github.com/microsoft/windowsappsdk
+Copyright: © Microsoft Corporation. All rights reserved.
+
+WinUIEx 2.9.0
+Authors: Morten Nielsen - https://xaml.dev
+License: MIT
+Project: https://dotmorten.github.io/WinUIEx
+Repository: https://github.com/dotMorten/WinUIEx
+Copyright: Copyright © 2021-2025 - Morten Nielsen
+
+YellowInsideLib 1.1.2
+Authors: 이호원 (airtaxi)
+License: MIT
+Repository: https://github.com/airtaxi/YellowInsideLib
