@@ -54,8 +54,8 @@
 		<PackageReference Include="DevWinUI.Controls" Version="9.9.4" />
 		<PackageReference Include="H.NotifyIcon.WinUI" Version="2.4.1" />
 		<PackageReference Include="InvenSticker.NET" Version="0.4.0" />
-		<PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.1721" />
-		<PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260317003" />
+		<PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.1839" />
+		<PackageReference Include="Microsoft.WindowsAppSDK" Version="2.0.1" />
 		<PackageReference Include="WinUIEx" Version="2.9.0" />
 		<PackageReference Include="YellowInsideLib" Version="1.1.1" />
 	</ItemGroup>
