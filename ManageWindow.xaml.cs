@@ -162,12 +162,13 @@ public sealed partial class ManageWindow : WindowEx, IRecipient<LaunchOnStartupC
 
     private void OnAppTitleBarBackRequested(TitleBar sender, object args)
     {
-        if (AppFrame.Content is ArcaconLoginPage) return;
-
-        if (AppFrame.CanGoBack)
+        if (AppFrame.Content is ArcaconLoginPage arcaconLoginPage)
         {
-            AppFrame.GoBack();
+            arcaconLoginPage.CancelLoginAndReturn();
+            return;
         }
+
+        if (AppFrame.CanGoBack) AppFrame.GoBack();
     }
 
     private void OnAppTitleBarPaneToggleRequested(TitleBar sender, object args)
@@ -191,7 +192,11 @@ public sealed partial class ManageWindow : WindowEx, IRecipient<LaunchOnStartupC
 
     public static void GoBack()
     {
-        if (Instance.AppFrame.Content is ArcaconLoginPage) return;
+        if (Instance.AppFrame.Content is ArcaconLoginPage arcaconLoginPage)
+        {
+            arcaconLoginPage.CancelLoginAndReturn();
+            return;
+        }
 
         if (Instance.AppFrame.CanGoBack) Instance.AppFrame.GoBack();
     }
@@ -199,6 +204,6 @@ public sealed partial class ManageWindow : WindowEx, IRecipient<LaunchOnStartupC
     private void UpdateTitleBarNavigationState(Type currentPageType)
     {
         AppTitleBar.IsPaneToggleButtonVisible = currentPageType == typeof(ManagePage);
-        AppTitleBar.IsBackButtonVisible = currentPageType != typeof(ArcaconLoginPage) && AppFrame.CanGoBack;
+        AppTitleBar.IsBackButtonVisible = currentPageType == typeof(ArcaconLoginPage) || AppFrame.CanGoBack;
     }
 }

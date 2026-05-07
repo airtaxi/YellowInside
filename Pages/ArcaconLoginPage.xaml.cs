@@ -45,6 +45,18 @@ public sealed partial class ArcaconLoginPage : Page
         base.OnNavigatedFrom(navigationEventArgs);
     }
 
+    public void CancelLoginAndReturn()
+    {
+        _isLoginStartPending = false;
+        _loginCancellationTokenSource?.Cancel();
+
+        var returnPageType = _navigationArguments.CancellationReturnPageType ?? _navigationArguments.ReturnPageType;
+        var returnPageParameter = _navigationArguments.CancellationReturnPageType is null
+            ? _navigationArguments.ReturnPageParameter
+            : _navigationArguments.CancellationReturnPageParameter;
+        ManageWindow.NavigateAndClearBackStack(returnPageType, returnPageParameter);
+    }
+
     private void OnPageLoaded(object sender, RoutedEventArgs routedEventArgs)
     {
         _isPageLoaded = true;
@@ -69,7 +81,9 @@ public sealed partial class ArcaconLoginPage : Page
         _isLoggingIn = true;
         _loginCancellationTokenSource?.Cancel();
         _loginCancellationTokenSource?.Dispose();
-        _loginCancellationTokenSource = new CancellationTokenSource();
+        var loginCancellationTokenSource = new CancellationTokenSource();
+        _loginCancellationTokenSource = loginCancellationTokenSource;
+        var loginCancellationToken = loginCancellationTokenSource.Token;
 
         RetryButton.IsEnabled = false;
         LoginProgressRing.IsActive = true;
@@ -81,9 +95,9 @@ public sealed partial class ArcaconLoginPage : Page
             if (LoginWebView2.CoreWebView2 is null) throw new InvalidOperationException("WebView2 초기화에 실패했습니다.");
 
             StatusTextBlock.Text = "아카라이브에 로그인해 주세요.";
-            await App.ArcaconClient.LoginAsync(LoginWebView2.CoreWebView2, _loginCancellationTokenSource.Token);
+            await App.ArcaconClient.LoginAsync(LoginWebView2.CoreWebView2, loginCancellationToken);
 
-            if (_loginCancellationTokenSource.IsCancellationRequested) return;
+            if (loginCancellationToken.IsCancellationRequested) return;
 
             StatusTextBlock.Text = "로그인 완료. 페이지로 이동하는 중...";
             ManageWindow.NavigateAndClearBackStack(_navigationArguments.ReturnPageType, _navigationArguments.ReturnPageParameter);
@@ -110,7 +124,11 @@ public sealed partial class ArcaconLoginPage : Page
             typeof(ManagePage),
             new ManagePageNavigationArguments(
                 typeof(HomePage),
-                new HomePageNavigationArguments(OpenArcaconPage: true)));
+                new HomePageNavigationArguments(OpenArcaconPage: true)),
+            typeof(ManagePage),
+            new ManagePageNavigationArguments(
+                typeof(HomePage),
+                new HomePageNavigationArguments(OpenArcaconPage: false)));
 
     private async void OnRetryButtonClicked(object sender, RoutedEventArgs routedEventArgs) => await StartLoginAsync();
 }

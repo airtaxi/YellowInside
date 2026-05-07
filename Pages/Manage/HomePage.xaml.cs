@@ -30,8 +30,8 @@ public sealed partial class HomePage : Page
     {
         base.OnNavigatedTo(navigationEventArgs);
 
-        if (navigationEventArgs.Parameter is HomePageNavigationArguments { OpenArcaconPage: true })
-            NavigateToArcaconContentPage();
+        if (navigationEventArgs.Parameter is HomePageNavigationArguments { OpenArcaconPage: true }) NavigateToArcaconContentPage();
+        else if (navigationEventArgs.Parameter is HomePageNavigationArguments { OpenArcaconPage: false }) NavigateToDefaultContentPage();
     }
 
     private async void OnSelectorBarSelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs selectorBarSelectionChangedEventArgs)
@@ -41,8 +41,9 @@ public sealed partial class HomePage : Page
 
         if (selectedSelectorBarItem == ArcaconSelectorBarItem)
         {
+            var isLoginRequired = !App.ArcaconClient.IsLoggedIn;
             var isNavigationStarted = await ArcaconSessionHelper.EnsureArcaconPageEntryAsync(this, NavigateToContentPage, typeof(ArcaconHomePage));
-            if (isNavigationStarted)
+            if (isNavigationStarted && !isLoginRequired)
             {
                 _previousSelectorBarItem = ArcaconSelectorBarItem;
                 return;
@@ -67,6 +68,15 @@ public sealed partial class HomePage : Page
         _isRestoringSelection = false;
         _previousSelectorBarItem = ArcaconSelectorBarItem;
         ContentFrame.Navigate(typeof(ArcaconHomePage));
+    }
+
+    private void NavigateToDefaultContentPage()
+    {
+        _isRestoringSelection = true;
+        ContentSourceSelectorBar.SelectedItem = DcconSelectorBarItem;
+        _isRestoringSelection = false;
+        _previousSelectorBarItem = DcconSelectorBarItem;
+        ContentFrame.Navigate(typeof(DcconHomePage));
     }
 
     private void RestorePreviousSelection(SelectorBar selectorBar)

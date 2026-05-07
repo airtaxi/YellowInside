@@ -67,13 +67,23 @@ public static class ArcaconSessionHelper
 
     public static void NavigateToArcaconLoginPage(Type returnPageType, object returnPageParameter = null)
     {
-        var (normalizedReturnPageType, normalizedReturnPageParameter) = NormalizeArcaconLoginReturnPage(returnPageType, returnPageParameter);
+        var (normalizedReturnPageType, normalizedReturnPageParameter) = NormalizeArcaconLoginSuccessReturnPage(returnPageType, returnPageParameter);
+        var (cancellationReturnPageType, cancellationReturnPageParameter) = NormalizeArcaconLoginCancellationReturnPage(returnPageType);
+        var hasDifferentCancellationReturnPage = cancellationReturnPageType != normalizedReturnPageType
+            || !Equals(cancellationReturnPageParameter, normalizedReturnPageParameter);
+
         ManageWindow.NavigateAndClearBackStack(
             typeof(ArcaconLoginPage),
-            new ArcaconLoginPageNavigationArguments(normalizedReturnPageType, normalizedReturnPageParameter));
+            hasDifferentCancellationReturnPage
+                ? new ArcaconLoginPageNavigationArguments(
+                    normalizedReturnPageType,
+                    normalizedReturnPageParameter,
+                    cancellationReturnPageType,
+                    cancellationReturnPageParameter)
+                : new ArcaconLoginPageNavigationArguments(normalizedReturnPageType, normalizedReturnPageParameter));
     }
 
-    private static (Type ReturnPageType, object ReturnPageParameter) NormalizeArcaconLoginReturnPage(Type returnPageType, object returnPageParameter)
+    private static (Type ReturnPageType, object ReturnPageParameter) NormalizeArcaconLoginSuccessReturnPage(Type returnPageType, object returnPageParameter)
     {
         if (returnPageType == typeof(ArcaconHomePage))
         {
@@ -103,5 +113,37 @@ public static class ArcaconSessionHelper
         }
 
         return (returnPageType, returnPageParameter);
+    }
+
+    private static (Type ReturnPageType, object ReturnPageParameter) NormalizeArcaconLoginCancellationReturnPage(Type returnPageType)
+    {
+        if (returnPageType == typeof(ArcaconHomePage))
+        {
+            return (
+                typeof(ManagePage),
+                new ManagePageNavigationArguments(
+                    typeof(HomePage),
+                    new HomePageNavigationArguments(OpenArcaconPage: false)));
+        }
+
+        if (returnPageType == typeof(ArcaconSearchPage))
+        {
+            return (
+                typeof(ManagePage),
+                new ManagePageNavigationArguments(
+                    typeof(SearchPage),
+                    new SearchPageNavigationArguments(OpenArcaconPage: false)));
+        }
+
+        if (returnPageType == typeof(SettingsPage))
+        {
+            return (
+                typeof(ManagePage),
+                new ManagePageNavigationArguments(
+                    typeof(SettingsPage),
+                    null));
+        }
+
+        return (typeof(ManagePage), null);
     }
 }
