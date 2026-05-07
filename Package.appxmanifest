@@ -29,7 +29,7 @@
 
   <Resources>
     <Resource Language="en"/>
-    <Resource Language="ko"/>
+    <Resource Language="ko-KR"/>
   </Resources>
 
   <Applications>
