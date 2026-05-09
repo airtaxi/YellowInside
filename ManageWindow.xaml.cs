@@ -138,7 +138,9 @@ public sealed partial class ManageWindow : WindowEx, IRecipient<LaunchOnStartupC
             Instance.LoadingTextBlock.Visibility = Visibility.Collapsed;
             Instance.LoadingProgressRing.Visibility = Visibility.Visible;
             Instance.LoadingProgressBar.Visibility = Visibility.Collapsed;
+            Instance.LoadingProgressBar.Value = 0;
             Instance.LoadingProgressTextBlock.Visibility = Visibility.Collapsed;
+            Instance.LoadingProgressTextBlock.Text = string.Empty;
             Instance.AppFrame.IsEnabled = true;
         });
     }
@@ -152,7 +154,7 @@ public sealed partial class ManageWindow : WindowEx, IRecipient<LaunchOnStartupC
     [RelayCommand]
     private void OpenManageWindow() => App.ShowManageWindow();
     private void OnCloseProgramMenuFlyoutItemClicked(object sender, RoutedEventArgs e) => Environment.Exit(0);
-    
+
     private void OnLaunchOnStartupMenuFlyoutItemClicked(object sender, RoutedEventArgs e)
     {
         App.LaunchOnStartup = !App.LaunchOnStartup;

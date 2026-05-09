@@ -15,6 +15,7 @@ using System.Linq;
 using System.Globalization;
 using System.IO.Compression;
 using System.Net.Http;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -25,6 +26,8 @@ namespace YellowInside;
 
 public static class ContentsManager
 {
+	private const int StreamCopyBufferSize = 81920;
+
 	private static readonly Lock s_lock = new();
 	private static readonly HttpClient s_httpClient = new();
 	private static readonly DcconClient s_dcconClient = new(s_httpClient);
@@ -1197,8 +1200,12 @@ public static class ContentsManager
 	/// <summary>
 	/// 현재 다운로드된 패키지와 설정을 .yip 파일로 내보냅니다.
 	/// </summary>
-	public static Task ExportAsync(string destinationFilePath, bool exportFavorites = true, CancellationToken cancellationToken = default)
-		=> ExportAsync(destinationFilePath, selectedPackageKeys: null, exportFavorites, cancellationToken);
+	public static Task ExportAsync(
+		string destinationFilePath,
+		bool exportFavorites = true,
+		IProgress<PackageArchiveProgress> progress = null,
+		CancellationToken cancellationToken = default)
+		=> ExportAsync(destinationFilePath, selectedPackageKeys: null, exportFavorites, progress, cancellationToken);
 
 	/// <summary>
 	/// 선택한 패키지와 관련 즐겨찾기를 .yip 파일로 내보냅니다.
@@ -1207,59 +1214,106 @@ public static class ContentsManager
 		string destinationFilePath,
 		IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> selectedPackageKeys,
 		bool exportFavorites = true,
+		IProgress<PackageArchiveProgress> progress = null,
 		CancellationToken cancellationToken = default)
 	{
 		if (File.Exists(destinationFilePath)) File.Delete(destinationFilePath);
 
-		var temporaryDirectory = Path.Combine(Path.GetTempPath(), $"YellowInside_Export_{Guid.NewGuid():N}");
-		try
+		string dataJson;
+		List<StickerPackage> packages;
+		HashSet<(ContentSource Source, string PackageIdentifier)> selectedPackageKeySet = null;
+		lock (s_lock)
 		{
-			Directory.CreateDirectory(temporaryDirectory);
+			if (selectedPackageKeys is not null) selectedPackageKeySet = [.. selectedPackageKeys];
 
-			string dataJson;
-			List<StickerPackage> packages;
-			HashSet<(ContentSource Source, string PackageIdentifier)> selectedPackageKeySet = null;
-			lock (s_lock)
+			var exportData = new ContentsManagerData
 			{
-				if (selectedPackageKeys is not null) selectedPackageKeySet = [.. selectedPackageKeys];
+				DownloadedPackages = selectedPackageKeySet is null
+					? [.. s_data.DownloadedPackages]
+					: [.. s_data.DownloadedPackages.Where(package => selectedPackageKeySet.Contains((package.Source, package.PackageIdentifier)))],
+				Favorites = exportFavorites
+					? selectedPackageKeySet is null
+						? [.. s_data.Favorites]
+						: [.. s_data.Favorites.Where(favorite => selectedPackageKeySet.Contains((favorite.Source, favorite.PackageIdentifier)))]
+					: [],
+			};
 
-				var exportData = new ContentsManagerData
-				{
-					DownloadedPackages = selectedPackageKeySet is null
-						? [.. s_data.DownloadedPackages]
-						: [.. s_data.DownloadedPackages.Where(package => selectedPackageKeySet.Contains((package.Source, package.PackageIdentifier)))],
-					Favorites = exportFavorites
-						? selectedPackageKeySet is null
-							? [.. s_data.Favorites]
-							: [.. s_data.Favorites.Where(favorite => selectedPackageKeySet.Contains((favorite.Source, favorite.PackageIdentifier)))]
-						: [],
-				};
-
-				dataJson = JsonSerializer.Serialize(exportData, ContentsManagerJsonContext.Default.ContentsManagerData);
-				packages = exportData.DownloadedPackages;
-			}
-
-			await File.WriteAllTextAsync(
-				Path.Combine(temporaryDirectory, "contents.json"), dataJson, cancellationToken);
-
-			foreach (var package in packages)
-			{
-				cancellationToken.ThrowIfCancellationRequested();
-
-				var sourceDirectory = GetPackageDirectory(package.Source, package.PackageIdentifier);
-				if (!Directory.Exists(sourceDirectory)) continue;
-
-				var relativeDirectory = Path.Combine(package.Source.ToString(), package.PackageIdentifier);
-				var targetDirectory = Path.Combine(temporaryDirectory, relativeDirectory);
-
-				CopyDirectoryRecursive(sourceDirectory, targetDirectory);
-			}
-
-			ZipFile.CreateFromDirectory(temporaryDirectory, destinationFilePath, CompressionLevel.Optimal, includeBaseDirectory: false);
+			dataJson = JsonSerializer.Serialize(exportData, ContentsManagerJsonContext.Default.ContentsManagerData);
+			packages = exportData.DownloadedPackages;
 		}
-		finally
+
+		var contentsJsonBytes = Encoding.UTF8.GetBytes(dataJson);
+		var packageArchiveFileEntries = CreatePackageArchiveFileEntries(packages);
+		var totalFileCount = packageArchiveFileEntries.Count + 1;
+		var totalByteCount = packageArchiveFileEntries.Sum(packageArchiveFileEntry => packageArchiveFileEntry.Length) + contentsJsonBytes.LongLength;
+		ReportPackageArchiveProgress(
+			progress,
+			PackageArchiveProgressStage.Preparing,
+			0,
+			totalFileCount,
+			0,
+			totalByteCount,
+			0,
+			0,
+			string.Empty);
+
+		await using var destinationFileStream = new FileStream(
+			destinationFilePath,
+			FileMode.Create,
+			FileAccess.Write,
+			FileShare.None,
+			StreamCopyBufferSize,
+			true);
+		using var exportArchive = new ZipArchive(destinationFileStream, ZipArchiveMode.Create);
+
+		var completedFileCount = 0;
+		var completedByteCount = 0L;
+		completedByteCount = await WriteArchiveEntryAsync(
+			exportArchive,
+			"contents.json",
+			contentsJsonBytes,
+			completedFileCount,
+			totalFileCount,
+			completedByteCount,
+			totalByteCount,
+			progress,
+			cancellationToken);
+		completedFileCount++;
+		ReportPackageArchiveProgress(
+			progress,
+			PackageArchiveProgressStage.AddingToArchive,
+			completedFileCount,
+			totalFileCount,
+			completedByteCount,
+			totalByteCount,
+			0,
+			0,
+			string.Empty);
+
+		foreach (var packageArchiveFileEntry in packageArchiveFileEntries)
 		{
-			if (Directory.Exists(temporaryDirectory)) Directory.Delete(temporaryDirectory, recursive: true);
+			cancellationToken.ThrowIfCancellationRequested();
+
+			completedByteCount = await WriteArchiveFileEntryAsync(
+				exportArchive,
+				packageArchiveFileEntry,
+				completedFileCount,
+				totalFileCount,
+				completedByteCount,
+				totalByteCount,
+				progress,
+				cancellationToken);
+			completedFileCount++;
+			ReportPackageArchiveProgress(
+				progress,
+				PackageArchiveProgressStage.AddingToArchive,
+				completedFileCount,
+				totalFileCount,
+				completedByteCount,
+				totalByteCount,
+				0,
+				0,
+				string.Empty);
 		}
 	}
 
@@ -1334,6 +1388,13 @@ public static class ContentsManager
 		CancellationToken cancellationToken = default)
 	{
 		using var importArchive = ZipFile.OpenRead(sourceFilePath);
+		return await ReadDataFromImportArchiveAsync(importArchive, cancellationToken);
+	}
+
+	private static async Task<ContentsManagerData> ReadDataFromImportArchiveAsync(
+		ZipArchive importArchive,
+		CancellationToken cancellationToken = default)
+	{
 		var importedDataEntry = importArchive.GetEntry("contents.json")
 			?? throw new InvalidOperationException("유효하지 않은 .yip 파일입니다. contents.json이 존재하지 않습니다.");
 
@@ -1356,28 +1417,47 @@ public static class ContentsManager
 		bool replaceAll,
 		bool importFavorites = true,
 		IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> selectedPackageKeys = null,
+		IProgress<PackageArchiveProgress> progress = null,
 		CancellationToken cancellationToken = default)
 	{
 		var temporaryDirectory = Path.Combine(Path.GetTempPath(), $"YellowInside_Import_{Guid.NewGuid():N}");
 		try
 		{
-			ZipFile.ExtractToDirectory(sourceFilePath, temporaryDirectory);
+			ReportPackageArchiveProgress(
+				progress,
+				PackageArchiveProgressStage.Preparing,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				string.Empty);
 
-			var importedDataFilePath = Path.Combine(temporaryDirectory, "contents.json");
-			if (!File.Exists(importedDataFilePath)) throw new InvalidOperationException("유효하지 않은 .yip 파일입니다. contents.json이 존재하지 않습니다.");
+			using var importArchive = ZipFile.OpenRead(sourceFilePath);
+			var importedData = await ReadDataFromImportArchiveAsync(importArchive, cancellationToken);
 
-			await using var importedDataStream = File.OpenRead(importedDataFilePath);
-			var importedData = await DeserializeImportedDataAsync(importedDataStream, cancellationToken);
-			MigrateImportedPackageIdentifiers(importedData);
-
-		if (selectedPackageKeys is not null)
+			HashSet<(ContentSource Source, string PackageIdentifier)> selectedPackageKeySet = null;
+			if (selectedPackageKeys is not null)
 			{
-				var selectedKeySet = selectedPackageKeys as HashSet<(ContentSource, string)> ?? [.. selectedPackageKeys];
-				importedData.DownloadedPackages = [.. importedData.DownloadedPackages.Where(package => selectedKeySet.Contains((package.Source, package.PackageIdentifier)))];
-				importedData.Favorites = [.. importedData.Favorites.Where(favorite => selectedKeySet.Contains((favorite.Source, favorite.PackageIdentifier)))];
+				selectedPackageKeySet = [.. selectedPackageKeys];
+				importedData.DownloadedPackages = [.. importedData.DownloadedPackages.Where(package => selectedPackageKeySet.Contains((package.Source, package.PackageIdentifier)))];
+				importedData.Favorites = [.. importedData.Favorites.Where(favorite => selectedPackageKeySet.Contains((favorite.Source, favorite.PackageIdentifier)))];
 			}
 
-            if (replaceAll)
+			var importedPackageKeySet = importedData.DownloadedPackages
+				.Select(package => (package.Source, package.PackageIdentifier))
+				.ToHashSet();
+
+			Directory.CreateDirectory(temporaryDirectory);
+			await ExtractPackageArchiveEntriesAsync(
+				importArchive,
+				temporaryDirectory,
+				importedPackageKeySet,
+				progress,
+				cancellationToken);
+
+			if (replaceAll)
 			{
 				lock (s_lock)
 				{
@@ -1394,32 +1474,20 @@ public static class ContentsManager
 						s_data.Favorites = [];
 					}
 				}
-
-				foreach (var package in importedData.DownloadedPackages)
-				{
-					cancellationToken.ThrowIfCancellationRequested();
-
-					var importedPackageDirectory = Path.Combine(temporaryDirectory, package.Source.ToString(), package.PackageIdentifier);
-					if (!Directory.Exists(importedPackageDirectory)) continue;
-
-					var targetDirectory = GetPackageDirectory(package.Source, package.PackageIdentifier);
-					CopyDirectoryRecursive(importedPackageDirectory, targetDirectory);
-				}
 			}
 			else
 			{
 				lock (s_lock)
 				{
 					// For partial import, remove existing selected packages to allow overwrite
-					if (selectedPackageKeys is not null)
+					if (selectedPackageKeySet is not null)
 					{
-						var selectedKeySet = selectedPackageKeys as HashSet<(ContentSource, string)> ?? [.. selectedPackageKeys];
 						s_data.DownloadedPackages = [.. s_data.DownloadedPackages
-							.Where(package => !selectedKeySet.Contains((package.Source, package.PackageIdentifier)))];
+							.Where(package => !selectedPackageKeySet.Contains((package.Source, package.PackageIdentifier)))];
 						if (importFavorites)
 						{
 							s_data.Favorites = [.. s_data.Favorites
-								.Where(favorite => !selectedKeySet.Contains((favorite.Source, favorite.PackageIdentifier)))];
+								.Where(favorite => !selectedPackageKeySet.Contains((favorite.Source, favorite.PackageIdentifier)))];
 						}
 					}
 
@@ -1445,25 +1513,49 @@ public static class ContentsManager
 					}
 				}
 
-				foreach (var package in importedData.DownloadedPackages)
+				if (selectedPackageKeySet is not null)
 				{
-					cancellationToken.ThrowIfCancellationRequested();
-
-					var targetDirectory = GetPackageDirectory(package.Source, package.PackageIdentifier);
-
-					if (selectedPackageKeys is not null && Directory.Exists(targetDirectory)) Directory.Delete(targetDirectory, recursive: true);
-					else if (Directory.Exists(targetDirectory)) continue;
-
-					var importedPackageDirectory = Path.Combine(
-						temporaryDirectory, package.Source.ToString(), package.PackageIdentifier);
-					if (!Directory.Exists(importedPackageDirectory)) continue;
-
-					CopyDirectoryRecursive(importedPackageDirectory, targetDirectory);
+					foreach (var package in importedData.DownloadedPackages)
+					{
+						var targetDirectory = GetPackageDirectory(package.Source, package.PackageIdentifier);
+						if (Directory.Exists(targetDirectory)) Directory.Delete(targetDirectory, recursive: true);
+					}
 				}
 			}
 
+			var shouldOverwriteExistingTargetDirectories = replaceAll || selectedPackageKeySet is not null;
+			var packageArchiveFileCopyEntries = CreateImportedPackageFileCopyEntries(
+				temporaryDirectory,
+				importedData.DownloadedPackages,
+				shouldOverwriteExistingTargetDirectories);
+			await CopyPackageArchiveFileEntriesAsync(
+				packageArchiveFileCopyEntries,
+				PackageArchiveProgressStage.ApplyingPackageFiles,
+				progress,
+				cancellationToken);
+
+			ReportPackageArchiveProgress(
+				progress,
+				PackageArchiveProgressStage.Saving,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				string.Empty);
 			await SaveAsync();
 
+			ReportPackageArchiveProgress(
+				progress,
+				PackageArchiveProgressStage.Refreshing,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				string.Empty);
 			PackagesChanged?.Invoke();
 			if (importFavorites) FavoritesChanged?.Invoke();
 
@@ -1474,13 +1566,10 @@ public static class ContentsManager
 					WeakReferenceMessenger.Default.Send(new FavoritesOrPackagesChangedMessage(package.Source, package.PackageIdentifier));
 				}
 			});
-        }
+		}
 		finally
 		{
-			if (Directory.Exists(temporaryDirectory))
-			{
-				Directory.Delete(temporaryDirectory, recursive: true);
-			}
+			if (Directory.Exists(temporaryDirectory)) Directory.Delete(temporaryDirectory, recursive: true);
 		}
 	}
 
@@ -1493,22 +1582,373 @@ public static class ContentsManager
 			cancellationToken)
 		?? throw new InvalidOperationException("유효하지 않은 .yip 파일입니다. contents.json을 역직렬화할 수 없습니다.");
 
-	private static void CopyDirectoryRecursive(string sourceDirectory, string targetDirectory)
+	private static List<PackageArchiveFileEntry> CreatePackageArchiveFileEntries(IEnumerable<StickerPackage> packages)
 	{
-		Directory.CreateDirectory(targetDirectory);
-
-		foreach (var file in Directory.GetFiles(sourceDirectory))
+		var packageArchiveFileEntries = new List<PackageArchiveFileEntry>();
+		foreach (var package in packages)
 		{
-			var destinationFile = Path.Combine(targetDirectory, Path.GetFileName(file));
-			File.Copy(file, destinationFile, overwrite: true);
+			var sourceDirectory = GetPackageDirectory(package.Source, package.PackageIdentifier);
+			if (!Directory.Exists(sourceDirectory)) continue;
+
+			var packageArchiveDirectory = NormalizeArchiveEntryName(Path.Combine(package.Source.ToString(), package.PackageIdentifier));
+			foreach (var sourceFilePath in Directory.EnumerateFiles(sourceDirectory, "*", SearchOption.AllDirectories))
+			{
+				var relativeFilePath = Path.GetRelativePath(sourceDirectory, sourceFilePath);
+				var relativeArchivePath = NormalizeArchiveEntryName(Path.Combine(packageArchiveDirectory, relativeFilePath));
+				var sourceFileInfo = new FileInfo(sourceFilePath);
+				packageArchiveFileEntries.Add(new PackageArchiveFileEntry(sourceFilePath, relativeArchivePath, sourceFileInfo.Length));
+			}
 		}
 
-		foreach (var subdirectory in Directory.GetDirectories(sourceDirectory))
+		return packageArchiveFileEntries;
+	}
+
+	private static async Task<long> WriteArchiveFileEntryAsync(
+		ZipArchive exportArchive,
+		PackageArchiveFileEntry packageArchiveFileEntry,
+		int completedFileCount,
+		int totalFileCount,
+		long completedByteCount,
+		long totalByteCount,
+		IProgress<PackageArchiveProgress> progress,
+		CancellationToken cancellationToken)
+	{
+		await using var sourceFileStream = new FileStream(
+			packageArchiveFileEntry.SourceFilePath,
+			FileMode.Open,
+			FileAccess.Read,
+			FileShare.Read,
+			StreamCopyBufferSize,
+			true);
+		return await WriteArchiveEntryAsync(
+			exportArchive,
+			packageArchiveFileEntry.RelativePath,
+			sourceFileStream,
+			packageArchiveFileEntry.Length,
+			completedFileCount,
+			totalFileCount,
+			completedByteCount,
+			totalByteCount,
+			progress,
+			cancellationToken);
+	}
+
+	private static async Task<long> WriteArchiveEntryAsync(
+		ZipArchive exportArchive,
+		string relativePath,
+		byte[] contents,
+		int completedFileCount,
+		int totalFileCount,
+		long completedByteCount,
+		long totalByteCount,
+		IProgress<PackageArchiveProgress> progress,
+		CancellationToken cancellationToken)
+	{
+		using var sourceStream = new MemoryStream(contents, writable: false);
+		return await WriteArchiveEntryAsync(
+			exportArchive,
+			relativePath,
+			sourceStream,
+			contents.LongLength,
+			completedFileCount,
+			totalFileCount,
+			completedByteCount,
+			totalByteCount,
+			progress,
+			cancellationToken);
+	}
+
+	private static async Task<long> WriteArchiveEntryAsync(
+		ZipArchive exportArchive,
+		string relativePath,
+		Stream sourceStream,
+		long entryLength,
+		int completedFileCount,
+		int totalFileCount,
+		long completedByteCount,
+		long totalByteCount,
+		IProgress<PackageArchiveProgress> progress,
+		CancellationToken cancellationToken)
+	{
+		var archiveEntry = exportArchive.CreateEntry(NormalizeArchiveEntryName(relativePath), CompressionLevel.Optimal);
+		await using var archiveEntryStream = archiveEntry.Open();
+		return await CopyStreamWithPackageArchiveProgressAsync(
+			sourceStream,
+			archiveEntryStream,
+			PackageArchiveProgressStage.AddingToArchive,
+			NormalizeArchiveEntryName(relativePath),
+			completedFileCount,
+			totalFileCount,
+			completedByteCount,
+			totalByteCount,
+			entryLength,
+			progress,
+			cancellationToken);
+	}
+
+	private static async Task ExtractPackageArchiveEntriesAsync(
+		ZipArchive importArchive,
+		string temporaryDirectory,
+		HashSet<(ContentSource Source, string PackageIdentifier)> packageKeySet,
+		IProgress<PackageArchiveProgress> progress,
+		CancellationToken cancellationToken)
+	{
+		var packageArchivePrefixes = packageKeySet
+			.Select(packageKey => $"{packageKey.Source}/{packageKey.PackageIdentifier}/")
+			.ToHashSet(StringComparer.Ordinal);
+		var archiveEntries = importArchive.Entries
+			.Where(archiveEntry => IsPackageArchiveFileEntryIncluded(archiveEntry, packageArchivePrefixes))
+			.ToList();
+		var totalFileCount = archiveEntries.Count;
+		var totalByteCount = archiveEntries.Sum(archiveEntry => archiveEntry.Length);
+		var destinationRootDirectoryPath = EnsureTrailingDirectorySeparator(Path.GetFullPath(temporaryDirectory));
+		var completedFileCount = 0;
+		var completedByteCount = 0L;
+
+		ReportPackageArchiveProgress(
+			progress,
+			PackageArchiveProgressStage.ExtractingArchive,
+			completedFileCount,
+			totalFileCount,
+			completedByteCount,
+			totalByteCount,
+			0,
+			0,
+			string.Empty);
+
+		foreach (var archiveEntry in archiveEntries)
 		{
-			var destinationSubdirectory = Path.Combine(targetDirectory, Path.GetFileName(subdirectory));
-			CopyDirectoryRecursive(subdirectory, destinationSubdirectory);
+			cancellationToken.ThrowIfCancellationRequested();
+
+			var relativeArchivePath = NormalizeArchiveEntryName(archiveEntry.FullName);
+			var destinationFilePath = Path.GetFullPath(Path.Combine(temporaryDirectory, relativeArchivePath));
+			if (!destinationFilePath.StartsWith(destinationRootDirectoryPath, StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("압축 파일에 잘못된 상대 경로가 포함되어 있습니다.");
+
+			var destinationDirectoryPath = Path.GetDirectoryName(destinationFilePath);
+			if (!string.IsNullOrEmpty(destinationDirectoryPath)) Directory.CreateDirectory(destinationDirectoryPath);
+
+			await using var archiveEntryStream = archiveEntry.Open();
+			await using var destinationFileStream = new FileStream(
+				destinationFilePath,
+				FileMode.Create,
+				FileAccess.Write,
+				FileShare.None,
+				StreamCopyBufferSize,
+				true);
+			completedByteCount = await CopyStreamWithPackageArchiveProgressAsync(
+				archiveEntryStream,
+				destinationFileStream,
+				PackageArchiveProgressStage.ExtractingArchive,
+				relativeArchivePath,
+				completedFileCount,
+				totalFileCount,
+				completedByteCount,
+				totalByteCount,
+				archiveEntry.Length,
+				progress,
+				cancellationToken);
+			completedFileCount++;
+			ReportPackageArchiveProgress(
+				progress,
+				PackageArchiveProgressStage.ExtractingArchive,
+				completedFileCount,
+				totalFileCount,
+				completedByteCount,
+				totalByteCount,
+				0,
+				0,
+				string.Empty);
 		}
 	}
+
+	private static bool IsPackageArchiveFileEntryIncluded(ZipArchiveEntry archiveEntry, HashSet<string> packageArchivePrefixes)
+	{
+		if (string.IsNullOrEmpty(archiveEntry.Name)) return false;
+
+		var relativeArchivePath = NormalizeArchiveEntryName(archiveEntry.FullName);
+		return packageArchivePrefixes.Any(packageArchivePrefix => relativeArchivePath.StartsWith(packageArchivePrefix, StringComparison.Ordinal));
+	}
+
+	private static List<PackageArchiveFileCopyEntry> CreateImportedPackageFileCopyEntries(
+		string temporaryDirectory,
+		IEnumerable<StickerPackage> packages,
+		bool shouldOverwriteExistingTargetDirectories)
+	{
+		var packageArchiveFileCopyEntries = new List<PackageArchiveFileCopyEntry>();
+		foreach (var package in packages)
+		{
+			var sourceDirectory = Path.Combine(temporaryDirectory, package.Source.ToString(), package.PackageIdentifier);
+			if (!Directory.Exists(sourceDirectory)) continue;
+
+			var targetDirectory = GetPackageDirectory(package.Source, package.PackageIdentifier);
+			if (!shouldOverwriteExistingTargetDirectories && Directory.Exists(targetDirectory)) continue;
+
+			foreach (var sourceFilePath in Directory.EnumerateFiles(sourceDirectory, "*", SearchOption.AllDirectories))
+			{
+				var relativeFilePath = Path.GetRelativePath(sourceDirectory, sourceFilePath);
+				var destinationFilePath = Path.Combine(targetDirectory, relativeFilePath);
+				var relativeArchivePath = NormalizeArchiveEntryName(Path.Combine(package.Source.ToString(), package.PackageIdentifier, relativeFilePath));
+				var sourceFileInfo = new FileInfo(sourceFilePath);
+				packageArchiveFileCopyEntries.Add(new PackageArchiveFileCopyEntry(sourceFilePath, destinationFilePath, relativeArchivePath, sourceFileInfo.Length));
+			}
+		}
+
+		return packageArchiveFileCopyEntries;
+	}
+
+	private static async Task CopyPackageArchiveFileEntriesAsync(
+		IReadOnlyList<PackageArchiveFileCopyEntry> packageArchiveFileCopyEntries,
+		PackageArchiveProgressStage stage,
+		IProgress<PackageArchiveProgress> progress,
+		CancellationToken cancellationToken)
+	{
+		var totalFileCount = packageArchiveFileCopyEntries.Count;
+		var totalByteCount = packageArchiveFileCopyEntries.Sum(packageArchiveFileCopyEntry => packageArchiveFileCopyEntry.Length);
+		var completedFileCount = 0;
+		var completedByteCount = 0L;
+
+		ReportPackageArchiveProgress(
+			progress,
+			stage,
+			completedFileCount,
+			totalFileCount,
+			completedByteCount,
+			totalByteCount,
+			0,
+			0,
+			string.Empty);
+
+		foreach (var packageArchiveFileCopyEntry in packageArchiveFileCopyEntries)
+		{
+			cancellationToken.ThrowIfCancellationRequested();
+
+			var destinationDirectoryPath = Path.GetDirectoryName(packageArchiveFileCopyEntry.DestinationFilePath);
+			if (!string.IsNullOrEmpty(destinationDirectoryPath)) Directory.CreateDirectory(destinationDirectoryPath);
+
+			await using var sourceFileStream = new FileStream(
+				packageArchiveFileCopyEntry.SourceFilePath,
+				FileMode.Open,
+				FileAccess.Read,
+				FileShare.Read,
+				StreamCopyBufferSize,
+				true);
+			await using var destinationFileStream = new FileStream(
+				packageArchiveFileCopyEntry.DestinationFilePath,
+				FileMode.Create,
+				FileAccess.Write,
+				FileShare.None,
+				StreamCopyBufferSize,
+				true);
+			completedByteCount = await CopyStreamWithPackageArchiveProgressAsync(
+				sourceFileStream,
+				destinationFileStream,
+				stage,
+				packageArchiveFileCopyEntry.RelativePath,
+				completedFileCount,
+				totalFileCount,
+				completedByteCount,
+				totalByteCount,
+				packageArchiveFileCopyEntry.Length,
+				progress,
+				cancellationToken);
+			completedFileCount++;
+			ReportPackageArchiveProgress(
+				progress,
+				stage,
+				completedFileCount,
+				totalFileCount,
+				completedByteCount,
+				totalByteCount,
+				0,
+				0,
+				string.Empty);
+		}
+	}
+
+	private static async Task<long> CopyStreamWithPackageArchiveProgressAsync(
+		Stream sourceStream,
+		Stream destinationStream,
+		PackageArchiveProgressStage stage,
+		string relativePath,
+		int completedFileCount,
+		int totalFileCount,
+		long completedByteCount,
+		long totalByteCount,
+		long currentFileTotalByteCount,
+		IProgress<PackageArchiveProgress> progress,
+		CancellationToken cancellationToken)
+	{
+		var currentFileCompletedByteCount = 0L;
+		var streamCopyBuffer = new byte[StreamCopyBufferSize];
+		ReportPackageArchiveProgress(
+			progress,
+			stage,
+			completedFileCount,
+			totalFileCount,
+			completedByteCount,
+			totalByteCount,
+			currentFileCompletedByteCount,
+			currentFileTotalByteCount,
+			relativePath);
+
+		while (true)
+		{
+			var readByteCount = await sourceStream.ReadAsync(streamCopyBuffer, cancellationToken);
+			if (readByteCount == 0) break;
+
+			await destinationStream.WriteAsync(streamCopyBuffer.AsMemory(0, readByteCount), cancellationToken);
+			currentFileCompletedByteCount += readByteCount;
+			completedByteCount += readByteCount;
+			ReportPackageArchiveProgress(
+				progress,
+				stage,
+				completedFileCount,
+				totalFileCount,
+				completedByteCount,
+				totalByteCount,
+				currentFileCompletedByteCount,
+				currentFileTotalByteCount,
+				relativePath);
+		}
+
+		return completedByteCount;
+	}
+
+	private static void ReportPackageArchiveProgress(
+		IProgress<PackageArchiveProgress> progress,
+		PackageArchiveProgressStage stage,
+		int completedFileCount,
+		int totalFileCount,
+		long completedByteCount,
+		long totalByteCount,
+		long currentFileCompletedByteCount,
+		long currentFileTotalByteCount,
+		string relativePath)
+		=> progress?.Report(new PackageArchiveProgress(
+			stage,
+			completedFileCount,
+			totalFileCount,
+			completedByteCount,
+			totalByteCount,
+			currentFileCompletedByteCount,
+			currentFileTotalByteCount,
+			relativePath));
+
+	private static string NormalizeArchiveEntryName(string path) => path.Replace('\\', '/');
+
+	private static string EnsureTrailingDirectorySeparator(string directoryPath)
+		=> Path.EndsInDirectorySeparator(directoryPath) ? directoryPath : directoryPath + Path.DirectorySeparatorChar;
+
+	private sealed record PackageArchiveFileEntry(
+		string SourceFilePath,
+		string RelativePath,
+		long Length);
+
+	private sealed record PackageArchiveFileCopyEntry(
+		string SourceFilePath,
+		string DestinationFilePath,
+		string RelativePath,
+		long Length);
 
 	private sealed record AnimatedPngStickerConversionCandidate(
 		StickerPackage Package,
@@ -1527,6 +1967,39 @@ public static class ContentsManager
 
 		await File.WriteAllTextAsync(s_dataFilePath, json);
 	}
+}
+
+public enum PackageArchiveProgressStage
+{
+	Preparing,
+	AddingToArchive,
+	ExtractingArchive,
+	ApplyingPackageFiles,
+	Saving,
+	Refreshing,
+}
+
+public sealed record PackageArchiveProgress(
+	PackageArchiveProgressStage Stage,
+	int CompletedFileCount,
+	int TotalFileCount,
+	long CompletedByteCount,
+	long TotalByteCount,
+	long CurrentFileCompletedByteCount,
+	long CurrentFileTotalByteCount,
+	string CurrentRelativePath)
+{
+	public double? ProgressPercentage
+		=> TotalByteCount > 0
+			? Math.Clamp(CompletedByteCount * 100d / TotalByteCount, 0d, 100d)
+			: TotalFileCount > 0
+				? Math.Clamp(CompletedFileCount * 100d / TotalFileCount, 0d, 100d)
+				: null;
+
+	public double? CurrentFileProgressPercentage
+		=> CurrentFileTotalByteCount > 0
+			? Math.Clamp(CurrentFileCompletedByteCount * 100d / CurrentFileTotalByteCount, 0d, 100d)
+			: null;
 }
 
 public enum AnimatedPngToWebpPackageConversionStage

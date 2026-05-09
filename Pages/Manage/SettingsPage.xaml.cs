@@ -243,11 +243,13 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
             if (replaceAll && !await ConfirmReplaceImportAsync(file.Path)) return;
 
             ManageWindow.ShowLoading("패키지를 불러오는 중...");
-            await Task.Run(async () => await ContentsManager.ImportAsync(file.Path, replaceAll, importFavorites));
+            var progress = CreatePackageArchiveProgress();
+            await Task.Run(() => ContentsManager.ImportAsync(file.Path, replaceAll, importFavorites: importFavorites, progress: progress));
         }
         catch (Exception exception)
         {
             App.LogException("PackageImport", exception);
+            ManageWindow.HideLoading();
             await this.ShowDialogAsync("불러오기 실패", exception.Message);
             return;
         }
@@ -372,11 +374,18 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         try
         {
             ManageWindow.ShowLoading("선택한 패키지를 불러오는 중...");
-            await Task.Run(async () => await ContentsManager.ImportAsync(file.Path, replaceAll: false, importFavorites, selectedPackageKeys));
+            var progress = CreatePackageArchiveProgress();
+            await Task.Run(() => ContentsManager.ImportAsync(
+                file.Path,
+                replaceAll: false,
+                importFavorites: importFavorites,
+                selectedPackageKeys: selectedPackageKeys,
+                progress: progress));
         }
         catch (Exception exception)
         {
             App.LogException("PartialPackageImport", exception);
+            ManageWindow.HideLoading();
             await this.ShowDialogAsync("불러오기 실패", exception.Message);
             return;
         }
@@ -593,6 +602,51 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
             return null;
         }
         finally { ManageWindow.HideLoading(); }
+    }
+
+    private static ActionProgress<PackageArchiveProgress> CreatePackageArchiveProgress()
+        => new(packageArchiveProgress =>
+            ManageWindow.ShowLoading(CreatePackageArchiveProgressMessage(packageArchiveProgress), packageArchiveProgress.ProgressPercentage));
+
+    private static string CreatePackageArchiveProgressMessage(PackageArchiveProgress progress)
+    {
+        var progressDetailText = CreatePackageArchiveProgressDetailText(progress);
+
+        return progress.Stage switch
+        {
+            PackageArchiveProgressStage.Preparing => "패키지 작업을 준비하는 중...",
+            PackageArchiveProgressStage.AddingToArchive => $"압축에 추가 중...{progressDetailText}",
+            PackageArchiveProgressStage.ExtractingArchive => $"압축 해제 중...{progressDetailText}",
+            PackageArchiveProgressStage.ApplyingPackageFiles => $"패키지 파일 적용 중...{progressDetailText}",
+            PackageArchiveProgressStage.Saving => "패키지 데이터 저장 중...",
+            PackageArchiveProgressStage.Refreshing => "패키지 목록 갱신 중...",
+            _ => "패키지 작업 중...",
+        };
+    }
+
+    private static string CreatePackageArchiveProgressDetailText(PackageArchiveProgress progress)
+    {
+        var progressCountText = CreatePackageArchiveProgressCountText(progress);
+        var currentFilePathText = string.IsNullOrWhiteSpace(progress.CurrentRelativePath)
+            ? string.Empty
+            : $": {progress.CurrentRelativePath}";
+        var currentFileByteCountText = progress.CurrentFileTotalByteCount > 0
+            ? $" ({FormatByteCount(progress.CurrentFileCompletedByteCount)} / {FormatByteCount(progress.CurrentFileTotalByteCount)})"
+            : string.Empty;
+
+        if (string.IsNullOrWhiteSpace(progressCountText) && string.IsNullOrWhiteSpace(currentFilePathText)) return string.Empty;
+
+        return $" {progressCountText}{currentFilePathText}{currentFileByteCountText}";
+    }
+
+    private static string CreatePackageArchiveProgressCountText(PackageArchiveProgress progress)
+    {
+        if (progress.TotalFileCount <= 0) return string.Empty;
+
+        var currentFileCount = string.IsNullOrWhiteSpace(progress.CurrentRelativePath)
+            ? progress.CompletedFileCount
+            : Math.Min(progress.CompletedFileCount + 1, progress.TotalFileCount);
+        return $"{currentFileCount}/{progress.TotalFileCount}";
     }
 
     private static string CreateFFmpegBinaryProgressMessage(FFmpegBinaryProgress progress)
@@ -908,8 +962,9 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         try
         {
             ManageWindow.ShowLoading(loadingMessage);
-            if (selectedPackageKeys is null) await Task.Run(() => ContentsManager.ExportAsync(destinationFilePath, exportFavorites));
-            else await Task.Run(() => ContentsManager.ExportAsync(destinationFilePath, selectedPackageKeys, exportFavorites));
+            var progress = CreatePackageArchiveProgress();
+            if (selectedPackageKeys is null) await Task.Run(() => ContentsManager.ExportAsync(destinationFilePath, exportFavorites, progress: progress));
+            else await Task.Run(() => ContentsManager.ExportAsync(destinationFilePath, selectedPackageKeys, exportFavorites, progress: progress));
             ManageWindow.HideLoading();
 
             await this.ShowDialogAsync("내보내기 완료", "패키지를 성공적으로 내보냈습니다.");
