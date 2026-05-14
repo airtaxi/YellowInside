@@ -50,7 +50,7 @@
         <GridView
             x:Name="CategoryGridView"
             Grid.Row="1"
-            MaxHeight="60"
+            MaxHeight="80"
             IsItemClickEnabled="False"
             ItemsSource="{x:Bind ViewModel.Categories}"
             ScrollViewer.VerticalScrollBarVisibility="Hidden"
