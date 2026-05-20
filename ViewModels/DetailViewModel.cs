@@ -283,17 +283,13 @@ public partial class DetailViewModel : ObservableObject
         catch (System.Exception exception) when (exception is HttpRequestException or TaskCanceledException)
         {
             ManageWindow.HideLoading();
-            await dialogHostElement.ShowDialogAsync(
-                "네트워크 오류",
-                "인터넷 연결을 확인해 주세요.\n오프라인 상태에서는 패키지를 새로고침할 수 없습니다.");
+            await dialogHostElement.ShowDialogAsync("네트워크 오류", "인터넷 연결을 확인해 주세요.\n오프라인 상태에서는 패키지를 새로고침할 수 없습니다.");
             return null;
         }
         catch (System.Exception exception)
         {
             ManageWindow.HideLoading();
-            await dialogHostElement.ShowDialogAsync(
-                "새로고침 실패",
-                exception.Message);
+            await dialogHostElement.ShowDialogAsync("새로고침 실패", exception.Message);
             return null;
         }
         finally { ManageWindow.HideLoading(); }
@@ -315,20 +311,83 @@ public partial class DetailViewModel : ObservableObject
         catch (System.Exception exception) when (exception is HttpRequestException or TaskCanceledException)
         {
             ManageWindow.HideLoading();
-            await dialogHostElement.ShowDialogAsync(
-                "네트워크 오류",
-                "인터넷 연결을 확인해 주세요.\n오프라인 상태에서는 패키지를 새로고침할 수 없습니다.");
+            await dialogHostElement.ShowDialogAsync("네트워크 오류", "인터넷 연결을 확인해 주세요.\n오프라인 상태에서는 패키지를 새로고침할 수 없습니다.");
             return null;
         }
         catch (System.Exception exception)
         {
             ManageWindow.HideLoading();
-            await dialogHostElement.ShowDialogAsync(
-                "새로고침 실패",
-                exception.Message);
+            await dialogHostElement.ShowDialogAsync("새로고침 실패", exception.Message);
             return null;
         }
         finally { ManageWindow.HideLoading(); }
+    }
+
+    private async Task<(int LocalStickerCount, int RemoteStickerCount)?> GetArcaconStickerCountComparisonAsync(UIElement dialogHostElement)
+    {
+        ManageWindow.ShowLoading("새 스티커 확인 중...");
+        try { return await ContentsManager.GetArcaconStickerCountComparisonAsync(PackageIdentifier); }
+        catch (System.Exception exception) when (exception is HttpRequestException or TaskCanceledException)
+        {
+            ManageWindow.HideLoading();
+            await dialogHostElement.ShowDialogAsync("네트워크 오류", "인터넷 연결을 확인해 주세요.\n오프라인 상태에서는 패키지를 새로고침할 수 없습니다.");
+            return null;
+        }
+        catch (System.Exception exception)
+        {
+            ManageWindow.HideLoading();
+            await dialogHostElement.ShowDialogAsync("새로고침 실패", exception.Message);
+            return null;
+        }
+        finally { ManageWindow.HideLoading(); }
+    }
+
+    private async Task<int?> RebuildArcaconSubscribedPackageAsync(UIElement dialogHostElement)
+    {
+        ManageWindow.ShowLoading("아카콘 다시 동기화 중...");
+        try
+        {
+            var rebuiltStickerCount = await ContentsManager.RebuildArcaconDownloadedPackageAsync(PackageIdentifier, new Progress<(int Completed, int Total)>(progress => ManageWindow.ShowLoading($"아카콘 다시 동기화 중... {progress.Completed}/{progress.Total}")));
+            if (rebuiltStickerCount > 0) await ConvertDownloadedPackageAnimatedPngToWebpAsync(dialogHostElement);
+            return rebuiltStickerCount;
+        }
+        catch (System.Exception exception) when (exception is HttpRequestException or TaskCanceledException)
+        {
+            ManageWindow.HideLoading();
+            await dialogHostElement.ShowDialogAsync("네트워크 오류", "인터넷 연결을 확인해 주세요.\n오프라인 상태에서는 패키지를 새로고침할 수 없습니다.");
+            return null;
+        }
+        catch (System.Exception exception)
+        {
+            ManageWindow.HideLoading();
+            await dialogHostElement.ShowDialogAsync("새로고침 실패", exception.Message);
+            return null;
+        }
+        finally { ManageWindow.HideLoading(); }
+    }
+
+    private async Task RefreshArcaconSubscribedPackageAsync(UIElement dialogHostElement)
+    {
+        var stickerCountComparison = await GetArcaconStickerCountComparisonAsync(dialogHostElement);
+        if (stickerCountComparison is null) return;
+
+        var localStickerCount = stickerCountComparison.Value.LocalStickerCount;
+        var remoteStickerCount = stickerCountComparison.Value.RemoteStickerCount;
+        var dialogResult = await dialogHostElement.ShowDialogAsync("아카콘 다시 동기화", CreateArcaconRebuildDialogMessage(localStickerCount, remoteStickerCount), "다시 동기화", "취소");
+        if (dialogResult != ContentDialogResult.Primary) return;
+
+        var rebuiltStickerCount = await RebuildArcaconSubscribedPackageAsync(dialogHostElement);
+        if (rebuiltStickerCount is null) return;
+
+        await InitializeAsync(Source, PackageIdentifier);
+        await dialogHostElement.ShowDialogAsync("동기화 완료", $"아카콘 스티커 {rebuiltStickerCount}개를 다시 동기화했습니다.");
+    }
+
+    private static string CreateArcaconRebuildDialogMessage(int localStickerCount, int remoteStickerCount)
+    {
+        if (localStickerCount != remoteStickerCount) return $"스티커 수가 변경되었습니다. (현재 {localStickerCount}개, 원격 {remoteStickerCount}개)\n아카콘 이미지 주소는 주기적으로 바뀌므로 기존 목록을 새 목록으로 다시 구성합니다.\n즐겨찾기와 최근 사용 기록은 같은 순서의 스티커로 옮겨집니다. 스티커 순서가 바뀐 경우 다른 스티커에 연결될 수 있습니다.";
+
+        return $"전체 스티커 수는 {remoteStickerCount}개로 그대로입니다.\n하지만 아카콘 이미지 주소는 주기적으로 바뀌어서 내용 변경 여부를 정확히 비교할 수 없습니다.\n스티커 파일과 정보를 다시 받아올까요? 즐겨찾기와 최근 사용 기록은 같은 순서의 스티커로 옮겨집니다. 스티커 순서가 바뀐 경우 다른 스티커에 연결될 수 있습니다.";
     }
 
     private async Task ConvertDownloadedPackageAnimatedPngToWebpAsync(UIElement dialogHostElement)
@@ -440,6 +499,9 @@ public partial class DetailViewModel : ObservableObject
                 typeof(DetailPage),
                 (Source, PackageIdentifier));
             if (arcaconSession is null) return;
+
+            await RefreshArcaconSubscribedPackageAsync(dialogHostElement);
+            return;
         }
 
         var additionalStickerCount = await GetAdditionalStickerCountAsync(dialogHostElement);

@@ -104,6 +104,52 @@ public static class HistoryManager
         if (removed) Save();
     }
 
+    /// <summary>
+    /// 특정 패키지의 스티커 경로를 새 경로로 치환합니다. 같은 새 경로로 모이는 기록은 최근 항목 하나만 유지합니다.
+    /// </summary>
+    public static void RemapStickerPaths(ContentSource source, string packageIdentifier, IReadOnlyDictionary<string, string> stickerPathByOldStickerPath)
+    {
+        var changed = false;
+        lock (s_lock)
+        {
+            var remappedEntries = new List<HistoryEntry>(s_entries.Count);
+            var remappedStickerPaths = new HashSet<string>(StringComparer.Ordinal);
+
+            foreach (var entry in s_entries)
+            {
+                if (entry.Source != source || entry.PackageIdentifier != packageIdentifier)
+                {
+                    remappedEntries.Add(entry);
+                    continue;
+                }
+
+                if (!stickerPathByOldStickerPath.TryGetValue(entry.StickerPath, out var remappedStickerPath))
+                {
+                    changed = true;
+                    continue;
+                }
+
+                if (!remappedStickerPaths.Add(remappedStickerPath))
+                {
+                    changed = true;
+                    continue;
+                }
+
+                if (!string.Equals(entry.StickerPath, remappedStickerPath, StringComparison.Ordinal))
+                {
+                    entry.StickerPath = remappedStickerPath;
+                    changed = true;
+                }
+
+                remappedEntries.Add(entry);
+            }
+
+            if (changed) s_entries = remappedEntries;
+        }
+
+        if (changed) Save();
+    }
+
     private static void MigratePackageIdentifiers()
     {
         var migrated = false;

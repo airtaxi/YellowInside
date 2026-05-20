@@ -538,7 +538,7 @@ public static class ContentsManager
 		{
 			var packageIndex = int.Parse(packageIdentifier, CultureInfo.InvariantCulture);
 			var detail = await App.ArcaconClient.GetPackageDetailAsync(packageIndex, cancellationToken);
-			return detail.Stickers.Count(sticker => !existingStickerPaths.Contains(sticker.ImageUrl));
+			return Math.Max(0, detail.Stickers.Count - package.Stickers.Count);
 		}
 		else if (source == ContentSource.Inven)
 		{
@@ -549,6 +549,25 @@ public static class ContentsManager
 
 		return 0;
 	}
+
+	public static async Task<(int LocalStickerCount, int RemoteStickerCount)> GetArcaconStickerCountComparisonAsync(string packageIdentifier, CancellationToken cancellationToken = default)
+	{
+		int localStickerCount;
+		lock (s_lock)
+		{
+			var package = s_data.DownloadedPackages.FirstOrDefault(
+				package => package.Source == ContentSource.Arcacon && package.PackageIdentifier == packageIdentifier)
+				?? throw new InvalidOperationException("다운로드된 패키지를 찾을 수 없습니다.");
+			localStickerCount = package.Stickers.Count;
+		}
+
+		var packageIndex = int.Parse(packageIdentifier, CultureInfo.InvariantCulture);
+		var detail = await App.ArcaconClient.GetPackageDetailAsync(packageIndex, cancellationToken);
+		return (localStickerCount, detail.Stickers.Count);
+	}
+
+	public static Task<int> RebuildArcaconDownloadedPackageAsync(string packageIdentifier, IProgress<(int Completed, int Total)> progress = null, CancellationToken cancellationToken = default)
+		=> SynchronizeDownloadedPackageAsync(ContentSource.Arcacon, packageIdentifier, progress, cancellationToken);
 
 	/// <summary>
 	/// 다운로드된 패키지에 원격으로 추가된 스티커를 내려받고 로컬 메타데이터를 갱신합니다.
@@ -570,11 +589,12 @@ public static class ContentsManager
 			_ => 0
 		};
 
-		if (synchronizedStickerCount == 0) return 0;
+		if (synchronizedStickerCount == 0 && source != ContentSource.Arcacon) return 0;
 
 		await SaveAsync();
 
 		PackagesChanged?.Invoke();
+		if (source == ContentSource.Arcacon) FavoritesChanged?.Invoke();
 		WeakReferenceMessenger.Default.Send(new FavoritesOrPackagesChangedMessage(source, packageIdentifier));
 		return synchronizedStickerCount;
 	}
@@ -970,33 +990,53 @@ public static class ContentsManager
 	{
 		var packageIndex = int.Parse(packageIdentifier, CultureInfo.InvariantCulture);
 		var detail = await App.ArcaconClient.GetPackageDetailAsync(packageIndex, cancellationToken);
-		var existingStickerPaths = GetExistingStickerPaths(package);
-		var additionalStickers = detail.Stickers.Where(sticker => !existingStickerPaths.Contains(sticker.ImageUrl)).ToList();
-		if (additionalStickers.Count == 0) return 0;
+		var packageDirectory = GetPackageDirectory(ContentSource.Arcacon, packageIdentifier);
+		Directory.CreateDirectory(packageDirectory);
 
-		var stickerDirectory = EnsurePackageStickerDirectory(ContentSource.Arcacon, packageIdentifier, package);
-		var synchronizedStickerCount = 0;
-		var synchronizedStickers = new List<Sticker>();
+		var localDirectoryName = GetSafeLocalDirectoryName(ContentSource.Arcacon, packageIdentifier, detail.Title);
+		var stickerDirectory = Path.Combine(packageDirectory, localDirectoryName);
+		var temporaryStickerDirectory = Path.Combine(packageDirectory, $".arcacon-sync-{Guid.NewGuid():N}");
+		Directory.CreateDirectory(temporaryStickerDirectory);
 
-		foreach (var sticker in additionalStickers)
-		{
-			var imageData = await App.ArcaconClient.DownloadStickerAsync(sticker, cancellationToken);
-			var fileName = ArcaconFileNameHelper.GetStickerFileName(sticker, imageData);
-			var filePath = Path.Combine(stickerDirectory, fileName);
-			await File.WriteAllBytesAsync(filePath, imageData, cancellationToken);
-			synchronizedStickers.Add(CreateSticker(sticker, fileName));
-
-			synchronizedStickerCount++;
-			progress?.Report((synchronizedStickerCount, additionalStickers.Count));
-		}
+		List<Sticker> oldStickers;
+		string oldLocalDirectoryName;
+		string oldMainImageFileName;
 
 		lock (s_lock)
 		{
-			ApplyArcaconPackageMetadata(package, detail, packageIndex);
-			AddSynchronizedStickers(package, synchronizedStickers);
+			oldStickers = [.. package.Stickers];
+			oldLocalDirectoryName = package.LocalDirectoryName;
+			oldMainImageFileName = package.MainImageFileName;
 		}
 
-		return synchronizedStickerCount;
+		try
+		{
+			var synchronizedStickers = await DownloadArcaconStickerFilesAsync(detail.Stickers, temporaryStickerDirectory, progress, cancellationToken);
+			var mainImagePath = $"https://arca.live/api/emoticon/{packageIndex}/thumb";
+			var mainImageFileName = await DownloadMainImageAsync(ContentSource.Arcacon, mainImagePath, packageDirectory, cancellationToken);
+			ReplaceDirectory(temporaryStickerDirectory, stickerDirectory);
+
+			var stickerPathByOldStickerPath = CreateStickerPathMapBySortNumber(oldStickers, synchronizedStickers);
+			lock (s_lock)
+			{
+				ApplyArcaconPackageMetadata(package, detail, packageIndex);
+				package.MainImageFileName = mainImageFileName;
+				package.LocalDirectoryName = localDirectoryName;
+				package.LocalDirectoryPath = stickerDirectory;
+				package.Stickers = synchronizedStickers;
+				RemapFavoriteStickerPathsUnderLock(ContentSource.Arcacon, packageIdentifier, stickerPathByOldStickerPath);
+			}
+
+			HistoryManager.RemapStickerPaths(ContentSource.Arcacon, packageIdentifier, stickerPathByOldStickerPath);
+			DeleteOldStickerDirectory(packageDirectory, oldLocalDirectoryName, stickerDirectory);
+			DeleteOldMainImageFile(packageDirectory, oldMainImageFileName, mainImageFileName);
+			return synchronizedStickers.Count;
+		}
+		catch
+		{
+			if (Directory.Exists(temporaryStickerDirectory)) Directory.Delete(temporaryStickerDirectory, recursive: true);
+			throw;
+		}
 	}
 
 	private static async Task<int> SynchronizeInvenStickerPackageAsync(
@@ -1068,6 +1108,108 @@ public static class ContentsManager
 	{
 		package.Stickers.AddRange(stickers);
 		package.Stickers = [.. package.Stickers.OrderBy(sticker => sticker.SortNumber)];
+	}
+
+	private static Dictionary<string, string> CreateStickerPathMapBySortNumber(IReadOnlyList<Sticker> oldStickers, IReadOnlyList<Sticker> newStickers)
+	{
+		var newStickerPathBySortNumber = newStickers
+			.GroupBy(sticker => sticker.SortNumber)
+			.ToDictionary(stickerGroup => stickerGroup.Key, stickerGroup => stickerGroup.First().Path);
+		var stickerPathByOldStickerPath = new Dictionary<string, string>(StringComparer.Ordinal);
+
+		foreach (var oldSticker in oldStickers)
+		{
+			if (stickerPathByOldStickerPath.ContainsKey(oldSticker.Path)) continue;
+			if (newStickerPathBySortNumber.TryGetValue(oldSticker.SortNumber, out var newStickerPath)) stickerPathByOldStickerPath[oldSticker.Path] = newStickerPath;
+		}
+
+		return stickerPathByOldStickerPath;
+	}
+
+	private static void RemapFavoriteStickerPathsUnderLock(ContentSource source, string packageIdentifier, IReadOnlyDictionary<string, string> stickerPathByOldStickerPath)
+	{
+		var remappedFavorites = new List<FavoriteSticker>(s_data.Favorites.Count);
+		var remappedStickerPaths = new HashSet<string>(StringComparer.Ordinal);
+		var changed = false;
+
+		foreach (var favorite in s_data.Favorites)
+		{
+			if (favorite.Source != source || favorite.PackageIdentifier != packageIdentifier)
+			{
+				remappedFavorites.Add(favorite);
+				continue;
+			}
+
+			if (!stickerPathByOldStickerPath.TryGetValue(favorite.StickerPath, out var remappedStickerPath))
+			{
+				changed = true;
+				continue;
+			}
+
+			if (!remappedStickerPaths.Add(remappedStickerPath))
+			{
+				changed = true;
+				continue;
+			}
+
+			if (!string.Equals(favorite.StickerPath, remappedStickerPath, StringComparison.Ordinal))
+			{
+				favorite.StickerPath = remappedStickerPath;
+				changed = true;
+			}
+
+			remappedFavorites.Add(favorite);
+		}
+
+		if (changed) s_data.Favorites = remappedFavorites;
+	}
+
+	private static void ReplaceDirectory(string sourceDirectory, string targetDirectory)
+	{
+		var backupDirectory = $"{targetDirectory}.backup-{Guid.NewGuid():N}";
+		var targetExists = Directory.Exists(targetDirectory);
+		if (targetExists) Directory.Move(targetDirectory, backupDirectory);
+
+		try
+		{
+			Directory.Move(sourceDirectory, targetDirectory);
+		}
+		catch
+		{
+			if (Directory.Exists(targetDirectory)) Directory.Delete(targetDirectory, recursive: true);
+			if (targetExists && Directory.Exists(backupDirectory)) Directory.Move(backupDirectory, targetDirectory);
+			throw;
+		}
+
+		if (!targetExists) return;
+		try { Directory.Delete(backupDirectory, recursive: true); }
+		catch (Exception exception) { App.LogException("ArcaconPackageRebuildCleanup", exception); }
+	}
+
+	private static void DeleteOldStickerDirectory(string packageDirectory, string oldLocalDirectoryName, string newStickerDirectory)
+	{
+		try
+		{
+			if (string.IsNullOrWhiteSpace(oldLocalDirectoryName)) return;
+
+			var oldStickerDirectory = Path.Combine(packageDirectory, oldLocalDirectoryName);
+			if (string.Equals(Path.GetFullPath(oldStickerDirectory), Path.GetFullPath(newStickerDirectory), StringComparison.OrdinalIgnoreCase)) return;
+			if (Directory.Exists(oldStickerDirectory)) Directory.Delete(oldStickerDirectory, recursive: true);
+		}
+		catch (Exception exception) { App.LogException("ArcaconPackageRebuildCleanup", exception); }
+	}
+
+	private static void DeleteOldMainImageFile(string packageDirectory, string oldMainImageFileName, string newMainImageFileName)
+	{
+		try
+		{
+			if (string.IsNullOrWhiteSpace(oldMainImageFileName)) return;
+			if (string.Equals(oldMainImageFileName, newMainImageFileName, StringComparison.OrdinalIgnoreCase)) return;
+
+			var oldMainImagePath = Path.Combine(packageDirectory, oldMainImageFileName);
+			if (File.Exists(oldMainImagePath)) File.Delete(oldMainImagePath);
+		}
+		catch (Exception exception) { App.LogException("ArcaconPackageRebuildCleanup", exception); }
 	}
 
 	private static async Task<List<Sticker>> DownloadArcaconStickerFilesAsync(
