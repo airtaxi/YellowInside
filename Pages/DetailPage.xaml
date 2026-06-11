@@ -24,6 +24,7 @@
                         HorizontalAlignment="Stretch"
                         VerticalAlignment="Stretch"
                         Background="#80000000"
+                        BorderThickness="0"
                         CornerRadius="0"
                         Foreground="White"
                         Tapped="{x:Bind OnTagButtonTapped}"
