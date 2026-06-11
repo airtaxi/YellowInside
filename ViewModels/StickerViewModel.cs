@@ -3,8 +3,11 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Messaging;
 using dccon.NET.Models;
 using InvenSticker.NET.Models;
+using YellowInside.Helpers;
 using YellowInside.Messages;
 using YellowInside.Models;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
@@ -27,6 +30,9 @@ public partial class StickerViewModel : ObservableObject
 
     [ObservableProperty]
     public partial bool IsFavorite { get; private set; }
+
+    [ObservableProperty]
+    public partial string Tag { get; private set; }
 
     private readonly string _packageIdentifier;
     private readonly ContentSource _source;
@@ -101,6 +107,7 @@ public partial class StickerViewModel : ObservableObject
     {
         IsSubscribed = ContentsManager.IsPackageDownloaded(_source, _packageIdentifier);
         IsFavorite = IsSubscribed && ContentsManager.IsFavorite(_source, _packageIdentifier, _path);
+        Tag = IsSubscribed ? ContentsManager.GetStickerTag(_source, _packageIdentifier, _path) : string.Empty;
     }
 
     private void OnFavoritesOrPackagesChangedMessageReceived(object recipient, FavoritesOrPackagesChangedMessage message)
@@ -116,6 +123,19 @@ public partial class StickerViewModel : ObservableObject
 
         if (IsFavorite) await ContentsManager.RemoveFavoriteAsync(_source, _packageIdentifier, _path);
         else await ContentsManager.AddFavoriteAsync(_source, _packageIdentifier, _path);
+    }
+
+    public async void OnTagButtonTapped(object sender, TappedRoutedEventArgs args)
+    {
+        if (!IsSubscribed) return;
+
+        var hasTag = !string.IsNullOrEmpty(Tag);
+        var (result, text) = await ((UIElement)sender).ShowInputDialogAsync("스티커 태그", hasTag ? Tag : "태그 입력...", "태그 설정", hasTag ? "태그 삭제" : null, "취소");
+
+        if (result == ContentDialogResult.Primary && !string.IsNullOrEmpty(text)) await ContentsManager.SetStickerTagAsync(_source, _packageIdentifier, _path, text);
+        else if (result == ContentDialogResult.Secondary) await ContentsManager.RemoveStickerTagAsync(_source, _packageIdentifier, _path);
+
+        UpdateFavoriteAndSubscriptionStatus();
     }
 
 }

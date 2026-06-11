@@ -914,6 +914,59 @@ public static class ContentsManager
     }
 
 	/// <summary>
+	/// 스티커의 사용자 지정 태그를 반환합니다.
+	/// </summary>
+	public static string GetStickerTag(ContentSource source, string packageIdentifier, string stickerPath)
+	{
+		lock (s_lock)
+		{
+			var package = s_data.DownloadedPackages.FirstOrDefault(p => p.Source == source && p.PackageIdentifier == packageIdentifier);
+			if (package is null) return string.Empty;
+
+			var sticker = package.Stickers.FirstOrDefault(s => s.Path == stickerPath);
+			return sticker?.Tag ?? string.Empty;
+		}
+	}
+
+	/// <summary>
+	/// 스티커에 사용자 지정 태그를 설정합니다.
+	/// </summary>
+	public static async Task SetStickerTagAsync(ContentSource source, string packageIdentifier, string stickerPath, string tag)
+	{
+		lock (s_lock)
+		{
+			var package = s_data.DownloadedPackages.FirstOrDefault(p => p.Source == source && p.PackageIdentifier == packageIdentifier);
+			if (package is null) return;
+
+			var sticker = package.Stickers.FirstOrDefault(s => s.Path == stickerPath);
+			if (sticker is null) return;
+
+			sticker.Tag = tag;
+		}
+
+		await SaveAsync();
+	}
+
+	/// <summary>
+	/// 스티커의 사용자 지정 태그를 제거합니다.
+	/// </summary>
+	public static async Task RemoveStickerTagAsync(ContentSource source, string packageIdentifier, string stickerPath)
+	{
+		lock (s_lock)
+		{
+			var package = s_data.DownloadedPackages.FirstOrDefault(p => p.Source == source && p.PackageIdentifier == packageIdentifier);
+			if (package is null) return;
+
+			var sticker = package.Stickers.FirstOrDefault(s => s.Path == stickerPath);
+			if (sticker is null) return;
+
+			sticker.Tag = string.Empty;
+		}
+
+		await SaveAsync();
+	}
+
+	/// <summary>
 	/// 스티커 이미지의 로컬 파일 경로를 반환합니다.
 	/// </summary>
 	public static string GetStickerImagePath(ContentSource source, string packageIdentifier, string localDirectoryName, string fileName)

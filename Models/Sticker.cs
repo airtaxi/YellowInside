@@ -25,4 +25,7 @@ public class Sticker
 
 	/// <summary>WebP로 변환된 파일명 (확장자 포함)</summary>
 	public string WebpFileName { get; set; } = string.Empty;
+
+	/// <summary>사용자 지정 태그</summary>
+	public string Tag { get; set; } = string.Empty;
 }

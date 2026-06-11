@@ -20,6 +20,20 @@
                 <Grid>
                     <Image Source="{x:Bind ImageSource, Mode=OneWay}" Stretch="Uniform" />
 
+                    <Button
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch"
+                        Background="#80000000"
+                        CornerRadius="0"
+                        Foreground="White"
+                        Tapped="{x:Bind OnTagButtonTapped}"
+                        Visibility="{x:Bind IsSubscribed, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <SymbolIcon
+                            Width="48"
+                            Height="48"
+                            Symbol="Tag" />
+                    </Button>
+
                     <Grid
                         Width="18"
                         Height="18"
@@ -117,9 +131,9 @@
                 <StackPanel
                     Grid.Column="1"
                     HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
                     Orientation="Horizontal"
                     Spacing="4"
-                    VerticalAlignment="Top"
                     Visibility="{x:Bind ViewModel.IsLocalPackage, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=True}">
                     <Button
                         Command="{x:Bind ViewModel.SubscribeCommand}"

@@ -15,14 +15,14 @@ namespace YellowInside.Helpers;
 
 public static class DialogHelper
 {
-    public static async Task<string> ShowInputDialogAsync(this UIElement element, string title = "입력", string placeholderText = "", bool showCancel = false, bool numberOnly = false, string defaultText = "")
+    public static async Task<(ContentDialogResult Result, string Text)> ShowInputDialogAsync(this UIElement element, string title = "입력", string placeholderText = "", string primaryText = "확인", string secondaryText = null, string cancelText = null, bool numberOnly = false, string defaultText = "")
     {
         HideOpenContentDialogs(element);
 
         var dialog = new ContentDialog
         {
             Title = title,
-            PrimaryButtonText = "확인",
+            PrimaryButtonText = primaryText,
             DefaultButton = ContentDialogButton.Primary,
             Style = GetDefaultContentDialogStyle(),
             XamlRoot = element.XamlRoot,
@@ -34,14 +34,12 @@ public static class DialogHelper
         textBox.PlaceholderText = placeholderText;
         if (!string.IsNullOrEmpty(defaultText)) textBox.Text = defaultText;
         dialog.Content = textBox;
-        if (showCancel) dialog.SecondaryButtonText = "취소";
-        TaskCompletionSource<string> taskCompletionSource = new();
+        if (!string.IsNullOrEmpty(secondaryText)) dialog.SecondaryButtonText = secondaryText;
+        if (!string.IsNullOrEmpty(cancelText)) dialog.CloseButtonText = cancelText;
+        var taskCompletionSource = new TaskCompletionSource<(ContentDialogResult Result, string Text)>();
         dialog.Closing += (_, args) =>
         {
-            if (args.Result == ContentDialogResult.Primary)
-                taskCompletionSource.SetResult(textBox.Text.Trim());
-            else
-                taskCompletionSource.SetResult(null);
+            taskCompletionSource.SetResult((args.Result, args.Result == ContentDialogResult.Primary ? textBox.Text.Trim() : null));
         };
         await dialog.ShowAsync();
         return await taskCompletionSource.Task;
