@@ -1,4 +1,4 @@
-﻿using YellowInside.Managers;
+using YellowInside.Managers;
 using YellowInside.ViewModels;
 using YellowInsideLib;
 using Microsoft.UI.Windowing;
@@ -194,7 +194,23 @@ public sealed partial class PopupWindow : WindowEx
 
     private void OnCategoryGridViewSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (CategoryGridView.SelectedIndex >= 0) ViewModel.SelectCategory(CategoryGridView.SelectedIndex);
+        if (CategoryGridView.SelectedIndex < 0) return;
+
+        ViewModel.SelectCategory(CategoryGridView.SelectedIndex);
+        TagSearchAutoSuggestBox.Text = ViewModel.TagSearchText;
+    }
+
+    private void OnTagSearchAutoSuggestBoxQuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs e)
+    {
+        if (e.ChosenSuggestion is string selectedTag) ViewModel.UpdateTagSearchText(selectedTag);
+        else ViewModel.UpdateTagSearchText(e.QueryText);
+
+        sender.Text = ViewModel.TagSearchText;
+    }
+
+    private void OnTagSearchAutoSuggestBoxSuggestionChosen(AutoSuggestBox sender, AutoSuggestBoxSuggestionChosenEventArgs e)
+    {
+        if (e.SelectedItem is string selectedTag) sender.Text = selectedTag;
     }
 
     private void OnStickerGridViewRightTapped(object sender, RightTappedRoutedEventArgs e)

@@ -13,6 +13,7 @@ public partial class PopupStickerViewModel : ObservableObject
     public ImageSource ImageSource { get; set; }
     public string LocalFilePath { get; init; } = string.Empty;
     public string Title { get; init; } = string.Empty;
+    public string Tag { get; init; } = string.Empty;
     public ContentSource Source { get; init; }
     public string PackageIdentifier { get; init; } = string.Empty;
     public string StickerPath { get; init; } = string.Empty;

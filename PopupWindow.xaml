@@ -23,6 +23,7 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -76,6 +77,10 @@
                             Visibility="{x:Bind FavoriteIconVisibility}" />
                         <FontIcon
                             FontSize="18"
+                            Glyph="&#xE8EC;"
+                            Visibility="{x:Bind TagIconVisibility}" />
+                        <FontIcon
+                            FontSize="18"
                             Glyph="&#xE81C;"
                             Visibility="{x:Bind HistoryIconVisibility}" />
                         <Image
@@ -87,16 +92,50 @@
             </GridView.ItemTemplate>
         </GridView>
 
-        <!--  구분선  -->
+        <!--  태그 검색  -->
         <Border
             Grid.Row="2"
+            Padding="8"
+            Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+            BorderThickness="1"
+            CornerRadius="{ThemeResource ControlCornerRadius}"
+            Visibility="{x:Bind ViewModel.TagSearchVisibility, Mode=OneWay}">
+            <Grid ColumnSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <FontIcon
+                    Grid.Column="0"
+                    VerticalAlignment="Center"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    Glyph="&#xE8EC;" />
+
+                <AutoSuggestBox
+                    x:Name="TagSearchAutoSuggestBox"
+                    Grid.Column="1"
+                    AutomationProperties.Name="태그 검색"
+                    ItemsSource="{x:Bind ViewModel.TagSuggestions, Mode=OneWay}"
+                    PlaceholderText="태그로 검색..."
+                    QueryIcon="Find"
+                    QuerySubmitted="OnTagSearchAutoSuggestBoxQuerySubmitted"
+                    SuggestionChosen="OnTagSearchAutoSuggestBoxSuggestionChosen"
+                    Text="{x:Bind ViewModel.TagSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+            </Grid>
+        </Border>
+
+        <!--  구분선  -->
+        <Border
+            Grid.Row="3"
             Height="1"
             Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
 
         <!--  스티커 그리드  -->
         <GridView
             x:Name="StickerGridView"
-            Grid.Row="3"
+            Grid.Row="4"
             IsItemClickEnabled="False"
             ItemsSource="{x:Bind ViewModel.Stickers, Mode=OneWay}"
             RightTapped="OnStickerGridViewRightTapped"
@@ -196,7 +235,7 @@
 
         <!--  대기열 바  -->
         <Border
-            Grid.Row="4"
+            Grid.Row="5"
             Padding="8"
             Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
             CornerRadius="4"
@@ -270,7 +309,7 @@
         <!--  전송 방법 토글 (단축키로 열린 경우에만 표시)  -->
         <Border
             x:Name="SendMethodToggleBorder"
-            Grid.Row="5"
+            Grid.Row="6"
             Padding="8"
             Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
             CornerRadius="4"

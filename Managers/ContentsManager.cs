@@ -1,4 +1,4 @@
-﻿using Arcacon.NET;
+using Arcacon.NET;
 using Arcacon.NET.Models;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
@@ -559,7 +559,10 @@ public static class ContentsManager
 	/// </summary>
 	public static IReadOnlyList<StickerPackage> GetDownloadedPackages(ContentSource? source = null)
 	{
-        lock (s_lock) return[..s_data.DownloadedPackages.Where(package => source == null || package.Source == source)];
+        lock (s_lock)
+        {
+            return [..s_data.DownloadedPackages.Where(package => source == null || package.Source == source)];
+        }
     }
 
 	/// <summary>
@@ -567,7 +570,10 @@ public static class ContentsManager
 	/// </summary>
 	public static StickerPackage GetDownloadedPackage(ContentSource source, string packageIdentifier)
 	{
-		lock (s_lock) return s_data.DownloadedPackages.FirstOrDefault(package => package.Source == source && package.PackageIdentifier == packageIdentifier);
+		lock (s_lock)
+		{
+		    return s_data.DownloadedPackages.FirstOrDefault(package => package.Source == source && package.PackageIdentifier == packageIdentifier);
+		}
 	}
 
 	public static Task<AnimatedPngToWebpPackageConversionResult> ConvertAnimatedPngStickersToWebpAsync(IProgress<AnimatedPngToWebpPackageConversionProgress> progress = null, CancellationToken cancellationToken = default) => ConvertAnimatedPngStickersToWebpAsync(null, progress, cancellationToken);
@@ -670,7 +676,10 @@ public static class ContentsManager
 	/// </summary>
 	public static bool IsPackageDownloaded(ContentSource source, string packageIdentifier)
 	{
-		lock (s_lock) return s_data.DownloadedPackages.Any(package => package.Source == source && package.PackageIdentifier == packageIdentifier);
+		lock (s_lock)
+		{
+		    return s_data.DownloadedPackages.Any(package => package.Source == source && package.PackageIdentifier == packageIdentifier);
+		}
 	}
 
 	/// <summary>
@@ -718,7 +727,10 @@ public static class ContentsManager
 	/// </summary>
 	public static bool IsFavorite(ContentSource source, string packageIdentifier, string stickerPath)
 	{
-		lock (s_lock) return s_data.Favorites.Any(favorite => favorite.Source == source && favorite.PackageIdentifier == packageIdentifier && favorite.StickerPath == stickerPath);
+		lock (s_lock)
+		{
+		    return s_data.Favorites.Any(favorite => favorite.Source == source && favorite.PackageIdentifier == packageIdentifier && favorite.StickerPath == stickerPath);
+		}
 	}
 
 	/// <summary>
@@ -742,8 +754,19 @@ public static class ContentsManager
 	{
 		lock (s_lock)
 		{
-			var packages = packageKeys is null ? s_data.DownloadedPackages : s_data.DownloadedPackages.Where(p => packageKeys.Contains((p.Source, p.PackageIdentifier)));
-			return packages.Any(p => p.Stickers.Any(s => !string.IsNullOrEmpty(s.Tag)));
+			var packages = packageKeys is null ? s_data.DownloadedPackages : s_data.DownloadedPackages.Where(package => packageKeys.Contains((package.Source, package.PackageIdentifier)));
+			return packages.Any(package => package.Stickers.Any(sticker => !string.IsNullOrWhiteSpace(sticker.Tag)));
+		}
+	}
+
+	/// <summary>
+	/// 다운로드된 스티커 중 사용자 지정 태그가 있는 스티커 목록을 반환합니다.
+	/// </summary>
+	public static IReadOnlyList<(StickerPackage Package, Sticker Sticker)> GetTaggedStickers()
+	{
+		lock (s_lock)
+		{
+		    return [..s_data.DownloadedPackages.SelectMany(package => package.Stickers.Where(sticker => !string.IsNullOrWhiteSpace(sticker.Tag)).Select(sticker => (package, sticker)))];
 		}
 	}
 
@@ -752,7 +775,10 @@ public static class ContentsManager
 	/// </summary>
 	public static IReadOnlyList<FavoriteSticker> GetFavorites(ContentSource? source = null)
 	{
-		lock (s_lock) return [.. s_data.Favorites.Where(favorite => source == null || favorite.Source == source)];
+		lock (s_lock)
+		{
+		    return [..s_data.Favorites.Where(favorite => source == null || favorite.Source == source)];
+		}
 	}
 
 	/// <summary>
@@ -1534,7 +1560,10 @@ public static class ContentsManager
 
 			ManageWindow.Instance.DispatcherQueue.TryEnqueue(() =>
 			{
-				foreach (var package in importedData.DownloadedPackages) WeakReferenceMessenger.Default.Send(new FavoritesOrPackagesChangedMessage(package.Source, package.PackageIdentifier));
+				foreach (var package in importedData.DownloadedPackages)
+				{
+				    WeakReferenceMessenger.Default.Send(new FavoritesOrPackagesChangedMessage(package.Source, package.PackageIdentifier));
+				}
 			});
 		}
 		finally
