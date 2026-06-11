@@ -57,9 +57,7 @@ public static class SettingsManager
     // Default: Ctrl+Shift (0x0002 | 0x0004 = 0x0006)
     public static uint HotkeyModifiers
     {
-        get => s_localSettings.Values[HotkeyModifiersKey] is int value
-            ? (uint)value
-            : HotkeyManager.ModifierControl | HotkeyManager.ModifierShift;
+        get => s_localSettings.Values[HotkeyModifiersKey] is int value ? (uint)value : HotkeyManager.ModifierControl | HotkeyManager.ModifierShift;
         set => s_localSettings.Values[HotkeyModifiersKey] = (int)value;
     }
 

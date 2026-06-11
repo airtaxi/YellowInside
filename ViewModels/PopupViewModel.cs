@@ -52,8 +52,7 @@ public partial class PopupViewModel : ObservableObject
 
     public bool TogglePending(PopupStickerViewModel sticker)
     {
-        var existing = PendingStickers.FirstOrDefault(
-            pendingSticker => pendingSticker.LocalFilePath == sticker.LocalFilePath);
+        var existing = PendingStickers.FirstOrDefault(pendingSticker => pendingSticker.LocalFilePath == sticker.LocalFilePath);
 
         if (existing is not null)
         {
@@ -81,20 +80,17 @@ public partial class PopupViewModel : ObservableObject
     public void RemoveFromPending(PendingStickerViewModel item)
     {
         PendingStickers.Remove(item);
-        var matchingSticker = Stickers.FirstOrDefault(
-            sticker => sticker.LocalFilePath == item.LocalFilePath);
+        var matchingSticker = Stickers.FirstOrDefault(sticker => sticker.LocalFilePath == item.LocalFilePath);
         if (matchingSticker is not null) matchingSticker.IsPending = false;
     }
 
     public void ClearPending()
     {
-        foreach (var sticker in Stickers)
-            sticker.IsPending = false;
+        foreach (var sticker in Stickers) sticker.IsPending = false;
         PendingStickers.Clear();
     }
 
-    public IReadOnlyList<string> GetPendingFilePaths() =>
-        PendingStickers.Select(pendingSticker => pendingSticker.LocalFilePath).ToList();
+    public IReadOnlyList<string> GetPendingFilePaths() => PendingStickers.Select(pendingSticker => pendingSticker.LocalFilePath).ToList();
 
     private void BuildCategories()
     {
@@ -110,12 +106,10 @@ public partial class PopupViewModel : ObservableObject
 
         foreach (var package in _packages)
         {
-            var mainImagePath = ContentsManager.GetMainImagePath(
-                package.Source, package.PackageIdentifier, package.MainImageFileName);
+            var mainImagePath = ContentsManager.GetMainImagePath(package.Source, package.PackageIdentifier, package.MainImageFileName);
 
             ImageSource thumbnailSource = null;
-            if (!string.IsNullOrEmpty(mainImagePath) && File.Exists(mainImagePath))
-                thumbnailSource = new BitmapImage(new Uri(mainImagePath)) { AutoPlay = SettingsManager.GifPlaybackEnabled };
+            if (!string.IsNullOrEmpty(mainImagePath) && File.Exists(mainImagePath)) thumbnailSource = new BitmapImage(new Uri(mainImagePath)) { AutoPlay = SettingsManager.GifPlaybackEnabled };
 
             Categories.Add(new PopupCategoryViewModel(false, default, thumbnailSource, package)
             {
@@ -128,9 +122,7 @@ public partial class PopupViewModel : ObservableObject
     {
         var settings = ApplicationData.Current.LocalSettings;
 
-        if (settings.Values.TryGetValue(SettingsKeySource, out var sourceObject) &&
-            settings.Values.TryGetValue(SettingsKeyPackageIdentifier, out var packageIdentifierObject) &&
-            sourceObject is int source)
+        if (settings.Values.TryGetValue(SettingsKeySource, out var sourceObject) && settings.Values.TryGetValue(SettingsKeyPackageIdentifier, out var packageIdentifierObject) && sourceObject is int source)
         {
             // LocalSettings 하위 호환: 기존 int 또는 새 string 모두 지원
             string packageIdentifier = packageIdentifierObject switch
@@ -145,17 +137,12 @@ public partial class PopupViewModel : ObservableObject
                 for (int i = 2; i < Categories.Count; i++)
                 {
                     var category = Categories[i];
-                    if (category.Package is not null &&
-                        (int)category.Package.Source == source &&
-                        category.Package.PackageIdentifier == packageIdentifier)
-                        return i;
+                    if (category.Package is not null && (int)category.Package.Source == source && category.Package.PackageIdentifier == packageIdentifier) return i;
                 }
             }
         }
 
-        if (settings.Values.TryGetValue(SettingsKeySpecialTab, out var specialTabObject) &&
-            specialTabObject is int specialTab && specialTab >= 0 && specialTab <= 1)
-            return specialTab;
+        if (settings.Values.TryGetValue(SettingsKeySpecialTab, out var specialTabObject) && specialTabObject is int specialTab && specialTab >= 0 && specialTab <= 1) return specialTab;
 
         return 0;
     }
@@ -170,22 +157,17 @@ public partial class PopupViewModel : ObservableObject
         RememberCategory(index);
         Stickers.Clear();
 
-        if (index == 0)
-            LoadFavoriteStickers();
-        else if (index == 1)
-            LoadHistoryStickers();
-        else
-            LoadPackageStickers(Categories[index].Package);
+        if (index == 0) LoadFavoriteStickers();
+        else if (index == 1) LoadHistoryStickers();
+        else LoadPackageStickers(Categories[index].Package);
 
         ApplyPendingFlags();
     }
 
     private void ApplyPendingFlags()
     {
-        var pendingFilePaths = new HashSet<string>(
-            PendingStickers.Select(pendingSticker => pendingSticker.LocalFilePath));
-        foreach (var sticker in Stickers)
-            sticker.IsPending = pendingFilePaths.Contains(sticker.LocalFilePath);
+        var pendingFilePaths = new HashSet<string>(PendingStickers.Select(pendingSticker => pendingSticker.LocalFilePath));
+        foreach (var sticker in Stickers) sticker.IsPending = pendingFilePaths.Contains(sticker.LocalFilePath);
     }
 
     private void RememberCategory(int index)
@@ -211,15 +193,13 @@ public partial class PopupViewModel : ObservableObject
         var favorites = ContentsManager.GetFavorites();
         foreach (var favorite in favorites)
         {
-            var package = _packages.FirstOrDefault(
-                package => package.Source == favorite.Source && package.PackageIdentifier == favorite.PackageIdentifier);
+            var package = _packages.FirstOrDefault(package => package.Source == favorite.Source && package.PackageIdentifier == favorite.PackageIdentifier);
             if (package is null) continue;
 
             var sticker = package.Stickers.FirstOrDefault(sticker => sticker.Path == favorite.StickerPath);
             if (sticker is null) continue;
 
-            var imagePath = ContentsManager.GetStickerImagePath(
-                favorite.Source, favorite.PackageIdentifier, package.LocalDirectoryName, sticker);
+            var imagePath = ContentsManager.GetStickerImagePath(favorite.Source, favorite.PackageIdentifier, package.LocalDirectoryName, sticker);
             if (!File.Exists(imagePath)) continue;
 
             Stickers.Add(new PopupStickerViewModel
@@ -242,15 +222,13 @@ public partial class PopupViewModel : ObservableObject
         var historyEntries = HistoryManager.GetEntries();
         foreach (var entry in historyEntries)
         {
-            var package = _packages.FirstOrDefault(
-                package => package.Source == entry.Source && package.PackageIdentifier == entry.PackageIdentifier);
+            var package = _packages.FirstOrDefault(package => package.Source == entry.Source && package.PackageIdentifier == entry.PackageIdentifier);
             if (package is null) continue;
 
             var sticker = package.Stickers.FirstOrDefault(sticker => sticker.Path == entry.StickerPath);
             if (sticker is null) continue;
 
-            var imagePath = ContentsManager.GetStickerImagePath(
-                entry.Source, entry.PackageIdentifier, package.LocalDirectoryName, sticker);
+            var imagePath = ContentsManager.GetStickerImagePath(entry.Source, entry.PackageIdentifier, package.LocalDirectoryName, sticker);
             if (!File.Exists(imagePath)) continue;
 
             Stickers.Add(new PopupStickerViewModel
@@ -272,8 +250,7 @@ public partial class PopupViewModel : ObservableObject
     {
         foreach (var sticker in package.Stickers)
         {
-            var imagePath = ContentsManager.GetStickerImagePath(
-                package.Source, package.PackageIdentifier, package.LocalDirectoryName, sticker);
+            var imagePath = ContentsManager.GetStickerImagePath(package.Source, package.PackageIdentifier, package.LocalDirectoryName, sticker);
             if (!File.Exists(imagePath)) continue;
 
             Stickers.Add(new PopupStickerViewModel
@@ -294,8 +271,7 @@ public partial class PopupViewModel : ObservableObject
     private void OnFavoriteToggled(PopupStickerViewModel item)
     {
         // 즐겨찾기 탭에서 즐겨찾기 해제하면 목록에서 제거
-        if (_currentCategoryIndex == 0 && !item.IsFavorite)
-            Stickers.Remove(item);
+        if (_currentCategoryIndex == 0 && !item.IsFavorite) Stickers.Remove(item);
     }
 
     public void RecordPendingHistory()
@@ -314,7 +290,9 @@ public partial class PopupViewModel : ObservableObject
         foreach (var pendingSticker in PendingStickers)
         {
             if (pendingSticker.ImageSource is BitmapImage pendingBitmap)
+            {
                 pendingBitmap.UriSource = null;
+            }
         }
         PendingStickers.Clear();
 
@@ -329,7 +307,9 @@ public partial class PopupViewModel : ObservableObject
         foreach (var category in Categories)
         {
             if (category.ThumbnailSource is BitmapImage bitmap)
+            {
                 bitmap.UriSource = null;
+            }
         }
         Categories.Clear();
     }

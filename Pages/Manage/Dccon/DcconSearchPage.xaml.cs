@@ -87,8 +87,7 @@ public sealed partial class DcconSearchPage : Page
         }
     }
 
-    private bool IsScrolledToBottom()
-        => ResultScrollViewer.VerticalOffset + ResultScrollViewer.ViewportHeight >= ResultScrollViewer.ExtentHeight - 100;
+    private bool IsScrolledToBottom() => ResultScrollViewer.VerticalOffset + ResultScrollViewer.ViewportHeight >= ResultScrollViewer.ExtentHeight - 100;
 
     private async Task FillViewportAsync()
     {

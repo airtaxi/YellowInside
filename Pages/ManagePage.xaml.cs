@@ -28,15 +28,13 @@ public sealed partial class ManagePage : Page
     {
         base.OnNavigatedTo(navigationEventArgs);
 
-        if (navigationEventArgs.NavigationMode == Microsoft.UI.Xaml.Navigation.NavigationMode.New
-            && navigationEventArgs.Parameter is ManagePageNavigationArguments managePageNavigationArguments)
+        if (navigationEventArgs.NavigationMode == Microsoft.UI.Xaml.Navigation.NavigationMode.New && navigationEventArgs.Parameter is ManagePageNavigationArguments managePageNavigationArguments)
             NavigateToContentPage(managePageNavigationArguments.ContentPageType, managePageNavigationArguments.ContentPageParameter, updateNavigationSelection: true);
     }
 
     private async void OnPageLoaded(object sender, RoutedEventArgs e)
     {
-        if (NavigationView.SelectedItem is null)
-            NavigateToContentPage(typeof(HomePage), updateNavigationSelection: true);
+        if (NavigationView.SelectedItem is null) NavigateToContentPage(typeof(HomePage), updateNavigationSelection: true);
 
         await ShowWhatsNewIfFirstLaunchAsync();
     }
@@ -72,10 +70,8 @@ public sealed partial class ManagePage : Page
             dialog.Content = scrollViewer;
             await dialog.ShowAsync();
         }
-        catch
-        {
-            // Silently ignore network or parsing errors
-        }
+        // Silently ignore network or parsing errors
+        catch { }
     }
 
     private static async Task<string> FetchWhatsNewAsync()
@@ -107,26 +103,17 @@ public sealed partial class ManagePage : Page
 
     private void NavigateToContentPage(Type contentPageType, object contentPageParameter = null, bool updateNavigationSelection = false)
     {
-        if (updateNavigationSelection)
-            SelectNavigationViewItem(contentPageType);
+        if (updateNavigationSelection) SelectNavigationViewItem(contentPageType);
 
-        if (ContentFrame.Content?.GetType() == contentPageType && contentPageParameter is null)
-            return;
+        if (ContentFrame.Content?.GetType() == contentPageType && contentPageParameter is null) return;
 
         ContentFrame.Navigate(contentPageType, contentPageParameter);
     }
 
     private void SelectNavigationViewItem(Type contentPageType)
     {
-        var navigationViewItem = contentPageType == typeof(HomePage) ? HomeNavigationViewItem
-            : contentPageType == typeof(SearchPage) ? SearchNavigationViewItem
-            : contentPageType == typeof(SubscriptionsPage) ? SubscriptionsNavigationViewItem
-            : contentPageType == typeof(FavoritesPage) ? FavoritesNavigationViewItem
-            : contentPageType == typeof(CustomPackagesPage) ? CustomPackagesNavigationViewItem
-            : contentPageType == typeof(SettingsPage) ? SettingsNavigationViewItem
-            : null;
-        if (navigationViewItem is null || ReferenceEquals(NavigationView.SelectedItem, navigationViewItem))
-            return;
+        var navigationViewItem = contentPageType == typeof(HomePage) ? HomeNavigationViewItem : contentPageType == typeof(SearchPage) ? SearchNavigationViewItem : contentPageType == typeof(SubscriptionsPage) ? SubscriptionsNavigationViewItem : contentPageType == typeof(FavoritesPage) ? FavoritesNavigationViewItem : contentPageType == typeof(CustomPackagesPage) ? CustomPackagesNavigationViewItem : contentPageType == typeof(SettingsPage) ? SettingsNavigationViewItem : null;
+        if (navigationViewItem is null || ReferenceEquals(NavigationView.SelectedItem, navigationViewItem)) return;
 
         _isProgrammaticNavigationSelection = true;
         NavigationView.SelectedItem = navigationViewItem;

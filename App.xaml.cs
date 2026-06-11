@@ -1,4 +1,4 @@
-﻿using Arcacon.NET;
+using Arcacon.NET;
 using dccon.NET;
 using ImageMagick;
 using InvenSticker.NET;
@@ -73,8 +73,7 @@ public partial class App : Application
 
     private static void OnAppDomainUnhandledException(object sender, System.UnhandledExceptionEventArgs e)
     {
-        if (e.ExceptionObject is Exception exception)
-            LogException("AppDomain.UnhandledException", exception);
+        if (e.ExceptionObject is Exception exception) LogException("AppDomain.UnhandledException", exception);
     }
 
     private static void OnUnobservedTaskException(object sender, UnobservedTaskExceptionEventArgs e)
@@ -124,8 +123,7 @@ public partial class App : Application
 
     private static void OnDcconButtonClicked(SessionInfo info) => OpenDcconPopup(info);
 
-    private static void OnHotkeyPressed(nint foregroundWindowHandle) =>
-        OpenDcconPopup(new SessionInfo(foregroundWindowHandle, "", false));
+    private static void OnHotkeyPressed(nint foregroundWindowHandle) => OpenDcconPopup(new SessionInfo(foregroundWindowHandle, "", false));
 
     private static void OpenDcconPopup(SessionInfo sessionInfo)
     {
@@ -148,17 +146,14 @@ public partial class App : Application
 
         s_manageWindow = new ManageWindow();
 
-        if (s_manageWindow.Content is FrameworkElement rootElement)
-            rootElement.RequestedTheme = SettingsManager.GetElementTheme();
+        if (s_manageWindow.Content is FrameworkElement rootElement) rootElement.RequestedTheme = SettingsManager.GetElementTheme();
 
         var activationArguments = AppInstance.GetCurrent().GetActivatedEventArgs();
-        if (activationArguments.Kind != ExtendedActivationKind.StartupTask)
-            s_manageWindow.Activate();
+        if (activationArguments.Kind != ExtendedActivationKind.StartupTask) s_manageWindow.Activate();
 
         UpdateCheckManager.Start();
 
         HotkeyManager.HotkeyPressed += OnHotkeyPressed;
-        if (SettingsManager.HotkeyEnabled)
-            HotkeyManager.Start(SettingsManager.HotkeyModifiers, SettingsManager.HotkeyKey);
+        if (SettingsManager.HotkeyEnabled) HotkeyManager.Start(SettingsManager.HotkeyModifiers, SettingsManager.HotkeyKey);
     }
 }

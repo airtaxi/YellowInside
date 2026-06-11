@@ -56,12 +56,7 @@ public sealed partial class ArcaconSearchPage : Page
         _isLoading = true;
         try
         {
-            if (await ArcaconSessionHelper.EnsureArcaconSessionAsync(
-                this,
-                NavigateToPage,
-                typeof(ArcaconSearchPage),
-                cancellationToken: _searchCancellationTokenSource?.Token ?? default) is null)
-                return false;
+            if (await ArcaconSessionHelper.EnsureArcaconSessionAsync(this, NavigateToPage, typeof(ArcaconSearchPage), cancellationToken: _searchCancellationTokenSource?.Token ?? default) is null) return false;
 
             ManageWindow.ShowLoading("검색 중...");
             try
@@ -78,12 +73,7 @@ public sealed partial class ArcaconSearchPage : Page
                     _ => ArcaconSearchSort.Hot,
                 };
 
-                var searchResult = await App.ArcaconClient.SearchAsync(
-                    _currentQuery,
-                    searchType,
-                    searchSort,
-                    _currentPage,
-                    _searchCancellationTokenSource?.Token ?? default);
+                var searchResult = await App.ArcaconClient.SearchAsync(_currentQuery, searchType, searchSort, _currentPage, _searchCancellationTokenSource?.Token ?? default);
 
                 foreach (var package in searchResult.Packages)
                 {

@@ -76,9 +76,7 @@ public sealed partial class PopupWindow : WindowEx
 
         var dpi = GetDpiForWindow(this.GetWindowHandle());
         var scale = dpi / 96.0;
-        AppWindow.Resize(new Windows.Graphics.SizeInt32(
-            (int)(PopupWidth * scale),
-            (int)(PopupHeight * scale)));
+        AppWindow.Resize(new Windows.Graphics.SizeInt32((int)(PopupWidth * scale), (int)(PopupHeight * scale)));
     }
 
     private void PositionNearChatWindow(nint chatHwnd)
@@ -91,9 +89,7 @@ public sealed partial class PopupWindow : WindowEx
         // 채팅창 중심 좌표 기준으로 해당 모니터의 DisplayArea를 찾음
         var chatCenterX = (chatRect.Left + chatRect.Right) / 2;
         var chatCenterY = (chatRect.Top + chatRect.Bottom) / 2;
-        var displayArea = DisplayArea.GetFromPoint(
-            new Windows.Graphics.PointInt32(chatCenterX, chatCenterY),
-            DisplayAreaFallback.Nearest);
+        var displayArea = DisplayArea.GetFromPoint(new Windows.Graphics.PointInt32(chatCenterX, chatCenterY), DisplayAreaFallback.Nearest);
         var workArea = displayArea.WorkArea;
 
         // 채팅창 오른쪽에, 하단 정렬
@@ -101,13 +97,11 @@ public sealed partial class PopupWindow : WindowEx
         var y = chatRect.Bottom - windowSize.Height;
 
         // 화면 밖으로 나가면 왼쪽에 배치
-        if (x + windowSize.Width > workArea.X + workArea.Width)
-            x = chatRect.Left - windowSize.Width;
+        if (x + windowSize.Width > workArea.X + workArea.Width) x = chatRect.Left - windowSize.Width;
 
         if (x < workArea.X) x = workArea.X;
         if (y < workArea.Y) y = workArea.Y;
-        if (y + windowSize.Height > workArea.Y + workArea.Height)
-            y = workArea.Y + workArea.Height - windowSize.Height;
+        if (y + windowSize.Height > workArea.Y + workArea.Height) y = workArea.Y + workArea.Height - windowSize.Height;
 
         AppWindow.Move(new Windows.Graphics.PointInt32(x, y));
     }
@@ -180,10 +174,8 @@ public sealed partial class PopupWindow : WindowEx
 
     private void ApplyCurrentSendMethod()
     {
-        if (_openedViaHotkey)
-            SessionManager.Instance.SendMethod = SendMethodToggleSwitch.IsOn ? SendMethod.Clipboard : SendMethod.Auto;
-        else
-            SessionManager.Instance.SendMethod = SendMethod.Auto;
+        if (_openedViaHotkey) SessionManager.Instance.SendMethod = SendMethodToggleSwitch.IsOn ? SendMethod.Clipboard : SendMethod.Auto;
+        else SessionManager.Instance.SendMethod = SendMethod.Auto;
     }
 
     private void OnSendMethodToggleSwitchToggled(object sender, RoutedEventArgs e)
@@ -202,8 +194,7 @@ public sealed partial class PopupWindow : WindowEx
 
     private void OnCategoryGridViewSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (CategoryGridView.SelectedIndex >= 0)
-            ViewModel.SelectCategory(CategoryGridView.SelectedIndex);
+        if (CategoryGridView.SelectedIndex >= 0) ViewModel.SelectCategory(CategoryGridView.SelectedIndex);
     }
 
     private void OnStickerGridViewRightTapped(object sender, RightTappedRoutedEventArgs e)

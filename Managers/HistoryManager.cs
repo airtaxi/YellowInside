@@ -42,10 +42,7 @@ public static class HistoryManager
     {
         lock (s_lock)
         {
-            s_entries.RemoveAll(
-                entry => entry.Source == source
-                    && entry.PackageIdentifier == packageIdentifier
-                    && entry.StickerPath == stickerPath);
+            s_entries.RemoveAll(entry => entry.Source == source && entry.PackageIdentifier == packageIdentifier && entry.StickerPath == stickerPath);
 
             s_entries.Insert(0, new HistoryEntry
             {
@@ -54,8 +51,7 @@ public static class HistoryManager
                 StickerPath = stickerPath,
             });
 
-            if (s_entries.Count > MaxHistoryCount)
-                s_entries.RemoveRange(MaxHistoryCount, s_entries.Count - MaxHistoryCount);
+            if (s_entries.Count > MaxHistoryCount) s_entries.RemoveRange(MaxHistoryCount, s_entries.Count - MaxHistoryCount);
         }
 
         Save();
@@ -66,10 +62,7 @@ public static class HistoryManager
     /// </summary>
     public static IReadOnlyList<HistoryEntry> GetEntries()
     {
-        lock (s_lock)
-        {
-            return [.. s_entries];
-        }
+        lock (s_lock) return[..s_entries];
     }
 
     /// <summary>
@@ -78,11 +71,7 @@ public static class HistoryManager
     public static void RemoveByPackage(ContentSource source, string packageIdentifier)
     {
         bool removed;
-        lock (s_lock)
-        {
-            removed = s_entries.RemoveAll(
-                entry => entry.Source == source && entry.PackageIdentifier == packageIdentifier) > 0;
-        }
+        lock (s_lock) removed = s_entries.RemoveAll(entry => entry.Source == source && entry.PackageIdentifier == packageIdentifier) > 0;
 
         if (removed) Save();
     }
@@ -93,13 +82,7 @@ public static class HistoryManager
     public static void RemoveByStickers(ContentSource source, string packageIdentifier, IReadOnlyList<string> stickerPaths)
     {
         bool removed;
-        lock (s_lock)
-        {
-            removed = s_entries.RemoveAll(
-                entry => entry.Source == source
-                    && entry.PackageIdentifier == packageIdentifier
-                    && stickerPaths.Contains(entry.StickerPath)) > 0;
-        }
+        lock (s_lock) removed = s_entries.RemoveAll(entry => entry.Source == source && entry.PackageIdentifier == packageIdentifier && stickerPaths.Contains(entry.StickerPath)) > 0;
 
         if (removed) Save();
     }
@@ -173,8 +156,7 @@ public static class HistoryManager
             if (File.Exists(s_historyFilePath))
             {
                 var json = File.ReadAllText(s_historyFilePath);
-                return JsonSerializer.Deserialize(json, HistoryManagerJsonContext.Default.ListHistoryEntry)
-                    ?? [];
+                return JsonSerializer.Deserialize(json, HistoryManagerJsonContext.Default.ListHistoryEntry) ?? [];
             }
         }
         catch { }
@@ -185,10 +167,7 @@ public static class HistoryManager
     private static void Save()
     {
         string json;
-        lock (s_lock)
-        {
-            json = JsonSerializer.Serialize(s_entries, HistoryManagerJsonContext.Default.ListHistoryEntry);
-        }
+        lock (s_lock) json = JsonSerializer.Serialize(s_entries, HistoryManagerJsonContext.Default.ListHistoryEntry);
 
         try { File.WriteAllText(s_historyFilePath, json); }
         catch { }

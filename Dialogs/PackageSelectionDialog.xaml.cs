@@ -12,15 +12,11 @@ public sealed partial class PackageSelectionDialog : ContentDialog
     public ObservableCollection<PackageSelectionListViewModel> PackageItems { get; } = [];
 
     public IReadOnlyList<(ContentSource Source, string PackageIdentifier)> SelectedPackageKeys =>
-        [.. PackageListView.SelectedItems
-            .OfType<PackageSelectionListViewModel>()
-            .Select(item => (item.Source, item.PackageIdentifier))];
+    [.. PackageListView.SelectedItems
+        .OfType<PackageSelectionListViewModel>()
+        .Select(item => (item.Source, item.PackageIdentifier))];
 
-    public PackageSelectionDialog(
-        string title,
-        string instruction,
-        string primaryButtonText,
-        IEnumerable<PackageSelectionListViewModel> items)
+    public PackageSelectionDialog(string title, string instruction, string primaryButtonText, IEnumerable<PackageSelectionListViewModel> items)
     {
         InitializeComponent();
         RequestedTheme = SettingsManager.GetElementTheme();

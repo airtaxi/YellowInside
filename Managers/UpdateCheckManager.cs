@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Windows.ApplicationModel;
@@ -31,14 +31,9 @@ public static class UpdateCheckManager
         using var timer = new PeriodicTimer(s_checkInterval);
         while (await timer.WaitForNextTickAsync(cancellationToken))
         {
-            try
-            {
-                await CheckForUpdateAsync();
-            }
-            catch
-            {
-                // Silently ignore (no network, not installed from Store, etc.)
-            }
+            try { await CheckForUpdateAsync(); }
+            // Silently ignore (no network, not installed from Store, etc.)
+            catch { }
         }
     }
 
@@ -47,8 +42,7 @@ public static class UpdateCheckManager
         var storeContext = StoreContext.GetDefault();
         var updates = await storeContext.GetAppAndOptionalStorePackageUpdatesAsync();
 
-        if (updates.Count > 0)
-            ShowUpdateNotification();
+        if (updates.Count > 0) ShowUpdateNotification();
     }
 
     private static void ShowUpdateNotification()
@@ -57,8 +51,7 @@ public static class UpdateCheckManager
         var storeUri = $"ms-windows-store://pdp/?PFN={packageFamilyName}";
 
         var toastXml = new XmlDocument();
-        toastXml.LoadXml(
-            $"""
+        toastXml.LoadXml($"""
             <toast activationType="protocol" launch="{storeUri}">
                 <visual>
                     <binding template="ToastGeneric">

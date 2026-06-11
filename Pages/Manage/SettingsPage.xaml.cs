@@ -1,4 +1,4 @@
-﻿using Arcacon.NET.Exceptions;
+using Arcacon.NET.Exceptions;
 using YellowInside.Dialogs;
 using YellowInside.Helpers;
 using YellowInside.Managers;
@@ -72,11 +72,7 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
 
         _isInitializing = false;
 
-        if (e.Parameter is SettingsPageNavigationArguments { StartArcaconSubscriptionSynchronization: true } settingsPageNavigationArguments)
-        {
-            DispatcherQueue.TryEnqueue(async () =>
-                await StartArcaconSubscriptionSynchronizationAsync(settingsPageNavigationArguments.IncludeInactiveArcacons));
-        }
+        if (e.Parameter is SettingsPageNavigationArguments { StartArcaconSubscriptionSynchronization: true } settingsPageNavigationArguments) DispatcherQueue.TryEnqueue(async () => await StartArcaconSubscriptionSynchronizationAsync(settingsPageNavigationArguments.IncludeInactiveArcacons));
     }
 
     private async void OnThemeComboBoxSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -88,9 +84,7 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
 
         ApplyThemeToAllWindows();
 
-        await this.ShowDialogAsync(
-            "테마 변경",
-            "일부 UI 요소는 프로그램을 재시작해야 올바르게 반영됩니다.");
+        await this.ShowDialogAsync("테마 변경", "일부 UI 요소는 프로그램을 재시작해야 올바르게 반영됩니다.");
     }
 
     private static void ApplyThemeToAllWindows()
@@ -165,11 +159,7 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
             if (updates.Count > 0)
             {
                 UpdateStatusTextBlock.Text = "새로운 업데이트가 있습니다.";
-                var result = await this.ShowDialogAsync(
-                    "업데이트 확인",
-                    "새로운 버전이 출시되었습니다. Microsoft Store에서 업데이트하시겠습니까?",
-                    primaryButtonText: "업데이트",
-                    secondaryButtonText: "나중에");
+                var result = await this.ShowDialogAsync("업데이트 확인", "새로운 버전이 출시되었습니다. Microsoft Store에서 업데이트하시겠습니까?", primaryButtonText: "업데이트", secondaryButtonText: "나중에");
 
                 if (result == ContentDialogResult.Primary)
                 {
@@ -207,11 +197,7 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         var file = await openPicker.PickSingleFileAsync();
         if (file is null) return;
 
-        var modeResult = await this.ShowDialogAsync(
-            "불러오기 모드 선택",
-            "기존 데이터를 모두 삭제하고 불러올까요?\n'확인'을 누르면 기존 데이터를 대체합니다.\n'추가만'을 누르면 기존 데이터에 추가합니다.",
-            primaryButtonText: "대체",
-            secondaryButtonText: "추가만");
+        var modeResult = await this.ShowDialogAsync("불러오기 모드 선택", "기존 데이터를 모두 삭제하고 불러올까요?\n'확인'을 누르면 기존 데이터를 대체합니다.\n'추가만'을 누르면 기존 데이터에 추가합니다.", primaryButtonText: "대체", secondaryButtonText: "추가만");
 
         if (modeResult == ContentDialogResult.None) return;
 
@@ -255,11 +241,7 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         }
 
         var exportItems = downloadedPackages.Select(package => (PackageSelectionListViewModel)new PartialPackageExportListViewModel(package));
-        var packageSelectionDialog = new PackageSelectionDialog(
-            "패키지 일부 내보내기",
-            "내보낼 패키지를 선택하세요.",
-            "내보내기",
-            exportItems)
+        var packageSelectionDialog = new PackageSelectionDialog("패키지 일부 내보내기", "내보낼 패키지를 선택하세요.", "내보내기", exportItems)
         {
             XamlRoot = XamlRoot,
         };
@@ -317,15 +299,17 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         }
         finally
         {
-            try { if (Directory.Exists(temporaryDirectory)) Directory.Delete(temporaryDirectory, recursive: true); }
+            try
+            {
+                if (Directory.Exists(temporaryDirectory))
+                {
+                    Directory.Delete(temporaryDirectory, recursive: true);
+                }
+            }
             catch { /* Temp cleanup failure is non-critical */ }
         }
 
-        var packageSelectionDialog = new PackageSelectionDialog(
-            "패키지 일부 불러오기",
-            "불러올 패키지를 선택하세요.",
-            "불러오기",
-            importItems)
+        var packageSelectionDialog = new PackageSelectionDialog("패키지 일부 불러오기", "불러올 패키지를 선택하세요.", "불러오기", importItems)
         {
             XamlRoot = XamlRoot,
         };
@@ -347,13 +331,7 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         {
             ManageWindow.ShowLoading("선택한 패키지를 불러오는 중...");
             var progress = CreatePackageArchiveProgress();
-            await Task.Run(() => ContentsManager.ImportAsync(
-                file.Path,
-                replaceAll: false,
-                importFavorites: importFavorites.Value,
-                importTags: importTags.Value,
-                selectedPackageKeys: selectedPackageKeys,
-                progress: progress));
+            await Task.Run(() => ContentsManager.ImportAsync(file.Path, replaceAll: false, importFavorites: importFavorites.Value, importTags: importTags.Value, selectedPackageKeys: selectedPackageKeys, progress: progress));
         }
         catch (Exception exception)
         {
@@ -368,8 +346,7 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         await this.ShowDialogAsync("불러오기 완료", CreatePackageImportCompletionMessage(animatedPngToWebpPackageConversionResult, isPartialImport: true));
     }
 
-    private async void OnSynchronizeArcaconSubscriptionsButtonClicked(object sender, RoutedEventArgs e)
-        => await StartArcaconSubscriptionSynchronizationAsync();
+    private async void OnSynchronizeArcaconSubscriptionsButtonClicked(object sender, RoutedEventArgs e) => await StartArcaconSubscriptionSynchronizationAsync();
 
     private async Task StartArcaconSubscriptionSynchronizationAsync(bool? includeInactiveArcacons = null)
     {
@@ -399,12 +376,7 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
             catch (Exception exception) when (exception is ArcaconLoginException or InvalidOperationException)
             {
                 ManageWindow.HideLoading();
-                await ArcaconSessionHelper.PromptArcaconLoginPageNavigationAsync(
-                    this,
-                    typeof(SettingsPage),
-                    new SettingsPageNavigationArguments(
-                        StartArcaconSubscriptionSynchronization: true,
-                        IncludeInactiveArcacons: includeInactiveArcacons));
+                await ArcaconSessionHelper.PromptArcaconLoginPageNavigationAsync(this, typeof(SettingsPage), new SettingsPageNavigationArguments(StartArcaconSubscriptionSynchronization: true, IncludeInactiveArcacons: includeInactiveArcacons));
                 return;
             }
             catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
@@ -420,10 +392,7 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
                 return;
             }
         }
-        finally
-        {
-            _isArcaconSubscriptionSynchronizationRunning = false;
-        }
+        finally { _isArcaconSubscriptionSynchronizationRunning = false; }
     }
 
     private void OnHotkeyToggleSwitchToggled(object sender, RoutedEventArgs e)
@@ -464,11 +433,7 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         var file = await openPicker.PickSingleFileAsync();
         if (file is null) return;
 
-        var modeResult = await this.ShowDialogAsync(
-            "불러오기 모드 선택",
-            "기존 설정을 모두 삭제하고 불러올까요?\n'대체'를 누르면 기존 설정을 대체합니다.\n'병합'을 누르면 기존 설정에 병합합니다.",
-            primaryButtonText: "대체",
-            secondaryButtonText: "병합");
+        var modeResult = await this.ShowDialogAsync("불러오기 모드 선택", "기존 설정을 모두 삭제하고 불러올까요?\n'대체'를 누르면 기존 설정을 대체합니다.\n'병합'을 누르면 기존 설정에 병합합니다.", primaryButtonText: "대체", secondaryButtonText: "병합");
 
         if (modeResult == ContentDialogResult.None) return;
 
@@ -506,18 +471,13 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         catch (Exception exception) { await this.ShowDialogAsync("로그 다운로드 실패", exception.Message); }
     }
 
-    private void UpdateAnimatedPngToWebpConversionControls()
-        => ConvertAnimatedPngToWebpButton.IsEnabled = SettingsManager.UseAnimatedPngWebpConversionEnabled;
+    private void UpdateAnimatedPngToWebpConversionControls() => ConvertAnimatedPngToWebpButton.IsEnabled = SettingsManager.UseAnimatedPngWebpConversionEnabled;
 
     private async Task<bool> EnsureFFmpegBinaryAvailableForAnimatedPngToWebpConversionAsync()
     {
         if (FFmpegBinaryHelper.IsFFmpegBinaryAvailable()) return true;
 
-        var dialogResult = await this.ShowDialogAsync(
-            "변환 도구 다운로드",
-            "움직이는 PNG를 용량이 더 작은 WebP로 바꾸려면 변환 도구를 한 번 내려받아야 합니다.\n처음 한 번만 준비하면 이후에는 바로 사용할 수 있습니다.",
-            primaryButtonText: "다운로드",
-            secondaryButtonText: "취소");
+        var dialogResult = await this.ShowDialogAsync("변환 도구 다운로드", "움직이는 PNG를 용량이 더 작은 WebP로 바꾸려면 변환 도구를 한 번 내려받아야 합니다.\n처음 한 번만 준비하면 이후에는 바로 사용할 수 있습니다.", primaryButtonText: "다운로드", secondaryButtonText: "취소");
         if (dialogResult != ContentDialogResult.Primary) return false;
 
         try
@@ -534,16 +494,13 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         catch (Exception exception)
         {
             App.LogException("FFmpegBinaryDownload", exception);
-            await this.ShowDialogAsync(
-                "변환 도구 다운로드 실패",
-                "변환 도구를 준비하지 못했습니다.\n인터넷 연결을 확인한 뒤 다시 시도해 주세요.");
+            await this.ShowDialogAsync("변환 도구 다운로드 실패", "변환 도구를 준비하지 못했습니다.\n인터넷 연결을 확인한 뒤 다시 시도해 주세요.");
             return false;
         }
         finally { ManageWindow.HideLoading(); }
     }
 
-    private async Task<AnimatedPngToWebpPackageConversionResult> RunAutomaticAnimatedPngToWebpConversionAsync(
-        IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> selectedPackageKeys = null)
+    private async Task<AnimatedPngToWebpPackageConversionResult> RunAutomaticAnimatedPngToWebpConversionAsync(IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> selectedPackageKeys = null)
     {
         if (!SettingsManager.UseAnimatedPngWebpConversionEnabled) return null;
         if (!await EnsureFFmpegBinaryAvailableForAnimatedPngToWebpConversionAsync()) return null;
@@ -551,15 +508,12 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         return await RunAnimatedPngToWebpConversionAsync(selectedPackageKeys);
     }
 
-    private async Task<AnimatedPngToWebpPackageConversionResult> RunAnimatedPngToWebpConversionAsync(
-        IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> selectedPackageKeys = null,
-        bool showCompletionDialog = false)
+    private async Task<AnimatedPngToWebpPackageConversionResult> RunAnimatedPngToWebpConversionAsync(IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> selectedPackageKeys = null, bool showCompletionDialog = false)
     {
         try
         {
             ManageWindow.ShowLoading("움짤 PNG를 검색하는 중...");
-            var progress = new ActionProgress<AnimatedPngToWebpPackageConversionProgress>(conversionProgress =>
-                ManageWindow.ShowLoading(CreateAnimatedPngToWebpProgressMessage(conversionProgress), conversionProgress.ProgressPercentage));
+            var progress = new ActionProgress<AnimatedPngToWebpPackageConversionProgress>(conversionProgress => ManageWindow.ShowLoading(CreateAnimatedPngToWebpProgressMessage(conversionProgress), conversionProgress.ProgressPercentage));
             var conversionResult = await Task.Run(async () => await ContentsManager.ConvertAnimatedPngStickersToWebpAsync(selectedPackageKeys, progress));
 
             if (showCompletionDialog) await this.ShowDialogAsync("WebP 변환 완료", CreateAnimatedPngToWebpCompletionMessage(conversionResult));
@@ -569,17 +523,13 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         catch (Exception exception)
         {
             App.LogException("AnimatedPngToWebpConversion", exception);
-            await this.ShowDialogAsync(
-                "WebP 변환 실패",
-                "움직이는 PNG를 WebP로 바꾸는 중 문제가 발생했습니다.\n일부 파일이 사용 중이거나 손상되었을 수 있습니다.");
+            await this.ShowDialogAsync("WebP 변환 실패", "움직이는 PNG를 WebP로 바꾸는 중 문제가 발생했습니다.\n일부 파일이 사용 중이거나 손상되었을 수 있습니다.");
             return null;
         }
         finally { ManageWindow.HideLoading(); }
     }
 
-    private static ActionProgress<PackageArchiveProgress> CreatePackageArchiveProgress()
-        => new(packageArchiveProgress =>
-            ManageWindow.ShowLoading(CreatePackageArchiveProgressMessage(packageArchiveProgress), packageArchiveProgress.ProgressPercentage));
+    private static ActionProgress<PackageArchiveProgress> CreatePackageArchiveProgress() => new(packageArchiveProgress => ManageWindow.ShowLoading(CreatePackageArchiveProgressMessage(packageArchiveProgress), packageArchiveProgress.ProgressPercentage));
 
     private static string CreatePackageArchiveProgressMessage(PackageArchiveProgress progress)
     {
@@ -600,12 +550,8 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
     private static string CreatePackageArchiveProgressDetailText(PackageArchiveProgress progress)
     {
         var progressCountText = CreatePackageArchiveProgressCountText(progress);
-        var currentFilePathText = string.IsNullOrWhiteSpace(progress.CurrentRelativePath)
-            ? string.Empty
-            : $": {progress.CurrentRelativePath}";
-        var currentFileByteCountText = progress.CurrentFileTotalByteCount > 0
-            ? $" ({FormatByteCount(progress.CurrentFileCompletedByteCount)} / {FormatByteCount(progress.CurrentFileTotalByteCount)})"
-            : string.Empty;
+        var currentFilePathText = string.IsNullOrWhiteSpace(progress.CurrentRelativePath) ? string.Empty : $": {progress.CurrentRelativePath}";
+        var currentFileByteCountText = progress.CurrentFileTotalByteCount > 0 ? $" ({FormatByteCount(progress.CurrentFileCompletedByteCount)} / {FormatByteCount(progress.CurrentFileTotalByteCount)})" : string.Empty;
 
         if (string.IsNullOrWhiteSpace(progressCountText) && string.IsNullOrWhiteSpace(currentFilePathText)) return string.Empty;
 
@@ -616,17 +562,13 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
     {
         if (progress.TotalFileCount <= 0) return string.Empty;
 
-        var currentFileCount = string.IsNullOrWhiteSpace(progress.CurrentRelativePath)
-            ? progress.CompletedFileCount
-            : Math.Min(progress.CompletedFileCount + 1, progress.TotalFileCount);
+        var currentFileCount = string.IsNullOrWhiteSpace(progress.CurrentRelativePath) ? progress.CompletedFileCount : Math.Min(progress.CompletedFileCount + 1, progress.TotalFileCount);
         return $"{currentFileCount}/{progress.TotalFileCount}";
     }
 
     private static string CreateFFmpegBinaryProgressMessage(FFmpegBinaryProgress progress)
     {
-        var byteCountText = progress.TotalByteCount.HasValue
-            ? $"{FormatByteCount(progress.CompletedByteCount)} / {FormatByteCount(progress.TotalByteCount.Value)}"
-            : FormatByteCount(progress.CompletedByteCount);
+        var byteCountText = progress.TotalByteCount.HasValue ? $"{FormatByteCount(progress.CompletedByteCount)} / {FormatByteCount(progress.TotalByteCount.Value)}" : FormatByteCount(progress.CompletedByteCount);
 
         return progress.Stage switch
         {
@@ -640,9 +582,7 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
     private static string CreateAnimatedPngToWebpProgressMessage(AnimatedPngToWebpPackageConversionProgress progress)
     {
         var progressCountText = progress.TotalCount > 0 ? $"{progress.CompletedCount}/{progress.TotalCount}" : string.Empty;
-        var currentTargetText = string.IsNullOrWhiteSpace(progress.PackageTitle)
-            ? string.Empty
-            : $" - {progress.PackageTitle}";
+        var currentTargetText = string.IsNullOrWhiteSpace(progress.PackageTitle) ? string.Empty : $" - {progress.PackageTitle}";
 
         return progress.Stage switch
         {
@@ -661,13 +601,9 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         return $"변환됨: {conversionResult.ConvertedCount}개\n이미 변환됨: {conversionResult.AlreadyConvertedCount}개\n변환 대상 아님: {conversionResult.NotTargetCount}개\n실패: {conversionResult.FailedCount}개";
     }
 
-    private static string CreatePackageImportCompletionMessage(
-        AnimatedPngToWebpPackageConversionResult conversionResult,
-        bool isPartialImport = false)
+    private static string CreatePackageImportCompletionMessage(AnimatedPngToWebpPackageConversionResult conversionResult, bool isPartialImport = false)
     {
-        var baseMessage = isPartialImport
-            ? "선택한 패키지를 성공적으로 불러왔습니다."
-            : "패키지를 성공적으로 불러왔습니다.";
+        var baseMessage = isPartialImport ? "선택한 패키지를 성공적으로 불러왔습니다." : "패키지를 성공적으로 불러왔습니다.";
         if (conversionResult is null) return baseMessage;
 
         return $"{baseMessage}\n\nWebP 변환 결과\n{CreateAnimatedPngToWebpCompletionMessage(conversionResult)}";
@@ -678,9 +614,7 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         const double kiloByte = 1024d;
         const double megaByte = kiloByte * 1024d;
 
-        return byteCount >= megaByte
-            ? $"{byteCount / megaByte:0.0}MB"
-            : $"{byteCount / kiloByte:0.0}KB";
+        return byteCount >= megaByte ? $"{byteCount / megaByte:0.0}MB" : $"{byteCount / kiloByte:0.0}KB";
     }
 
     private void UpdateHotkeyVisibility()
@@ -729,11 +663,7 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
 
             var virtualKey = arguments.Key;
 
-            if (virtualKey is VirtualKey.Control or VirtualKey.LeftControl or VirtualKey.RightControl
-                or VirtualKey.Shift or VirtualKey.LeftShift or VirtualKey.RightShift
-                or VirtualKey.Menu or VirtualKey.LeftMenu or VirtualKey.RightMenu
-                or VirtualKey.LeftWindows or VirtualKey.RightWindows)
-                return;
+            if (virtualKey is VirtualKey.Control or VirtualKey.LeftControl or VirtualKey.RightControl or VirtualKey.Shift or VirtualKey.LeftShift or VirtualKey.RightShift or VirtualKey.Menu or VirtualKey.LeftMenu or VirtualKey.RightMenu or VirtualKey.LeftWindows or VirtualKey.RightWindows) return;
 
             capturedModifiers = 0;
             if (IsVirtualKeyDown(VirtualKey.Control)) capturedModifiers |= HotkeyManager.ModifierControl;
@@ -758,8 +688,7 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         if (SettingsManager.HotkeyEnabled) App.HotkeyManager.UpdateHotkey(capturedModifiers, capturedKey);
     }
 
-    private static bool IsVirtualKeyDown(VirtualKey key) =>
-        InputKeyboardSource.GetKeyStateForCurrentThread(key).HasFlag(CoreVirtualKeyStates.Down);
+    private static bool IsVirtualKeyDown(VirtualKey key) => InputKeyboardSource.GetKeyStateForCurrentThread(key).HasFlag(CoreVirtualKeyStates.Down);
 
     private static void PopulateHotkeyKeyVisuals(Panel panel, uint modifiers, uint key)
     {
@@ -768,16 +697,7 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
 
         void AddKeyVisual(string name)
         {
-            if (!isFirst)
-            {
-                panel.Children.Add(new TextBlock
-                {
-                    Text = "+",
-                    VerticalAlignment = VerticalAlignment.Center,
-                    Opacity = 0.6,
-                    Margin = new Thickness(2, 0, 2, 0),
-                });
-            }
+            if (!isFirst) panel.Children.Add(new TextBlock { Text = "+", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, Margin = new Thickness(2, 0, 2, 0), });
             panel.Children.Add(new KeyVisual
             {
                 Content = name,
@@ -821,16 +741,11 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         _ => $"0x{virtualKey:X2}",
     };
 
-    private async Task<bool?> AskExportFavoritesAsync(
-        IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> selectedPackageKeys = null)
+    private async Task<bool?> AskExportFavoritesAsync(IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> selectedPackageKeys = null)
     {
         if (!ContentsManager.HasFavorites(selectedPackageKeys)) return false;
 
-        var result = await this.ShowDialogAsync(
-            "즐겨찾기 내보내기",
-            "즐겨찾기 정보가 존재합니다.\n즐겨찾기도 함께 내보내시겠습니까?",
-            primaryButtonText: "예",
-            secondaryButtonText: "아니오");
+        var result = await this.ShowDialogAsync("즐겨찾기 내보내기", "즐겨찾기 정보가 존재합니다.\n즐겨찾기도 함께 내보내시겠습니까?", primaryButtonText: "예", secondaryButtonText: "아니오");
 
         if (result == ContentDialogResult.None) return null;
 
@@ -840,40 +755,24 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
     private async Task<bool?> AskImportFavoritesAsync(string filePath, IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> selectedPackageKeys = null)
     {
         bool hasFavorites;
-        try
-        {
-            hasFavorites = selectedPackageKeys is null
-                ? await ContentsManager.HasFavoritesInImportFileAsync(filePath)
-                : await ContentsManager.HasFavoritesForPackagesInImportFileAsync(filePath, selectedPackageKeys);
-        }
+        try { hasFavorites = selectedPackageKeys is null ? await ContentsManager.HasFavoritesInImportFileAsync(filePath) : await ContentsManager.HasFavoritesForPackagesInImportFileAsync(filePath, selectedPackageKeys); }
         catch { return false; }
 
         if (!hasFavorites) return false;
 
-        var message = selectedPackageKeys is null
-            ? "불러올 데이터에 즐겨찾기가 포함되어 있습니다.\n즐겨찾기도 함께 불러오시겠습니까?"
-            : "선택한 패키지에 즐겨찾기가 포함되어 있습니다.\n즐겨찾기도 함께 불러오시겠습니까?";
-        var result = await this.ShowDialogAsync(
-            "즐겨찾기 불러오기",
-            message,
-            primaryButtonText: "예",
-            secondaryButtonText: "아니오");
+        var message = selectedPackageKeys is null ? "불러올 데이터에 즐겨찾기가 포함되어 있습니다.\n즐겨찾기도 함께 불러오시겠습니까?" : "선택한 패키지에 즐겨찾기가 포함되어 있습니다.\n즐겨찾기도 함께 불러오시겠습니까?";
+        var result = await this.ShowDialogAsync("즐겨찾기 불러오기", message, primaryButtonText: "예", secondaryButtonText: "아니오");
 
         if (result == ContentDialogResult.None) return null;
 
         return result == ContentDialogResult.Primary;
     }
 
-    private async Task<bool?> AskExportTagsAsync(
-        IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> selectedPackageKeys = null)
+    private async Task<bool?> AskExportTagsAsync(IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> selectedPackageKeys = null)
     {
         if (!ContentsManager.HasStickerTags(selectedPackageKeys)) return true;
 
-        var result = await this.ShowDialogAsync(
-            "스티커 태그 내보내기",
-            "스티커에 지정된 태그가 존재합니다.\n태그도 함께 내보내시겠습니까?",
-            primaryButtonText: "예",
-            secondaryButtonText: "아니오");
+        var result = await this.ShowDialogAsync("스티커 태그 내보내기", "스티커에 지정된 태그가 존재합니다.\n태그도 함께 내보내시겠습니까?", primaryButtonText: "예", secondaryButtonText: "아니오");
 
         if (result == ContentDialogResult.None) return null;
 
@@ -883,24 +782,13 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
     private async Task<bool?> AskImportTagsAsync(string filePath, IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> selectedPackageKeys = null)
     {
         bool hasTags;
-        try
-        {
-            hasTags = selectedPackageKeys is null
-                ? await ContentsManager.HasStickerTagsInImportFileAsync(filePath)
-                : await ContentsManager.HasStickerTagsForPackagesInImportFileAsync(filePath, selectedPackageKeys);
-        }
+        try { hasTags = selectedPackageKeys is null ? await ContentsManager.HasStickerTagsInImportFileAsync(filePath) : await ContentsManager.HasStickerTagsForPackagesInImportFileAsync(filePath, selectedPackageKeys); }
         catch { return true; }
 
         if (!hasTags) return true;
 
-        var message = selectedPackageKeys is null
-            ? "불러올 데이터에 스티커 태그가 포함되어 있습니다.\n태그도 함께 불러오시겠습니까?"
-            : "선택한 패키지에 스티커 태그가 포함되어 있습니다.\n태그도 함께 불러오시겠습니까?";
-        var result = await this.ShowDialogAsync(
-            "스티커 태그 불러오기",
-            message,
-            primaryButtonText: "예",
-            secondaryButtonText: "아니오");
+        var message = selectedPackageKeys is null ? "불러올 데이터에 스티커 태그가 포함되어 있습니다.\n태그도 함께 불러오시겠습니까?" : "선택한 패키지에 스티커 태그가 포함되어 있습니다.\n태그도 함께 불러오시겠습니까?";
+        var result = await this.ShowDialogAsync("스티커 태그 불러오기", message, primaryButtonText: "예", secondaryButtonText: "아니오");
 
         if (result == ContentDialogResult.None) return null;
 
@@ -911,12 +799,7 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
     {
         if (!App.ArcaconClient.IsLoggedIn)
         {
-            await ArcaconSessionHelper.PromptArcaconLoginPageNavigationAsync(
-                this,
-                typeof(SettingsPage),
-                new SettingsPageNavigationArguments(
-                    StartArcaconSubscriptionSynchronization: true,
-                    IncludeInactiveArcacons: includeInactiveArcacons));
+            await ArcaconSessionHelper.PromptArcaconLoginPageNavigationAsync(this, typeof(SettingsPage), new SettingsPageNavigationArguments(StartArcaconSubscriptionSynchronization: true, IncludeInactiveArcacons: includeInactiveArcacons));
             return false;
         }
 
@@ -930,13 +813,7 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         catch (Exception exception) when (exception is ArcaconLoginException or InvalidOperationException)
         {
             ManageWindow.HideLoading();
-            await ArcaconSessionHelper.PromptArcaconLoginPageNavigationAsync(
-                this,
-                typeof(SettingsPage),
-                new SettingsPageNavigationArguments(
-                    StartArcaconSubscriptionSynchronization: true,
-                    IncludeInactiveArcacons: includeInactiveArcacons),
-                isSessionExpired: true);
+            await ArcaconSessionHelper.PromptArcaconLoginPageNavigationAsync(this, typeof(SettingsPage), new SettingsPageNavigationArguments(StartArcaconSubscriptionSynchronization: true, IncludeInactiveArcacons: includeInactiveArcacons), isSessionExpired: true);
             return false;
         }
         catch
@@ -948,11 +825,7 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
 
     private async Task<bool?> AskIncludeInactiveArcaconsAsync()
     {
-        var contentDialogResult = await this.ShowDialogAsync(
-            "미사용 아카콘 포함",
-            "현재 사용하지 않는 아카콘도 함께 동기화할까요?",
-            primaryButtonText: "예",
-            secondaryButtonText: "아니오");
+        var contentDialogResult = await this.ShowDialogAsync("미사용 아카콘 포함", "현재 사용하지 않는 아카콘도 함께 동기화할까요?", primaryButtonText: "예", secondaryButtonText: "아니오");
         if (contentDialogResult == ContentDialogResult.None) return null;
 
         return contentDialogResult == ContentDialogResult.Primary;
@@ -996,12 +869,7 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         return await savePicker.PickSaveFileAsync();
     }
 
-    private async Task ExportPackagesAsync(
-        string destinationFilePath,
-        string loadingMessage,
-        IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> selectedPackageKeys = null,
-        bool exportFavorites = true,
-        bool exportTags = true)
+    private async Task ExportPackagesAsync(string destinationFilePath, string loadingMessage, IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> selectedPackageKeys = null, bool exportFavorites = true, bool exportTags = true)
     {
         try
         {

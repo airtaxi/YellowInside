@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
@@ -8,32 +8,16 @@ namespace YellowInside.Controls;
 public sealed partial class CardControl : UserControl
 {
     public static readonly DependencyProperty ThumbnailSourceProperty =
-        DependencyProperty.Register(
-            nameof(ThumbnailSource),
-            typeof(ImageSource),
-            typeof(CardControl),
-            new PropertyMetadata(null));
+        DependencyProperty.Register(nameof(ThumbnailSource), typeof(ImageSource), typeof(CardControl), new PropertyMetadata(null));
 
     public static readonly DependencyProperty TitleProperty =
-        DependencyProperty.Register(
-            nameof(Title),
-            typeof(string),
-            typeof(CardControl),
-            new PropertyMetadata(string.Empty));
+        DependencyProperty.Register(nameof(Title), typeof(string), typeof(CardControl), new PropertyMetadata(string.Empty));
 
     public static readonly DependencyProperty DescriptionProperty =
-        DependencyProperty.Register(
-            nameof(Description),
-            typeof(string),
-            typeof(CardControl),
-            new PropertyMetadata(string.Empty));
+        DependencyProperty.Register(nameof(Description), typeof(string), typeof(CardControl), new PropertyMetadata(string.Empty));
 
     public static readonly DependencyProperty TagsProperty =
-        DependencyProperty.Register(
-            nameof(Tags),
-            typeof(ObservableCollection<string>),
-            typeof(CardControl),
-            new PropertyMetadata(null));
+        DependencyProperty.Register(nameof(Tags), typeof(ObservableCollection<string>), typeof(CardControl), new PropertyMetadata(null));
 
     public CardControl()
     {

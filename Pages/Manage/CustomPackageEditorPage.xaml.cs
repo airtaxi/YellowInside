@@ -101,8 +101,7 @@ public sealed partial class CustomPackageEditorPage : Page
 
         foreach (var sticker in package.Stickers.OrderBy(sticker => sticker.SortNumber))
         {
-            var stickerFilePath = ContentsManager.GetStickerImagePath(
-                ContentSource.Local, _packageIdentifier, package.LocalDirectoryName, sticker.FileName);
+            var stickerFilePath = ContentsManager.GetStickerImagePath(ContentSource.Local, _packageIdentifier, package.LocalDirectoryName, sticker.FileName);
 
             BitmapImage thumbnail = null;
             if (File.Exists(stickerFilePath)) thumbnail = await LoadBitmapWithoutLockingAsync(stickerFilePath);
@@ -140,8 +139,7 @@ public sealed partial class CustomPackageEditorPage : Page
         return bitmapImage;
     }
 
-    private void UpdateSaveButtonState()
-        => SaveButton.IsEnabled = !string.IsNullOrWhiteSpace(TitleTextBox.Text) && (_hasExistingMainImage || !string.IsNullOrEmpty(_mainImageFilePath));
+    private void UpdateSaveButtonState() => SaveButton.IsEnabled = !string.IsNullOrWhiteSpace(TitleTextBox.Text) && (_hasExistingMainImage || !string.IsNullOrEmpty(_mainImageFilePath));
 
     private void UpdateStickerCountText()
     {
@@ -149,8 +147,7 @@ public sealed partial class CustomPackageEditorPage : Page
         NoStickersTextBlock.Visibility = StickerFiles.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
-    private void OnTitleTextBoxTextChanged(object sender, TextChangedEventArgs e)
-        => UpdateSaveButtonState();
+    private void OnTitleTextBoxTextChanged(object sender, TextChangedEventArgs e) => UpdateSaveButtonState();
 
     private async void OnSelectMainImageButtonClicked(object sender, RoutedEventArgs e)
     {
@@ -246,27 +243,13 @@ public sealed partial class CustomPackageEditorPage : Page
                     .Select(item => (item.SourceFilePath, item.IsExisting, item.OriginalStickerPath, item.OriginalFileName))
                     .ToList();
 
-                await ContentsManager.UpdateCustomPackageAsync(
-                    _packageIdentifier,
-                    TitleTextBox.Text.Trim(),
-                    DescriptionTextBox.Text.Trim(),
-                    _mainImageFilePath,
-                    SellerNameTextBox.Text.Trim(),
-                    [.. Tags],
-                    stickerEntries);
+                await ContentsManager.UpdateCustomPackageAsync(_packageIdentifier, TitleTextBox.Text.Trim(), DescriptionTextBox.Text.Trim(), _mainImageFilePath, SellerNameTextBox.Text.Trim(), [..Tags], stickerEntries);
             }
             else
             {
                 ManageWindow.ShowLoading("사용자 지정콘 추가 중...");
                 var stickerSourcePaths = StickerFiles.Select(item => item.SourceFilePath).ToList();
-                savedPackageIdentifier = await ContentsManager.AddCustomPackageAsync(
-                    TitleTextBox.Text.Trim(),
-                    DescriptionTextBox.Text.Trim(),
-                    _mainImageFilePath,
-                    SellerNameTextBox.Text.Trim(),
-                    RegistrationDateTextBox.Text,
-                    [.. Tags],
-                    stickerSourcePaths);
+                savedPackageIdentifier = await ContentsManager.AddCustomPackageAsync(TitleTextBox.Text.Trim(), DescriptionTextBox.Text.Trim(), _mainImageFilePath, SellerNameTextBox.Text.Trim(), RegistrationDateTextBox.Text, [..Tags], stickerSourcePaths);
             }
         }
         catch (Exception exception)
@@ -290,16 +273,13 @@ public sealed partial class CustomPackageEditorPage : Page
         try
         {
             ManageWindow.ShowLoading("움짤 PNG를 검색하는 중...");
-            var progress = new ActionProgress<AnimatedPngToWebpPackageConversionProgress>(conversionProgress =>
-                ManageWindow.ShowLoading(CreateAnimatedPngToWebpProgressMessage(conversionProgress), conversionProgress.ProgressPercentage));
+            var progress = new ActionProgress<AnimatedPngToWebpPackageConversionProgress>(conversionProgress => ManageWindow.ShowLoading(CreateAnimatedPngToWebpProgressMessage(conversionProgress), conversionProgress.ProgressPercentage));
             await Task.Run(async () => await ContentsManager.ConvertAnimatedPngStickersToWebpAsync([(ContentSource.Local, packageIdentifier)], progress));
         }
         catch (Exception exception)
         {
             App.LogException("AnimatedPngToWebpConversion", exception);
-            await this.ShowDialogAsync(
-                "WebP 변환 실패",
-                "움직이는 PNG를 WebP로 바꾸는 중 문제가 발생했습니다.\n저장된 원본 PNG는 그대로 사용할 수 있습니다.");
+            await this.ShowDialogAsync("WebP 변환 실패", "움직이는 PNG를 WebP로 바꾸는 중 문제가 발생했습니다.\n저장된 원본 PNG는 그대로 사용할 수 있습니다.");
         }
         finally { ManageWindow.HideLoading(); }
     }

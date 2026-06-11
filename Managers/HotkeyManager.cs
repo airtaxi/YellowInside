@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Runtime.InteropServices;
 using System.Threading;
 
@@ -102,15 +102,13 @@ public sealed partial class HotkeyManager : IDisposable
     {
         _modifiers = modifiers;
         _virtualKey = virtualKey;
-        if (_running && _threadId != 0)
-            PostThreadMessage(_threadId, WM_UPDATE_HOTKEY, 0, 0);
+        if (_running && _threadId != 0) PostThreadMessage(_threadId, WM_UPDATE_HOTKEY, 0, 0);
     }
 
     public void Stop()
     {
         if (!_running) return;
-        if (_threadId != 0)
-            PostThreadMessage(_threadId, 0x0012, 0, 0); // WM_QUIT
+        if (_threadId != 0) PostThreadMessage(_threadId, 0x0012, 0, 0); // WM_QUIT
         _thread?.Join(TimeSpan.FromSeconds(2));
         _running = false;
         _threadId = 0;

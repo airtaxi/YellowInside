@@ -12,7 +12,8 @@ public static class AnimatedPngToWebpConversionManager
     public const uint DefaultWebpQuality = 80;
 
     private const string AnimatedPngFormatPrefix = "apng:";
-    private static ReadOnlySpan<byte> PngSignature => [137, 80, 78, 71, 13, 10, 26, 10];
+    private static ReadOnlySpan<byte> PngSignature =>
+    [137, 80, 78, 71, 13, 10, 26, 10];
     private static ReadOnlySpan<byte> AnimatedPngControlChunkType => "acTL"u8;
     private static ReadOnlySpan<byte> ImageDataChunkType => "IDAT"u8;
 
@@ -75,7 +76,13 @@ public static class AnimatedPngToWebpConversionManager
         }
         finally
         {
-            try { if (File.Exists(temporaryDestinationFilePath)) File.Delete(temporaryDestinationFilePath); }
+            try
+            {
+                if (File.Exists(temporaryDestinationFilePath))
+                {
+                    File.Delete(temporaryDestinationFilePath);
+                }
+            }
             catch { }
         }
     }

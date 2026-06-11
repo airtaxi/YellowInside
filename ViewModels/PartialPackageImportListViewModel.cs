@@ -1,4 +1,4 @@
-﻿using Microsoft.UI.Xaml.Media.Imaging;
+using Microsoft.UI.Xaml.Media.Imaging;
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -20,11 +20,7 @@ public sealed class PartialPackageImportListViewModel : PackageSelectionListView
     {
         if (string.IsNullOrWhiteSpace(stickerPackage.MainImageFileName)) return null;
 
-        var mainImagePath = Path.Combine(
-            temporaryDirectory,
-            stickerPackage.Source.ToString(),
-            stickerPackage.PackageIdentifier,
-            stickerPackage.MainImageFileName);
+        var mainImagePath = Path.Combine(temporaryDirectory, stickerPackage.Source.ToString(), stickerPackage.PackageIdentifier, stickerPackage.MainImageFileName);
         if (!File.Exists(mainImagePath)) return null;
 
         var bitmapImage = new BitmapImage { AutoPlay = SettingsManager.GifPlaybackEnabled };

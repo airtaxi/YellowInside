@@ -1,4 +1,4 @@
-﻿using ABI.System;
+using ABI.System;
 using Arcacon.NET.Models;
 using AngleSharp.Dom;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -99,40 +99,22 @@ public partial class DetailViewModel : ObservableObject
         {
             var downloadedPackage = ContentsManager.GetDownloadedPackage(source, packageIdentifier);
 
-            if (downloadedPackage is not null)
-            {
-                await InitializeFromLocalPackageAsync(source, packageIdentifier, downloadedPackage);
-            }
-            else
-            {
-                await InitializeFromRemoteDcconAsync(packageIdentifier);
-            }
+            if (downloadedPackage is not null) await InitializeFromLocalPackageAsync(source, packageIdentifier, downloadedPackage);
+            else await InitializeFromRemoteDcconAsync(packageIdentifier);
         }
         else if (source == ContentSource.Arcacon)
         {
             var downloadedPackage = ContentsManager.GetDownloadedPackage(source, packageIdentifier);
 
-            if (downloadedPackage is not null)
-            {
-                await InitializeFromLocalPackageAsync(source, packageIdentifier, downloadedPackage);
-            }
-            else
-            {
-                await InitializeFromRemoteArcaconAsync(packageIdentifier);
-            }
+            if (downloadedPackage is not null) await InitializeFromLocalPackageAsync(source, packageIdentifier, downloadedPackage);
+            else await InitializeFromRemoteArcaconAsync(packageIdentifier);
         }
         else if (source == ContentSource.Inven)
         {
             var downloadedPackage = ContentsManager.GetDownloadedPackage(source, packageIdentifier);
 
-            if (downloadedPackage is not null)
-            {
-                await InitializeFromLocalPackageAsync(source, packageIdentifier, downloadedPackage);
-            }
-            else
-            {
-                await InitializeFromRemoteInvenAsync(packageIdentifier);
-            }
+            if (downloadedPackage is not null) await InitializeFromLocalPackageAsync(source, packageIdentifier, downloadedPackage);
+            else await InitializeFromRemoteInvenAsync(packageIdentifier);
         }
         else if (source == ContentSource.Local)
         {
@@ -190,23 +172,17 @@ public partial class DetailViewModel : ObservableObject
         SaleCount = detail.SaleCount == 0 ? "판매량 정보 없음" : $"{detail.SaleCount}회 판매됨";
 
         if (!string.IsNullOrWhiteSpace(detail.RegistrationDate) && DateTime.TryParse(detail.RegistrationDate, out var registrationDateTime)) RegisterationDate = registrationDateTime.ToString("yyyy년 MM월 dd일 등록");
-        else if (!string.IsNullOrWhiteSpace(detail.RegistrationDateShort) && DateTime.TryParse(detail.RegistrationDateShort, out var shortRegistrationDateTime))
-            RegisterationDate = shortRegistrationDateTime.ToString("yyyy년 MM월 dd일 등록");
-        else
-            RegisterationDate = detail.RegistrationDate;
+        else if (!string.IsNullOrWhiteSpace(detail.RegistrationDateShort) && DateTime.TryParse(detail.RegistrationDateShort, out var shortRegistrationDateTime)) RegisterationDate = shortRegistrationDateTime.ToString("yyyy년 MM월 dd일 등록");
+        else RegisterationDate = detail.RegistrationDate;
 
         var downloadedPackage = ContentsManager.GetDownloadedPackage(Source, packageIdentifier);
         if (downloadedPackage is not null && !string.IsNullOrEmpty(downloadedPackage.MainImageFileName))
         {
             var mainImagePath = ContentsManager.GetMainImagePath(Source, packageIdentifier, downloadedPackage.MainImageFileName);
             if (File.Exists(mainImagePath)) MainImageSource = new BitmapImage(new Uri(mainImagePath)) { AutoPlay = SettingsManager.GifPlaybackEnabled };
-            else
-                await DownloadMainImageSourceAsync();
+            else await DownloadMainImageSourceAsync();
         }
-        else
-        {
-            await DownloadMainImageSourceAsync();
-        }
+        else await DownloadMainImageSourceAsync();
 
         Stickers = [.. detail.Stickers.Select(sticker => new StickerViewModel(packageIdentifier, sticker))];
 
@@ -234,13 +210,9 @@ public partial class DetailViewModel : ObservableObject
         {
             var mainImagePath = ContentsManager.GetMainImagePath(Source, packageIdentifier, downloadedPackage.MainImageFileName);
             if (File.Exists(mainImagePath)) MainImageSource = new BitmapImage(new Uri(mainImagePath)) { AutoPlay = SettingsManager.GifPlaybackEnabled };
-            else
-                await DownloadMainImageSourceAsync();
+            else await DownloadMainImageSourceAsync();
         }
-        else
-        {
-            await DownloadMainImageSourceAsync();
-        }
+        else await DownloadMainImageSourceAsync();
 
         Stickers = [.. detail.Images.Select(sticker => new StickerViewModel(packageIdentifier, sticker))];
 
@@ -258,9 +230,14 @@ public partial class DetailViewModel : ObservableObject
 
         if (!string.IsNullOrEmpty(package.RegistrationDate))
         {
-            if (DateTime.TryParse(package.RegistrationDate, out var registrationDateTime)) RegisterationDate = registrationDateTime.ToString("yyyy년 MM월 dd일 등록");
+            if (DateTime.TryParse(package.RegistrationDate, out var registrationDateTime))
+            {
+                RegisterationDate = registrationDateTime.ToString("yyyy년 MM월 dd일 등록");
+            }
             else
+            {
                 RegisterationDate = package.RegistrationDate;
+            }
         }
 
         if (!string.IsNullOrEmpty(package.MainImageFileName))
@@ -300,11 +277,7 @@ public partial class DetailViewModel : ObservableObject
         ManageWindow.ShowLoading("새 스티커 받는 중...");
         try
         {
-            var synchronizedStickerCount = await ContentsManager.SynchronizeDownloadedPackageAsync(
-                Source,
-                PackageIdentifier,
-                new Progress<(int Completed, int Total)>(progress => ManageWindow.ShowLoading(
-                    $"새 스티커 받는 중... {progress.Completed}/{progress.Total}")));
+            var synchronizedStickerCount = await ContentsManager.SynchronizeDownloadedPackageAsync(Source, PackageIdentifier, new Progress<(int Completed, int Total)>(progress => ManageWindow.ShowLoading($"새 스티커 받는 중... {progress.Completed}/{progress.Total}")));
             if (synchronizedStickerCount > 0) await ConvertDownloadedPackageAnimatedPngToWebpAsync(dialogHostElement);
             return synchronizedStickerCount;
         }
@@ -397,16 +370,13 @@ public partial class DetailViewModel : ObservableObject
         try
         {
             ManageWindow.ShowLoading("움짤 PNG를 검색하는 중...");
-            var progress = new ActionProgress<AnimatedPngToWebpPackageConversionProgress>(conversionProgress =>
-                ManageWindow.ShowLoading(CreateAnimatedPngToWebpProgressMessage(conversionProgress), conversionProgress.ProgressPercentage));
+            var progress = new ActionProgress<AnimatedPngToWebpPackageConversionProgress>(conversionProgress => ManageWindow.ShowLoading(CreateAnimatedPngToWebpProgressMessage(conversionProgress), conversionProgress.ProgressPercentage));
             await Task.Run(async () => await ContentsManager.ConvertAnimatedPngStickersToWebpAsync([(Source, PackageIdentifier)], progress));
         }
         catch (System.Exception exception)
         {
             App.LogException("AnimatedPngToWebpConversion", exception);
-            await dialogHostElement.ShowDialogAsync(
-                "WebP 변환 실패",
-                "움직이는 PNG를 WebP로 바꾸는 중 문제가 발생했습니다.\n다운로드된 원본 파일은 그대로 사용할 수 있습니다.");
+            await dialogHostElement.ShowDialogAsync("WebP 변환 실패", "움직이는 PNG를 WebP로 바꾸는 중 문제가 발생했습니다.\n다운로드된 원본 파일은 그대로 사용할 수 있습니다.");
         }
         finally { ManageWindow.HideLoading(); }
     }
@@ -432,38 +402,23 @@ public partial class DetailViewModel : ObservableObject
     [RelayCommand]
     public async Task Subscribe()
     {
-        var dialogHostElement = ManageWindow.Instance.Content as UIElement
-            ?? throw new System.InvalidOperationException("관리 창 콘텐츠를 찾을 수 없습니다.");
+        var dialogHostElement = ManageWindow.Instance.Content as UIElement ?? throw new System.InvalidOperationException("관리 창 콘텐츠를 찾을 수 없습니다.");
 
         if (Source == ContentSource.Dccon)
         {
             ManageWindow.ShowLoading("다운로드중...");
-            try
-            {
-                await ContentsManager.DownloadDcconPackageAsync(
-                    int.Parse(PackageIdentifier, CultureInfo.InvariantCulture),
-                    new Progress<(int Completed, int Total)>(progress => ManageWindow.ShowLoading($"다운로드중... {progress.Completed}/{progress.Total}")));
-            }
+            try { await ContentsManager.DownloadDcconPackageAsync(int.Parse(PackageIdentifier, CultureInfo.InvariantCulture), new Progress<(int Completed, int Total)>(progress => ManageWindow.ShowLoading($"다운로드중... {progress.Completed}/{progress.Total}"))); }
             finally { ManageWindow.HideLoading(); }
 
             await ConvertDownloadedPackageAnimatedPngToWebpAsync(dialogHostElement);
         }
         else if (Source == ContentSource.Arcacon)
         {
-            var arcaconSession = await ArcaconSessionHelper.EnsureArcaconSessionAsync(
-                dialogHostElement,
-                (pageType, pageParameter) => ManageWindow.Navigate(pageType, pageParameter),
-                typeof(DetailPage),
-                (Source, PackageIdentifier));
+            var arcaconSession = await ArcaconSessionHelper.EnsureArcaconSessionAsync(dialogHostElement, (pageType, pageParameter) => ManageWindow.Navigate(pageType, pageParameter), typeof(DetailPage), (Source, PackageIdentifier));
             if (arcaconSession is null) return;
 
             ManageWindow.ShowLoading("다운로드중...");
-            try
-            {
-                await ContentsManager.DownloadArcaconPackageAsync(
-                    int.Parse(PackageIdentifier, CultureInfo.InvariantCulture),
-                    new Progress<(int Completed, int Total)>(progress => ManageWindow.ShowLoading($"다운로드중... {progress.Completed}/{progress.Total}")));
-            }
+            try { await ContentsManager.DownloadArcaconPackageAsync(int.Parse(PackageIdentifier, CultureInfo.InvariantCulture), new Progress<(int Completed, int Total)>(progress => ManageWindow.ShowLoading($"다운로드중... {progress.Completed}/{progress.Total}"))); }
             finally { ManageWindow.HideLoading(); }
 
             await ConvertDownloadedPackageAnimatedPngToWebpAsync(dialogHostElement);
@@ -471,12 +426,7 @@ public partial class DetailViewModel : ObservableObject
         else if (Source == ContentSource.Inven)
         {
             ManageWindow.ShowLoading("다운로드중...");
-            try
-            {
-                await ContentsManager.DownloadInvenStickerPackageAsync(
-                    int.Parse(PackageIdentifier, CultureInfo.InvariantCulture),
-                    new Progress<(int Completed, int Total)>(progress => ManageWindow.ShowLoading($"다운로드중... {progress.Completed}/{progress.Total}")));
-            }
+            try { await ContentsManager.DownloadInvenStickerPackageAsync(int.Parse(PackageIdentifier, CultureInfo.InvariantCulture), new Progress<(int Completed, int Total)>(progress => ManageWindow.ShowLoading($"다운로드중... {progress.Completed}/{progress.Total}"))); }
             finally { ManageWindow.HideLoading(); }
 
             await ConvertDownloadedPackageAnimatedPngToWebpAsync(dialogHostElement);
@@ -488,16 +438,11 @@ public partial class DetailViewModel : ObservableObject
     {
         if (!CanRefreshPackage) return;
 
-        var dialogHostElement = ManageWindow.Instance.Content as UIElement
-            ?? throw new System.InvalidOperationException("관리 창 콘텐츠를 찾을 수 없습니다.");
+        var dialogHostElement = ManageWindow.Instance.Content as UIElement ?? throw new System.InvalidOperationException("관리 창 콘텐츠를 찾을 수 없습니다.");
 
         if (Source == ContentSource.Arcacon)
         {
-            var arcaconSession = await ArcaconSessionHelper.EnsureArcaconSessionAsync(
-                dialogHostElement,
-                (pageType, pageParameter) => ManageWindow.Navigate(pageType, pageParameter),
-                typeof(DetailPage),
-                (Source, PackageIdentifier));
+            var arcaconSession = await ArcaconSessionHelper.EnsureArcaconSessionAsync(dialogHostElement, (pageType, pageParameter) => ManageWindow.Navigate(pageType, pageParameter), typeof(DetailPage), (Source, PackageIdentifier));
             if (arcaconSession is null) return;
 
             await RefreshArcaconSubscribedPackageAsync(dialogHostElement);
@@ -509,17 +454,11 @@ public partial class DetailViewModel : ObservableObject
 
         if (additionalStickerCount == 0)
         {
-            await dialogHostElement.ShowDialogAsync(
-                "새로고침",
-                "패키지에 새로 추가된 스티커가 없습니다.");
+            await dialogHostElement.ShowDialogAsync("새로고침", "패키지에 새로 추가된 스티커가 없습니다.");
             return;
         }
 
-        var dialogResult = await dialogHostElement.ShowDialogAsync(
-            "새 스티커 동기화",
-            $"{additionalStickerCount}개의 새 스티커가 있습니다.\n지금 동기화하시겠습니까?",
-            "동기화",
-            "나중에");
+        var dialogResult = await dialogHostElement.ShowDialogAsync("새 스티커 동기화", $"{additionalStickerCount}개의 새 스티커가 있습니다.\n지금 동기화하시겠습니까?", "동기화", "나중에");
         if (dialogResult != ContentDialogResult.Primary) return;
 
         var synchronizedStickerCount = await SynchronizeSubscribedPackageAsync(dialogHostElement);
@@ -527,16 +466,12 @@ public partial class DetailViewModel : ObservableObject
 
         if (synchronizedStickerCount == 0)
         {
-            await dialogHostElement.ShowDialogAsync(
-                "새로고침",
-                "패키지에 새로 추가된 스티커가 없습니다.");
+            await dialogHostElement.ShowDialogAsync("새로고침", "패키지에 새로 추가된 스티커가 없습니다.");
             return;
         }
 
         await InitializeAsync(Source, PackageIdentifier);
-        await dialogHostElement.ShowDialogAsync(
-            "동기화 완료",
-            $"{synchronizedStickerCount}개의 새 스티커를 동기화했습니다.");
+        await dialogHostElement.ShowDialogAsync("동기화 완료", $"{synchronizedStickerCount}개의 새 스티커를 동기화했습니다.");
     }
 
     [RelayCommand]

@@ -23,12 +23,10 @@ public sealed partial class DetailPage : Page
         var isDownloadedArcaconPackage = source == ContentSource.Arcacon && ContentsManager.IsPackageDownloaded(source, packageIdentifier);
         if (source == ContentSource.Arcacon && !isDownloadedArcaconPackage)
         {
-            if (await ArcaconSessionHelper.EnsureArcaconSessionAsync(
-                this,
-                (pageType, pageParameter) => ManageWindow.Navigate(pageType, pageParameter),
-                typeof(DetailPage),
-                (source, packageIdentifier)) is null)
+            if (await ArcaconSessionHelper.EnsureArcaconSessionAsync(this, (pageType, pageParameter) => ManageWindow.Navigate(pageType, pageParameter), typeof(DetailPage), (source, packageIdentifier)) is null)
+            {
                 return;
+            }
         }
 
         var viewModel = DataContext as DetailViewModel;

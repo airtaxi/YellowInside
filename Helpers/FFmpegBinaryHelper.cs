@@ -24,17 +24,12 @@ public static class FFmpegBinaryHelper
     private static readonly HttpClient s_httpClient = new();
     private static readonly SemaphoreSlim s_downloadSemaphore = new(1, 1);
 
-    public static string FFmpegDirectoryPath => Path.Combine(
-        ApplicationData.Current.LocalCacheFolder.Path,
-        LocalCacheDirectoryName,
-        ApplicationDataDirectoryName,
-        FFmpegDirectoryName);
+    public static string FFmpegDirectoryPath => Path.Combine(ApplicationData.Current.LocalCacheFolder.Path, LocalCacheDirectoryName, ApplicationDataDirectoryName, FFmpegDirectoryName);
     public static string FFmpegBinaryPath => Path.Combine(FFmpegDirectoryPath, FFmpegExecutableFileName);
 
     public static bool IsFFmpegBinaryAvailable() => File.Exists(FFmpegBinaryPath);
 
-    public static Task<string> EnsureFFmpegBinaryAsync(CancellationToken cancellationToken = default)
-        => EnsureFFmpegBinaryAsync(null, cancellationToken);
+    public static Task<string> EnsureFFmpegBinaryAsync(CancellationToken cancellationToken = default) => EnsureFFmpegBinaryAsync(null, cancellationToken);
 
     public static async Task<string> EnsureFFmpegBinaryAsync(IProgress<FFmpegBinaryProgress> progress, CancellationToken cancellationToken = default)
     {
@@ -57,10 +52,7 @@ public static class FFmpegBinaryHelper
             ReportProgress(progress, FFmpegBinaryProgressStage.Completed, 1, 1, FFmpegBinaryPath);
             return FFmpegBinaryPath;
         }
-        finally
-        {
-            s_downloadSemaphore.Release();
-        }
+        finally { s_downloadSemaphore.Release(); }
     }
 
     private static async Task DownloadFFmpegBinaryAsync(IProgress<FFmpegBinaryProgress> progress, CancellationToken cancellationToken)
@@ -82,10 +74,7 @@ public static class FFmpegBinaryHelper
 
             if (!IsFFmpegBinaryAvailable()) throw new FileNotFoundException("FFmpeg 바이너리를 찾을 수 없습니다.", FFmpegBinaryPath);
         }
-        finally
-        {
-            TryDeleteDirectory(temporaryDirectoryPath);
-        }
+        finally { TryDeleteDirectory(temporaryDirectoryPath); }
     }
 
     private static async Task DownloadArchiveAsync(string downloadAddress, string temporaryArchivePath, IProgress<FFmpegBinaryProgress> progress, CancellationToken cancellationToken)
@@ -173,14 +162,12 @@ public static class FFmpegBinaryHelper
         CopyDirectoryFiles(extractedBinaryDirectoryPath, FFmpegDirectoryPath);
     }
 
-    private static string EnsureTrailingDirectorySeparator(string directoryPath)
-        => directoryPath.EndsWith(Path.DirectorySeparatorChar) ? directoryPath : $"{directoryPath}{Path.DirectorySeparatorChar}";
+    private static string EnsureTrailingDirectorySeparator(string directoryPath) => directoryPath.EndsWith(Path.DirectorySeparatorChar) ? directoryPath : $"{directoryPath}{Path.DirectorySeparatorChar}";
 
     private static void ReportProgress(IProgress<FFmpegBinaryProgress> progress, FFmpegBinaryProgressStage stage, long completedByteCount, long? totalByteCount, string currentFilePath)
         => progress?.Report(new FFmpegBinaryProgress(stage, completedByteCount, totalByteCount, CalculateProgressPercentage(completedByteCount, totalByteCount), currentFilePath));
 
-    private static double? CalculateProgressPercentage(long completedByteCount, long? totalByteCount)
-        => totalByteCount > 0 ? Math.Clamp(completedByteCount * 100d / totalByteCount.Value, 0d, 100d) : null;
+    private static double? CalculateProgressPercentage(long completedByteCount, long? totalByteCount) => totalByteCount > 0 ? Math.Clamp(completedByteCount * 100d / totalByteCount.Value, 0d, 100d) : null;
 
     private static void CopyDirectoryFiles(string sourceDirectoryPath, string destinationDirectoryPath)
     {
@@ -199,7 +186,13 @@ public static class FFmpegBinaryHelper
 
     private static void TryDeleteDirectory(string directoryPath)
     {
-        try { if (Directory.Exists(directoryPath)) Directory.Delete(directoryPath, true); }
+        try
+        {
+            if (Directory.Exists(directoryPath))
+            {
+                Directory.Delete(directoryPath, true);
+            }
+        }
         catch { }
     }
 }
@@ -211,9 +204,4 @@ public enum FFmpegBinaryProgressStage
     Completed,
 }
 
-public sealed record FFmpegBinaryProgress(
-    FFmpegBinaryProgressStage Stage,
-    long CompletedByteCount,
-    long? TotalByteCount,
-    double? ProgressPercentage,
-    string CurrentFilePath);
+public sealed record FFmpegBinaryProgress(FFmpegBinaryProgressStage Stage, long CompletedByteCount, long? TotalByteCount, double? ProgressPercentage, string CurrentFilePath);

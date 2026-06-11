@@ -18,11 +18,7 @@ public static class ArcaconSessionHelper
     private const string EntryDialogDescription = "아카콘을 사용하려면 아카라이브 로그인이 필요합니다.\n로그인 페이지로 이동할까요?";
     private const string SessionExpiredDialogDescription = "로그인이 필요하거나 세션이 만료되었습니다.\n로그인 페이지로 이동할까요?";
 
-    public static async Task<bool> EnsureArcaconPageEntryAsync(
-        UIElement dialogHostElement,
-        Action<Type, object> navigateAction,
-        Type targetPageType,
-        object targetPageParameter = null)
+    public static async Task<bool> EnsureArcaconPageEntryAsync(UIElement dialogHostElement, Action<Type, object> navigateAction, Type targetPageType, object targetPageParameter = null)
     {
         if (App.ArcaconClient.IsLoggedIn)
         {
@@ -33,12 +29,7 @@ public static class ArcaconSessionHelper
         return await PromptArcaconLoginPageNavigationAsync(dialogHostElement, targetPageType, targetPageParameter);
     }
 
-    public static async Task<ArcaconSearchResult> EnsureArcaconSessionAsync(
-        UIElement dialogHostElement,
-        Action<Type, object> navigateAction,
-        Type returnPageType,
-        object returnPageParameter = null,
-        CancellationToken cancellationToken = default)
+    public static async Task<ArcaconSearchResult> EnsureArcaconSessionAsync(UIElement dialogHostElement, Action<Type, object> navigateAction, Type returnPageType, object returnPageParameter = null, CancellationToken cancellationToken = default)
     {
         try { return await App.ArcaconClient.GetNewListAsync(cancellationToken: cancellationToken); }
         catch (Exception exception) when (exception is ArcaconLoginException or InvalidOperationException)
@@ -48,17 +39,9 @@ public static class ArcaconSessionHelper
         }
     }
 
-    public static async Task<bool> PromptArcaconLoginPageNavigationAsync(
-        UIElement dialogHostElement,
-        Type returnPageType,
-        object returnPageParameter = null,
-        bool isSessionExpired = false)
+    public static async Task<bool> PromptArcaconLoginPageNavigationAsync(UIElement dialogHostElement, Type returnPageType, object returnPageParameter = null, bool isSessionExpired = false)
     {
-        var contentDialogResult = await dialogHostElement.ShowDialogAsync(
-            EntryDialogTitle,
-            isSessionExpired ? SessionExpiredDialogDescription : EntryDialogDescription,
-            "이동",
-            "취소");
+        var contentDialogResult = await dialogHostElement.ShowDialogAsync(EntryDialogTitle, isSessionExpired ? SessionExpiredDialogDescription : EntryDialogDescription, "이동", "취소");
         if (contentDialogResult != ContentDialogResult.Primary) return false;
 
         NavigateToArcaconLoginPage(returnPageType, returnPageParameter);
@@ -69,84 +52,31 @@ public static class ArcaconSessionHelper
     {
         var (normalizedReturnPageType, normalizedReturnPageParameter) = NormalizeArcaconLoginSuccessReturnPage(returnPageType, returnPageParameter);
         var (cancellationReturnPageType, cancellationReturnPageParameter) = NormalizeArcaconLoginCancellationReturnPage(returnPageType);
-        var hasDifferentCancellationReturnPage = cancellationReturnPageType != normalizedReturnPageType
-            || !Equals(cancellationReturnPageParameter, normalizedReturnPageParameter);
+        var hasDifferentCancellationReturnPage = cancellationReturnPageType != normalizedReturnPageType || !Equals(cancellationReturnPageParameter, normalizedReturnPageParameter);
         var useBackStackOnLoginSuccess = returnPageType != typeof(ManagePage) && returnPageType == normalizedReturnPageType;
-        var navigationArguments = hasDifferentCancellationReturnPage
-            ? new ArcaconLoginPageNavigationArguments(
-                normalizedReturnPageType,
-                normalizedReturnPageParameter,
-                cancellationReturnPageType,
-                cancellationReturnPageParameter,
-                useBackStackOnLoginSuccess)
-            : new ArcaconLoginPageNavigationArguments(
-                normalizedReturnPageType,
-                normalizedReturnPageParameter,
-                UseBackStackOnLoginSuccess: useBackStackOnLoginSuccess);
+        var navigationArguments = hasDifferentCancellationReturnPage ? new ArcaconLoginPageNavigationArguments(normalizedReturnPageType, normalizedReturnPageParameter, cancellationReturnPageType, cancellationReturnPageParameter, useBackStackOnLoginSuccess) : new ArcaconLoginPageNavigationArguments(normalizedReturnPageType, normalizedReturnPageParameter, UseBackStackOnLoginSuccess: useBackStackOnLoginSuccess);
 
         ManageWindow.Navigate(typeof(ArcaconLoginPage), navigationArguments);
     }
 
     private static (Type ReturnPageType, object ReturnPageParameter) NormalizeArcaconLoginSuccessReturnPage(Type returnPageType, object returnPageParameter)
     {
-        if (returnPageType == typeof(ArcaconHomePage))
-        {
-            return (
-                typeof(ManagePage),
-                new ManagePageNavigationArguments(
-                    typeof(HomePage),
-                    new HomePageNavigationArguments(OpenArcaconPage: true)));
-        }
+        if (returnPageType == typeof(ArcaconHomePage)) return (typeof(ManagePage), new ManagePageNavigationArguments(typeof(HomePage), new HomePageNavigationArguments(OpenArcaconPage: true)));
 
-        if (returnPageType == typeof(ArcaconSearchPage))
-        {
-            return (
-                typeof(ManagePage),
-                new ManagePageNavigationArguments(
-                    typeof(SearchPage),
-                    new SearchPageNavigationArguments(OpenArcaconPage: true)));
-        }
+        if (returnPageType == typeof(ArcaconSearchPage)) return (typeof(ManagePage), new ManagePageNavigationArguments(typeof(SearchPage), new SearchPageNavigationArguments(OpenArcaconPage: true)));
 
-        if (returnPageType == typeof(SettingsPage))
-        {
-            return (
-                typeof(ManagePage),
-                new ManagePageNavigationArguments(
-                    typeof(SettingsPage),
-                    returnPageParameter));
-        }
+        if (returnPageType == typeof(SettingsPage)) return (typeof(ManagePage), new ManagePageNavigationArguments(typeof(SettingsPage), returnPageParameter));
 
         return (returnPageType, returnPageParameter);
     }
 
     private static (Type ReturnPageType, object ReturnPageParameter) NormalizeArcaconLoginCancellationReturnPage(Type returnPageType)
     {
-        if (returnPageType == typeof(ArcaconHomePage))
-        {
-            return (
-                typeof(ManagePage),
-                new ManagePageNavigationArguments(
-                    typeof(HomePage),
-                    new HomePageNavigationArguments(OpenArcaconPage: false)));
-        }
+        if (returnPageType == typeof(ArcaconHomePage)) return (typeof(ManagePage), new ManagePageNavigationArguments(typeof(HomePage), new HomePageNavigationArguments(OpenArcaconPage: false)));
 
-        if (returnPageType == typeof(ArcaconSearchPage))
-        {
-            return (
-                typeof(ManagePage),
-                new ManagePageNavigationArguments(
-                    typeof(SearchPage),
-                    new SearchPageNavigationArguments(OpenArcaconPage: false)));
-        }
+        if (returnPageType == typeof(ArcaconSearchPage)) return (typeof(ManagePage), new ManagePageNavigationArguments(typeof(SearchPage), new SearchPageNavigationArguments(OpenArcaconPage: false)));
 
-        if (returnPageType == typeof(SettingsPage))
-        {
-            return (
-                typeof(ManagePage),
-                new ManagePageNavigationArguments(
-                    typeof(SettingsPage),
-                    null));
-        }
+        if (returnPageType == typeof(SettingsPage)) return (typeof(ManagePage), new ManagePageNavigationArguments(typeof(SettingsPage), null));
 
         return (typeof(ManagePage), null);
     }

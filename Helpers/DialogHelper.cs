@@ -1,4 +1,4 @@
-﻿using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using System;
@@ -76,10 +76,8 @@ public static class DialogHelper
         var contentDialogs = VisualTreeHelper.GetOpenPopupsForXamlRoot(element.XamlRoot).Where(x => x.Child is ContentDialog).Select(x => x.Child as ContentDialog);
         if (!contentDialogs.Any()) return;
 
-        foreach (var contentDialog in contentDialogs)
-            contentDialog.Hide();
+        foreach (var contentDialog in contentDialogs) contentDialog.Hide();
     }
 
-    private static Style GetDefaultContentDialogStyle()
-        => Application.Current.Resources.TryGetValue("DefaultContentDialogStyle", out var style) ? style as Style : null;
+    private static Style GetDefaultContentDialogStyle() => Application.Current.Resources.TryGetValue("DefaultContentDialogStyle", out var style) ? style as Style : null;
 }

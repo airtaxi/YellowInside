@@ -1,4 +1,4 @@
-﻿using Microsoft.UI.Xaml.Media.Imaging;
+using Microsoft.UI.Xaml.Media.Imaging;
 using System;
 using System.IO;
 using YellowInside.Models;
@@ -11,10 +11,7 @@ public sealed class PartialPackageExportListViewModel(StickerPackage stickerPack
     {
         if (string.IsNullOrWhiteSpace(stickerPackage.MainImageFileName)) return null;
 
-        var mainImagePath = ContentsManager.GetMainImagePath(
-            stickerPackage.Source,
-            stickerPackage.PackageIdentifier,
-            stickerPackage.MainImageFileName);
+        var mainImagePath = ContentsManager.GetMainImagePath(stickerPackage.Source, stickerPackage.PackageIdentifier, stickerPackage.MainImageFileName);
         if (!File.Exists(mainImagePath)) return null;
 
         return new BitmapImage(new Uri(mainImagePath)) { AutoPlay = SettingsManager.GifPlaybackEnabled };

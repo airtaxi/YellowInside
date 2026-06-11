@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -27,21 +27,16 @@ public static class FileLogManager
         {
             try
             {
-                var lines = File.Exists(s_logFilePath)
-                    ? File.ReadAllLines(s_logFilePath).ToList()
-                    : [];
+                var lines = File.Exists(s_logFilePath) ? File.ReadAllLines(s_logFilePath).ToList() : [];
 
                 lines.Add(logEntry);
 
-                if (lines.Count > MaxLogEntries)
-                    lines = lines.Skip(lines.Count - MaxLogEntries).ToList();
+                if (lines.Count > MaxLogEntries) lines = lines.Skip(lines.Count - MaxLogEntries).ToList();
 
                 File.WriteAllLines(s_logFilePath, lines);
             }
-            catch
-            {
-                // Logging failure should not crash the app
-            }
+            // Logging failure should not crash the app
+            catch { }
         }
     }
 
@@ -51,7 +46,6 @@ public static class FileLogManager
 
     public static bool HasLogs()
     {
-        lock (s_lock)
-            return File.Exists(s_logFilePath) && new FileInfo(s_logFilePath).Length > 0;
+        lock (s_lock) return File.Exists(s_logFilePath) && new FileInfo(s_logFilePath).Length > 0;
     }
 }

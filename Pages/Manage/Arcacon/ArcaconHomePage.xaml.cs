@@ -52,11 +52,7 @@ public sealed partial class ArcaconHomePage : Page
         HotList.Clear();
         NewList.Clear();
 
-        var latestSearchResult = await ArcaconSessionHelper.EnsureArcaconSessionAsync(
-            this,
-            NavigateToPage,
-            typeof(ArcaconHomePage),
-            cancellationToken: cancellationToken);
+        var latestSearchResult = await ArcaconSessionHelper.EnsureArcaconSessionAsync(this, NavigateToPage, typeof(ArcaconHomePage), cancellationToken: cancellationToken);
         if (latestSearchResult is null) return;
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -66,21 +62,9 @@ public sealed partial class ArcaconHomePage : Page
         if (latestSearchResult.TotalPages <= 1) _hasMoreNewListPages = false;
         else _newListPageNumber = 2;
 
-        await LoadPopularPackagesAsync(
-            "일간 인기 아카콘 불러오는 중...",
-            (cancellationToken) => App.ArcaconClient.GetDailyPopularAsync(cancellationToken),
-            DailyPopularList,
-            cancellationToken);
-        await LoadPopularPackagesAsync(
-            "주간 인기 아카콘 불러오는 중...",
-            (cancellationToken) => App.ArcaconClient.GetWeeklyPopularAsync(cancellationToken),
-            WeeklyPopularList,
-            cancellationToken);
-        await LoadPopularPackagesAsync(
-            "월간 인기 아카콘 불러오는 중...",
-            (cancellationToken) => App.ArcaconClient.GetMonthlyPopularAsync(cancellationToken),
-            MonthlyPopularList,
-            cancellationToken);
+        await LoadPopularPackagesAsync("일간 인기 아카콘 불러오는 중...", (cancellationToken) => App.ArcaconClient.GetDailyPopularAsync(cancellationToken), DailyPopularList, cancellationToken);
+        await LoadPopularPackagesAsync("주간 인기 아카콘 불러오는 중...", (cancellationToken) => App.ArcaconClient.GetWeeklyPopularAsync(cancellationToken), WeeklyPopularList, cancellationToken);
+        await LoadPopularPackagesAsync("월간 인기 아카콘 불러오는 중...", (cancellationToken) => App.ArcaconClient.GetMonthlyPopularAsync(cancellationToken), MonthlyPopularList, cancellationToken);
         await LoadMoreAsync(isHotList: true, cancellationToken);
 
         _isLoaded = true;
@@ -88,17 +72,10 @@ public sealed partial class ArcaconHomePage : Page
 
     private static void AddPackagesToTargetList(ObservableCollection<SearchResultViewModel> targetList, IEnumerable<SearchResultViewModel> viewModels)
     {
-        foreach (var viewModel in viewModels.Where(viewModel => !targetList.Any(existing => existing.PackageIdentifier == viewModel.PackageIdentifier)))
-        {
-            targetList.Add(viewModel);
-        }
+        foreach (var viewModel in viewModels.Where(viewModel => !targetList.Any(existing => existing.PackageIdentifier == viewModel.PackageIdentifier))) targetList.Add(viewModel);
     }
 
-    private static async Task LoadPopularPackagesAsync(
-        string loadingMessage,
-        Func<CancellationToken, Task<IReadOnlyList<ArcaconPackageSummary>>> getPopularPackagesAsync,
-        ObservableCollection<SearchResultViewModel> targetList,
-        CancellationToken cancellationToken)
+    private static async Task LoadPopularPackagesAsync(string loadingMessage, Func<CancellationToken, Task<IReadOnlyList<ArcaconPackageSummary>>> getPopularPackagesAsync, ObservableCollection<SearchResultViewModel> targetList, CancellationToken cancellationToken)
     {
         ManageWindow.ShowLoading(loadingMessage);
         try

@@ -62,6 +62,5 @@ public sealed partial class CustomPackagesPage : Page
         NoCustomPackagesTextBlock.Visibility = CustomPackageList.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
-    private void OnAddCustomPackageButtonClicked(object sender, RoutedEventArgs e)
-        => ManageWindow.Navigate(typeof(CustomPackageEditorPage), new CustomPackageEditorArguments(CustomPackageEditorMode.Add));
+    private void OnAddCustomPackageButtonClicked(object sender, RoutedEventArgs e) => ManageWindow.Navigate(typeof(CustomPackageEditorPage), new CustomPackageEditorArguments(CustomPackageEditorMode.Add));
 }

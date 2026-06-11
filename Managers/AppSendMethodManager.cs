@@ -55,8 +55,7 @@ public static class AppSendMethodManager
     public static async Task ImportAsync(string sourceFilePath, bool replaceAll)
     {
         var json = await File.ReadAllTextAsync(sourceFilePath);
-        var imported = JsonSerializer.Deserialize(json, AppSendMethodSettingsJsonContext.Default.DictionaryStringBoolean)
-            ?? [];
+        var imported = JsonSerializer.Deserialize(json, AppSendMethodSettingsJsonContext.Default.DictionaryStringBoolean) ?? [];
 
         if (replaceAll)
         {
@@ -65,19 +64,14 @@ public static class AppSendMethodManager
         }
 
         var existing = LoadSettings();
-        foreach (var pair in imported)
-            existing[pair.Key] = pair.Value;
+        foreach (var pair in imported) existing[pair.Key] = pair.Value;
 
         SaveSettings(existing);
     }
 
     private static Dictionary<string, bool> LoadSettings()
     {
-        if (s_localSettings.Values[SettingsKey] is string json)
-        {
-            return JsonSerializer.Deserialize(json, AppSendMethodSettingsJsonContext.Default.DictionaryStringBoolean)
-                ?? [];
-        }
+        if (s_localSettings.Values[SettingsKey] is string json) return JsonSerializer.Deserialize(json, AppSendMethodSettingsJsonContext.Default.DictionaryStringBoolean) ?? [];
         return [];
     }
 

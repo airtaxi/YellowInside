@@ -44,21 +44,9 @@ public sealed partial class DcconHomePage : Page
         MonthlyPopularList.Clear();
         NewList.Clear();
 
-        await LoadPopularPackagesAsync(
-            "일간 인기 디시콘 불러오는 중...",
-            async () => (await App.DcconClient.GetDailyPopularAsync()).Select(package => new SearchResultViewModel(package, cancellationToken)),
-            DailyPopularList,
-            cancellationToken);
-        await LoadPopularPackagesAsync(
-            "주간 인기 디시콘 불러오는 중...",
-            async () => (await App.DcconClient.GetWeeklyPopularAsync()).Select(package => new SearchResultViewModel(package, cancellationToken)),
-            WeeklyPopularList,
-            cancellationToken);
-        await LoadPopularPackagesAsync(
-            "월간 인기 디시콘 불러오는 중...",
-            async () => (await App.DcconClient.GetMonthlyPopularAsync()).Select(package => new SearchResultViewModel(package, cancellationToken)),
-            MonthlyPopularList,
-            cancellationToken);
+        await LoadPopularPackagesAsync("일간 인기 디시콘 불러오는 중...", async () => (await App.DcconClient.GetDailyPopularAsync()).Select(package => new SearchResultViewModel(package, cancellationToken)), DailyPopularList, cancellationToken);
+        await LoadPopularPackagesAsync("주간 인기 디시콘 불러오는 중...", async () => (await App.DcconClient.GetWeeklyPopularAsync()).Select(package => new SearchResultViewModel(package, cancellationToken)), WeeklyPopularList, cancellationToken);
+        await LoadPopularPackagesAsync("월간 인기 디시콘 불러오는 중...", async () => (await App.DcconClient.GetMonthlyPopularAsync()).Select(package => new SearchResultViewModel(package, cancellationToken)), MonthlyPopularList, cancellationToken);
 
         await LoadMoreNewListAsync(cancellationToken);
 
@@ -67,17 +55,10 @@ public sealed partial class DcconHomePage : Page
 
     private static void AddPackagesToTargetList(ObservableCollection<SearchResultViewModel> targetList, IEnumerable<SearchResultViewModel> viewModels)
     {
-        foreach (var viewModel in viewModels.Where(viewModel => !targetList.Any(existingViewModel => existingViewModel.PackageIdentifier == viewModel.PackageIdentifier)))
-        {
-            targetList.Add(viewModel);
-        }
+        foreach (var viewModel in viewModels.Where(viewModel => !targetList.Any(existingViewModel => existingViewModel.PackageIdentifier == viewModel.PackageIdentifier))) targetList.Add(viewModel);
     }
 
-    private static async Task LoadPopularPackagesAsync(
-        string loadingMessage,
-        Func<Task<IEnumerable<SearchResultViewModel>>> getPopularPackageViewModelsAsync,
-        ObservableCollection<SearchResultViewModel> targetList,
-        CancellationToken cancellationToken)
+    private static async Task LoadPopularPackagesAsync(string loadingMessage, Func<Task<IEnumerable<SearchResultViewModel>>> getPopularPackageViewModelsAsync, ObservableCollection<SearchResultViewModel> targetList, CancellationToken cancellationToken)
     {
         ManageWindow.ShowLoading(loadingMessage);
         try

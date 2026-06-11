@@ -48,10 +48,7 @@ public static class ContentsManager
 	/// </summary>
 	public static async Task InitializeAsync()
 	{
-		s_basePath = Path.Combine(
-			Windows.Storage.ApplicationData.Current.LocalCacheFolder.Path,
-			"Local",
-			"YellowInside");
+		s_basePath = Path.Combine(Windows.Storage.ApplicationData.Current.LocalCacheFolder.Path, "Local", "YellowInside");
 		s_dataFilePath = Path.Combine(s_basePath, "contents.json");
 
 		Directory.CreateDirectory(s_basePath);
@@ -59,9 +56,7 @@ public static class ContentsManager
 		if (File.Exists(s_dataFilePath))
 		{
 			var json = await File.ReadAllTextAsync(s_dataFilePath);
-			var deserialized = JsonSerializer.Deserialize(
-				json,
-				ContentsManagerJsonContext.Default.ContentsManagerData);
+			var deserialized = JsonSerializer.Deserialize(json, ContentsManagerJsonContext.Default.ContentsManagerData);
 			if (deserialized is not null) s_data = deserialized;
 		}
 
@@ -125,14 +120,7 @@ public static class ContentsManager
 	/// <summary>
 	/// 사용자 지정 패키지를 추가합니다.
 	/// </summary>
-	public static async Task<string> AddCustomPackageAsync(
-		string title,
-		string description,
-		string mainImageSourcePath,
-		string sellerName,
-		string registrationDate,
-		IReadOnlyList<string> tags,
-		IReadOnlyList<string> stickerSourcePaths)
+	public static async Task<string> AddCustomPackageAsync(string title, string description, string mainImageSourcePath, string sellerName, string registrationDate, IReadOnlyList<string> tags, IReadOnlyList<string> stickerSourcePaths)
 	{
 		var packageIdentifier = Guid.NewGuid().ToString();
 		var packageDirectory = GetPackageDirectory(ContentSource.Local, packageIdentifier);
@@ -183,10 +171,7 @@ public static class ContentsManager
 			Stickers = stickers,
 		};
 
-		lock (s_lock)
-		{
-			s_data.DownloadedPackages.Add(stickerPackage);
-		}
+		lock (s_lock) s_data.DownloadedPackages.Add(stickerPackage);
 
 		await SaveAsync();
 
@@ -198,20 +183,10 @@ public static class ContentsManager
 	/// <summary>
 	/// 사용자 지정 패키지를 수정합니다.
 	/// </summary>
-	public static async Task UpdateCustomPackageAsync(
-		string packageIdentifier,
-		string title,
-		string description,
-		string newMainImageSourcePath,
-		string sellerName,
-		IReadOnlyList<string> tags,
-		IReadOnlyList<(string SourceFilePath, bool IsExisting, string OriginalStickerPath, string OriginalFileName)> stickerEntries)
+	public static async Task UpdateCustomPackageAsync(string packageIdentifier, string title, string description, string newMainImageSourcePath, string sellerName, IReadOnlyList<string> tags, IReadOnlyList<(string SourceFilePath, bool IsExisting, string OriginalStickerPath, string OriginalFileName)> stickerEntries)
 	{
 		StickerPackage package;
-		lock (s_lock)
-		{
-			package = s_data.DownloadedPackages.FirstOrDefault(p => p.Source == ContentSource.Local && p.PackageIdentifier == packageIdentifier);
-		}
+		lock (s_lock) package = s_data.DownloadedPackages.FirstOrDefault(p => p.Source == ContentSource.Local && p.PackageIdentifier == packageIdentifier);
 		if (package is null) return;
 
 		var packageDirectory = GetPackageDirectory(ContentSource.Local, packageIdentifier);
@@ -298,24 +273,40 @@ public static class ContentsManager
 		foreach (var orphanedFileName in oldStickerFileNames.Except(keptStickerFileNames))
 		{
 			var orphanedFilePath = Path.Combine(stickersDirectory, orphanedFileName);
-			try { if (File.Exists(orphanedFilePath)) File.Delete(orphanedFilePath); }
+			try
+			{
+			    if (File.Exists(orphanedFilePath))
+			    {
+			        File.Delete(orphanedFilePath);
+			    }
+			}
 			catch { }
 		}
 
 		foreach (var orphanedWebpFileName in oldStickerWebpFileNames.Except(keptStickerWebpFileNames))
 		{
 			var orphanedWebpFilePath = Path.Combine(stickersDirectory, orphanedWebpFileName);
-			try { if (File.Exists(orphanedWebpFilePath)) File.Delete(orphanedWebpFilePath); }
+			try
+			{
+			    if (File.Exists(orphanedWebpFilePath))
+			    {
+			        File.Delete(orphanedWebpFilePath);
+			    }
+			}
 			catch { }
 		}
 
 		// Delete old main image if replaced with different extension
-		if (!string.IsNullOrEmpty(newMainImageSourcePath) &&
-			!string.IsNullOrEmpty(oldMainImageFileName) &&
-			oldMainImageFileName != mainImageFileName)
+		if (!string.IsNullOrEmpty(newMainImageSourcePath) && !string.IsNullOrEmpty(oldMainImageFileName) && oldMainImageFileName != mainImageFileName)
 		{
 			var oldMainImagePath = Path.Combine(packageDirectory, oldMainImageFileName);
-			try { if (File.Exists(oldMainImagePath)) File.Delete(oldMainImagePath); }
+			try
+			{
+			    if (File.Exists(oldMainImagePath))
+			    {
+			        File.Delete(oldMainImagePath);
+			    }
+			}
 			catch { }
 		}
 
@@ -324,13 +315,7 @@ public static class ContentsManager
 		if (removedStickerPaths.Count > 0)
 		{
 			bool favoritesRemoved;
-			lock (s_lock)
-			{
-				favoritesRemoved = s_data.Favorites.RemoveAll(
-					favorite => favorite.Source == ContentSource.Local
-						&& favorite.PackageIdentifier == packageIdentifier
-						&& removedStickerPaths.Contains(favorite.StickerPath)) > 0;
-			}
+			lock (s_lock) favoritesRemoved = s_data.Favorites.RemoveAll(favorite => favorite.Source == ContentSource.Local && favorite.PackageIdentifier == packageIdentifier && removedStickerPaths.Contains(favorite.StickerPath)) > 0;
 
 			HistoryManager.RemoveByStickers(ContentSource.Local, packageIdentifier, removedStickerPaths);
 
@@ -340,18 +325,16 @@ public static class ContentsManager
 		PackagesChanged?.Invoke();
 		WeakReferenceMessenger.Default.Send(new FavoritesOrPackagesChangedMessage(ContentSource.Local, packageIdentifier));
 	}
-	public static async Task DownloadDcconPackageAsync(
-		int packageIndex,
-		IProgress<(int Completed, int Total)> progress = null,
-		CancellationToken cancellationToken = default)
+	public static async Task DownloadDcconPackageAsync(int packageIndex, IProgress<(int Completed, int Total)> progress = null, CancellationToken cancellationToken = default)
 	{
 		var packageIdentifier = packageIndex.ToString();
 
 		lock (s_lock)
 		{
-			if (s_data.DownloadedPackages.Any(
-				package => package.Source == ContentSource.Dccon && package.PackageIdentifier == packageIdentifier))
-				return;
+			if (s_data.DownloadedPackages.Any(package => package.Source == ContentSource.Dccon && package.PackageIdentifier == packageIdentifier))
+			{
+			    return;
+			}
 		}
 
 		var detail = await s_dcconClient.GetPackageDetailAsync(packageIndex, cancellationToken);
@@ -361,8 +344,7 @@ public static class ContentsManager
 
 		await s_dcconClient.DownloadPackageAsync(packageIndex, packageDirectory, progress, cancellationToken);
 
-		var mainImageFileName = await DownloadMainImageAsync(
-			ContentSource.Dccon, detail.MainImagePath, packageDirectory, cancellationToken);
+		var mainImageFileName = await DownloadMainImageAsync(ContentSource.Dccon, detail.MainImagePath, packageDirectory, cancellationToken);
 
 		var localDirectoryName = DcconFileNameHelper.SanitizeFileName(detail.Title);
 
@@ -390,10 +372,7 @@ public static class ContentsManager
 			Tags = [.. detail.Tags],
 		};
 
-		lock (s_lock)
-		{
-			s_data.DownloadedPackages.Add(stickerPackage);
-		}
+		lock (s_lock) s_data.DownloadedPackages.Add(stickerPackage);
 
 		await SaveAsync();
 
@@ -401,18 +380,16 @@ public static class ContentsManager
         WeakReferenceMessenger.Default.Send(new FavoritesOrPackagesChangedMessage(ContentSource.Dccon, packageIdentifier));
     }
 
-	public static async Task DownloadArcaconPackageAsync(
-		int packageIndex,
-		IProgress<(int Completed, int Total)> progress = null,
-		CancellationToken cancellationToken = default)
+	public static async Task DownloadArcaconPackageAsync(int packageIndex, IProgress<(int Completed, int Total)> progress = null, CancellationToken cancellationToken = default)
 	{
 		var packageIdentifier = packageIndex.ToString();
 
 		lock (s_lock)
 		{
-			if (s_data.DownloadedPackages.Any(
-				package => package.Source == ContentSource.Arcacon && package.PackageIdentifier == packageIdentifier))
-				return;
+			if (s_data.DownloadedPackages.Any(package => package.Source == ContentSource.Arcacon && package.PackageIdentifier == packageIdentifier))
+			{
+			    return;
+			}
 		}
 
 		var detail = await App.ArcaconClient.GetPackageDetailAsync(packageIndex, cancellationToken);
@@ -426,8 +403,7 @@ public static class ContentsManager
 		var stickers = await DownloadArcaconStickerFilesAsync(detail.Stickers, stickerDirectory, progress, cancellationToken);
 
 		var mainImagePath = $"https://arca.live/api/emoticon/{packageIndex}/thumb";
-		var mainImageFileName = await DownloadMainImageAsync(
-			ContentSource.Arcacon, mainImagePath, packageDirectory, cancellationToken);
+		var mainImageFileName = await DownloadMainImageAsync(ContentSource.Arcacon, mainImagePath, packageDirectory, cancellationToken);
 
 		var stickerPackage = new StickerPackage
 		{
@@ -445,10 +421,7 @@ public static class ContentsManager
 			Tags = [.. detail.Tags],
 		};
 
-		lock (s_lock)
-		{
-			s_data.DownloadedPackages.Add(stickerPackage);
-		}
+		lock (s_lock) s_data.DownloadedPackages.Add(stickerPackage);
 
 		await SaveAsync();
 
@@ -456,18 +429,16 @@ public static class ContentsManager
 		WeakReferenceMessenger.Default.Send(new FavoritesOrPackagesChangedMessage(ContentSource.Arcacon, packageIdentifier));
 	}
 
-	public static async Task DownloadInvenStickerPackageAsync(
-		int packageId,
-		IProgress<(int Completed, int Total)> progress = null,
-		CancellationToken cancellationToken = default)
+	public static async Task DownloadInvenStickerPackageAsync(int packageId, IProgress<(int Completed, int Total)> progress = null, CancellationToken cancellationToken = default)
 	{
 		var packageIdentifier = packageId.ToString();
 
 		lock (s_lock)
 		{
-			if (s_data.DownloadedPackages.Any(
-				package => package.Source == ContentSource.Inven && package.PackageIdentifier == packageIdentifier))
-				return;
+			if (s_data.DownloadedPackages.Any(package => package.Source == ContentSource.Inven && package.PackageIdentifier == packageIdentifier))
+			{
+			    return;
+			}
 		}
 
 		var detail = await s_stickerClient.GetDetailAsync(packageId, cancellationToken);
@@ -477,8 +448,7 @@ public static class ContentsManager
 
 		await s_stickerClient.DownloadPackageAsync(packageId, packageDirectory, progress, cancellationToken);
 
-		var mainImageFileName = await DownloadMainImageAsync(
-			ContentSource.Inven, detail.ThumbnailUrl, packageDirectory, cancellationToken);
+		var mainImageFileName = await DownloadMainImageAsync(ContentSource.Inven, detail.ThumbnailUrl, packageDirectory, cancellationToken);
 
 		var localDirectoryName = InvenStickerFileNameHelper.SanitizeFileName(detail.Title);
 
@@ -505,10 +475,7 @@ public static class ContentsManager
 			Tags = [.. detail.Tags],
 		};
 
-		lock (s_lock)
-		{
-			s_data.DownloadedPackages.Add(stickerPackage);
-		}
+		lock (s_lock) s_data.DownloadedPackages.Add(stickerPackage);
 
 		await SaveAsync();
 
@@ -519,13 +486,9 @@ public static class ContentsManager
 	/// <summary>
 	/// 원격 패키지에 로컬에 없는 새 스티커가 몇 개 있는지 확인합니다.
 	/// </summary>
-	public static async Task<int> GetAdditionalStickerCountAsync(
-		ContentSource source,
-		string packageIdentifier,
-		CancellationToken cancellationToken = default)
+	public static async Task<int> GetAdditionalStickerCountAsync(ContentSource source, string packageIdentifier, CancellationToken cancellationToken = default)
 	{
-		var package = GetDownloadedPackage(source, packageIdentifier)
-			?? throw new InvalidOperationException("다운로드된 패키지를 찾을 수 없습니다.");
+		var package = GetDownloadedPackage(source, packageIdentifier) ?? throw new InvalidOperationException("다운로드된 패키지를 찾을 수 없습니다.");
 		var existingStickerPaths = GetExistingStickerPaths(package);
 
 		if (source == ContentSource.Dccon)
@@ -555,9 +518,7 @@ public static class ContentsManager
 		int localStickerCount;
 		lock (s_lock)
 		{
-			var package = s_data.DownloadedPackages.FirstOrDefault(
-				package => package.Source == ContentSource.Arcacon && package.PackageIdentifier == packageIdentifier)
-				?? throw new InvalidOperationException("다운로드된 패키지를 찾을 수 없습니다.");
+			var package = s_data.DownloadedPackages.FirstOrDefault(package => package.Source == ContentSource.Arcacon && package.PackageIdentifier == packageIdentifier) ?? throw new InvalidOperationException("다운로드된 패키지를 찾을 수 없습니다.");
 			localStickerCount = package.Stickers.Count;
 		}
 
@@ -566,20 +527,14 @@ public static class ContentsManager
 		return (localStickerCount, detail.Stickers.Count);
 	}
 
-	public static Task<int> RebuildArcaconDownloadedPackageAsync(string packageIdentifier, IProgress<(int Completed, int Total)> progress = null, CancellationToken cancellationToken = default)
-		=> SynchronizeDownloadedPackageAsync(ContentSource.Arcacon, packageIdentifier, progress, cancellationToken);
+	public static Task<int> RebuildArcaconDownloadedPackageAsync(string packageIdentifier, IProgress<(int Completed, int Total)> progress = null, CancellationToken cancellationToken = default) => SynchronizeDownloadedPackageAsync(ContentSource.Arcacon, packageIdentifier, progress, cancellationToken);
 
 	/// <summary>
 	/// 다운로드된 패키지에 원격으로 추가된 스티커를 내려받고 로컬 메타데이터를 갱신합니다.
 	/// </summary>
-	public static async Task<int> SynchronizeDownloadedPackageAsync(
-		ContentSource source,
-		string packageIdentifier,
-		IProgress<(int Completed, int Total)> progress = null,
-		CancellationToken cancellationToken = default)
+	public static async Task<int> SynchronizeDownloadedPackageAsync(ContentSource source, string packageIdentifier, IProgress<(int Completed, int Total)> progress = null, CancellationToken cancellationToken = default)
 	{
-		var package = GetDownloadedPackage(source, packageIdentifier)
-			?? throw new InvalidOperationException("다운로드된 패키지를 찾을 수 없습니다.");
+		var package = GetDownloadedPackage(source, packageIdentifier) ?? throw new InvalidOperationException("다운로드된 패키지를 찾을 수 없습니다.");
 
 		var synchronizedStickerCount = source switch
 		{
@@ -604,10 +559,7 @@ public static class ContentsManager
 	/// </summary>
 	public static IReadOnlyList<StickerPackage> GetDownloadedPackages(ContentSource? source = null)
 	{
-        lock (s_lock)
-        {
-            return [.. s_data.DownloadedPackages.Where(package => source == null || package.Source == source)];
-        }
+        lock (s_lock) return[..s_data.DownloadedPackages.Where(package => source == null || package.Source == source)];
     }
 
 	/// <summary>
@@ -615,22 +567,12 @@ public static class ContentsManager
 	/// </summary>
 	public static StickerPackage GetDownloadedPackage(ContentSource source, string packageIdentifier)
 	{
-		lock (s_lock)
-		{
-			return s_data.DownloadedPackages.FirstOrDefault(
-				package => package.Source == source && package.PackageIdentifier == packageIdentifier);
-		}
+		lock (s_lock) return s_data.DownloadedPackages.FirstOrDefault(package => package.Source == source && package.PackageIdentifier == packageIdentifier);
 	}
 
-	public static Task<AnimatedPngToWebpPackageConversionResult> ConvertAnimatedPngStickersToWebpAsync(
-		IProgress<AnimatedPngToWebpPackageConversionProgress> progress = null,
-		CancellationToken cancellationToken = default)
-		=> ConvertAnimatedPngStickersToWebpAsync(null, progress, cancellationToken);
+	public static Task<AnimatedPngToWebpPackageConversionResult> ConvertAnimatedPngStickersToWebpAsync(IProgress<AnimatedPngToWebpPackageConversionProgress> progress = null, CancellationToken cancellationToken = default) => ConvertAnimatedPngStickersToWebpAsync(null, progress, cancellationToken);
 
-	public static async Task<AnimatedPngToWebpPackageConversionResult> ConvertAnimatedPngStickersToWebpAsync(
-		IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> selectedPackageKeys,
-		IProgress<AnimatedPngToWebpPackageConversionProgress> progress = null,
-		CancellationToken cancellationToken = default)
+	public static async Task<AnimatedPngToWebpPackageConversionResult> ConvertAnimatedPngStickersToWebpAsync(IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> selectedPackageKeys, IProgress<AnimatedPngToWebpPackageConversionProgress> progress = null, CancellationToken cancellationToken = default)
 	{
 		var conversionCandidates = new List<AnimatedPngStickerConversionCandidate>();
 		var convertedPackageKeys = new HashSet<(ContentSource Source, string PackageIdentifier)>();
@@ -653,12 +595,7 @@ public static class ContentsManager
 			cancellationToken.ThrowIfCancellationRequested();
 
 			var stickerCandidate = stickerCandidates[stickerCandidateIndex];
-			progress?.Report(new AnimatedPngToWebpPackageConversionProgress(
-				AnimatedPngToWebpPackageConversionStage.Searching,
-				stickerCandidateIndex + 1,
-				stickerCandidates.Count,
-				stickerCandidate.Package.Title,
-				stickerCandidate.Sticker.FileName));
+			progress?.Report(new AnimatedPngToWebpPackageConversionProgress(AnimatedPngToWebpPackageConversionStage.Searching, stickerCandidateIndex + 1, stickerCandidates.Count, stickerCandidate.Package.Title, stickerCandidate.Sticker.FileName));
 
 			if (!Path.GetExtension(stickerCandidate.Sticker.FileName).Equals(".png", StringComparison.OrdinalIgnoreCase))
 			{
@@ -669,9 +606,7 @@ public static class ContentsManager
 			if (!File.Exists(stickerCandidate.SourceFilePath))
 			{
 				failedCount++;
-				App.LogException(
-					"AnimatedPngToWebpConversion",
-					new FileNotFoundException("스티커 원본 파일을 찾을 수 없습니다.", stickerCandidate.SourceFilePath));
+				App.LogException("AnimatedPngToWebpConversion", new FileNotFoundException("스티커 원본 파일을 찾을 수 없습니다.", stickerCandidate.SourceFilePath));
 				continue;
 			}
 
@@ -696,19 +631,11 @@ public static class ContentsManager
 			cancellationToken.ThrowIfCancellationRequested();
 
 			var conversionCandidate = conversionCandidates[conversionCandidateIndex];
-			progress?.Report(new AnimatedPngToWebpPackageConversionProgress(
-				AnimatedPngToWebpPackageConversionStage.Converting,
-				conversionCandidateIndex,
-				conversionCandidates.Count,
-				conversionCandidate.Package.Title,
-				conversionCandidate.Sticker.FileName));
+			progress?.Report(new AnimatedPngToWebpPackageConversionProgress(AnimatedPngToWebpPackageConversionStage.Converting, conversionCandidateIndex, conversionCandidates.Count, conversionCandidate.Package.Title, conversionCandidate.Sticker.FileName));
 
 			try
 			{
-				AnimatedPngToWebpConversionManager.ConvertAnimatedPngToWebp(
-					conversionCandidate.SourceFilePath,
-					conversionCandidate.WebpFilePath,
-					cancellationToken);
+				AnimatedPngToWebpConversionManager.ConvertAnimatedPngToWebp(conversionCandidate.SourceFilePath, conversionCandidate.WebpFilePath, cancellationToken);
 
 				lock (s_lock) conversionCandidate.Sticker.WebpFileName = conversionCandidate.WebpFileName;
 				convertedPackageKeys.Add((conversionCandidate.Package.Source, conversionCandidate.Package.PackageIdentifier));
@@ -720,42 +647,22 @@ public static class ContentsManager
 				App.LogException("AnimatedPngToWebpConversion", exception);
 			}
 
-			progress?.Report(new AnimatedPngToWebpPackageConversionProgress(
-				AnimatedPngToWebpPackageConversionStage.Converting,
-				conversionCandidateIndex + 1,
-				conversionCandidates.Count,
-				conversionCandidate.Package.Title,
-				conversionCandidate.Sticker.FileName));
+			progress?.Report(new AnimatedPngToWebpPackageConversionProgress(AnimatedPngToWebpPackageConversionStage.Converting, conversionCandidateIndex + 1, conversionCandidates.Count, conversionCandidate.Package.Title, conversionCandidate.Sticker.FileName));
 		}
 
 		if (convertedCount > 0)
 		{
-			progress?.Report(new AnimatedPngToWebpPackageConversionProgress(
-				AnimatedPngToWebpPackageConversionStage.Saving,
-				0,
-				1,
-				string.Empty,
-				string.Empty));
+			progress?.Report(new AnimatedPngToWebpPackageConversionProgress(AnimatedPngToWebpPackageConversionStage.Saving, 0, 1, string.Empty, string.Empty));
 
 			await SaveAsync();
 
 			PackagesChanged?.Invoke();
 			foreach (var packageKey in convertedPackageKeys) WeakReferenceMessenger.Default.Send(new FavoritesOrPackagesChangedMessage(packageKey.Source, packageKey.PackageIdentifier));
 
-			progress?.Report(new AnimatedPngToWebpPackageConversionProgress(
-				AnimatedPngToWebpPackageConversionStage.Saving,
-				1,
-				1,
-				string.Empty,
-				string.Empty));
+			progress?.Report(new AnimatedPngToWebpPackageConversionProgress(AnimatedPngToWebpPackageConversionStage.Saving, 1, 1, string.Empty, string.Empty));
 		}
 
-		return new AnimatedPngToWebpPackageConversionResult(
-			stickerCandidates.Count,
-			convertedCount,
-			alreadyConvertedCount,
-			notTargetCount,
-			failedCount);
+		return new AnimatedPngToWebpPackageConversionResult(stickerCandidates.Count, convertedCount, alreadyConvertedCount, notTargetCount, failedCount);
 	}
 
 	/// <summary>
@@ -763,11 +670,7 @@ public static class ContentsManager
 	/// </summary>
 	public static bool IsPackageDownloaded(ContentSource source, string packageIdentifier)
 	{
-		lock (s_lock)
-		{
-			return s_data.DownloadedPackages.Any(
-				package => package.Source == source && package.PackageIdentifier == packageIdentifier);
-		}
+		lock (s_lock) return s_data.DownloadedPackages.Any(package => package.Source == source && package.PackageIdentifier == packageIdentifier);
 	}
 
 	/// <summary>
@@ -777,10 +680,7 @@ public static class ContentsManager
 	{
 		lock (s_lock)
 		{
-			var alreadyExists = s_data.Favorites.Any(
-				favorite => favorite.Source == source
-					&& favorite.PackageIdentifier == packageIdentifier
-					&& favorite.StickerPath == stickerPath);
+			var alreadyExists = s_data.Favorites.Any(favorite => favorite.Source == source && favorite.PackageIdentifier == packageIdentifier && favorite.StickerPath == stickerPath);
 			if (alreadyExists) return;
 
 			s_data.Favorites.Add(new FavoriteSticker
@@ -803,13 +703,7 @@ public static class ContentsManager
 	public static async Task RemoveFavoriteAsync(ContentSource source, string packageIdentifier, string stickerPath)
 	{
 		bool removed;
-		lock (s_lock)
-		{
-			removed = s_data.Favorites.RemoveAll(
-				favorite => favorite.Source == source
-					&& favorite.PackageIdentifier == packageIdentifier
-					&& favorite.StickerPath == stickerPath) > 0;
-		}
+		lock (s_lock) removed = s_data.Favorites.RemoveAll(favorite => favorite.Source == source && favorite.PackageIdentifier == packageIdentifier && favorite.StickerPath == stickerPath) > 0;
 
 		if (!removed) return;
 
@@ -824,13 +718,7 @@ public static class ContentsManager
 	/// </summary>
 	public static bool IsFavorite(ContentSource source, string packageIdentifier, string stickerPath)
 	{
-		lock (s_lock)
-		{
-			return s_data.Favorites.Any(
-				favorite => favorite.Source == source
-					&& favorite.PackageIdentifier == packageIdentifier
-					&& favorite.StickerPath == stickerPath);
-		}
+		lock (s_lock) return s_data.Favorites.Any(favorite => favorite.Source == source && favorite.PackageIdentifier == packageIdentifier && favorite.StickerPath == stickerPath);
 	}
 
 	/// <summary>
@@ -843,8 +731,7 @@ public static class ContentsManager
 			if (packageKeys is null) return s_data.Favorites.Count > 0;
 
 			var keySet = packageKeys as HashSet<(ContentSource, string)> ?? [.. packageKeys];
-			return s_data.Favorites.Any(
-				favorite => keySet.Contains((favorite.Source, favorite.PackageIdentifier)));
+			return s_data.Favorites.Any(favorite => keySet.Contains((favorite.Source, favorite.PackageIdentifier)));
 		}
 	}
 
@@ -855,9 +742,7 @@ public static class ContentsManager
 	{
 		lock (s_lock)
 		{
-			var packages = packageKeys is null
-				? s_data.DownloadedPackages
-				: s_data.DownloadedPackages.Where(p => packageKeys.Contains((p.Source, p.PackageIdentifier)));
+			var packages = packageKeys is null ? s_data.DownloadedPackages : s_data.DownloadedPackages.Where(p => packageKeys.Contains((p.Source, p.PackageIdentifier)));
 			return packages.Any(p => p.Stickers.Any(s => !string.IsNullOrEmpty(s.Tag)));
 		}
 	}
@@ -867,10 +752,7 @@ public static class ContentsManager
 	/// </summary>
 	public static IReadOnlyList<FavoriteSticker> GetFavorites(ContentSource? source = null)
 	{
-		lock (s_lock)
-		{
-			return [.. s_data.Favorites.Where(favorite => source == null || favorite.Source == source)];
-		}
+		lock (s_lock) return [.. s_data.Favorites.Where(favorite => source == null || favorite.Source == source)];
 	}
 
 	/// <summary>
@@ -880,13 +762,15 @@ public static class ContentsManager
 	{
 		lock (s_lock)
 		{
-			var packagesByKey = s_data.DownloadedPackages.ToDictionary(
-				package => (package.Source, package.PackageIdentifier));
+			var packagesByKey = s_data.DownloadedPackages.ToDictionary(package => (package.Source, package.PackageIdentifier));
 
 			var reordered = new List<StickerPackage>(s_data.DownloadedPackages.Count);
 			foreach (var key in newOrder)
 			{
-				if (packagesByKey.Remove(key, out var package)) reordered.Add(package);
+				if (packagesByKey.Remove(key, out var package))
+				{
+				    reordered.Add(package);
+				}
 			}
 			reordered.AddRange(packagesByKey.Values);
 
@@ -906,10 +790,8 @@ public static class ContentsManager
 
 		lock (s_lock)
 		{
-			packageRemoved = s_data.DownloadedPackages.RemoveAll(
-				package => package.Source == source && package.PackageIdentifier == packageIdentifier) > 0;
-			favoritesRemoved = s_data.Favorites.RemoveAll(
-				favorite => favorite.Source == source && favorite.PackageIdentifier == packageIdentifier) > 0;
+			packageRemoved = s_data.DownloadedPackages.RemoveAll(package => package.Source == source && package.PackageIdentifier == packageIdentifier) > 0;
+			favoritesRemoved = s_data.Favorites.RemoveAll(favorite => favorite.Source == source && favorite.PackageIdentifier == packageIdentifier) > 0;
 		}
 
 		if (!packageRemoved) return;
@@ -983,8 +865,7 @@ public static class ContentsManager
 	/// <summary>
 	/// 스티커 이미지의 로컬 파일 경로를 반환합니다.
 	/// </summary>
-	public static string GetStickerImagePath(ContentSource source, string packageIdentifier, string localDirectoryName, string fileName)
-		=> Path.Combine(GetPackageDirectory(source, packageIdentifier), localDirectoryName, fileName);
+	public static string GetStickerImagePath(ContentSource source, string packageIdentifier, string localDirectoryName, string fileName) => Path.Combine(GetPackageDirectory(source, packageIdentifier), localDirectoryName, fileName);
 
 	public static string GetStickerImagePath(ContentSource source, string packageIdentifier, string localDirectoryName, Sticker sticker)
 	{
@@ -1000,11 +881,9 @@ public static class ContentsManager
     /// <summary>
     /// 패키지의 메인 이미지 로컬 파일 경로를 반환합니다.
     /// </summary>
-    public static string GetMainImagePath(ContentSource source, string packageIdentifier, string mainImageFileName)
-		=> Path.Combine(GetPackageDirectory(source, packageIdentifier), mainImageFileName);
+    public static string GetMainImagePath(ContentSource source, string packageIdentifier, string mainImageFileName) => Path.Combine(GetPackageDirectory(source, packageIdentifier), mainImageFileName);
 
-    private static string GetPackageDirectory(ContentSource source, string packageIdentifier)
-		=> Path.Combine(s_basePath, source.ToString(), packageIdentifier);
+    private static string GetPackageDirectory(ContentSource source, string packageIdentifier) => Path.Combine(s_basePath, source.ToString(), packageIdentifier);
 
 	private static AnimatedPngStickerConversionCandidate CreateAnimatedPngStickerConversionCandidate(StickerPackage package, Sticker sticker)
 	{
@@ -1014,11 +893,7 @@ public static class ContentsManager
 		return new AnimatedPngStickerConversionCandidate(package, sticker, sourceFilePath, webpFileName, webpFilePath);
 	}
 
-	private static async Task<int> SynchronizeDcconPackageAsync(
-		string packageIdentifier,
-		StickerPackage package,
-		IProgress<(int Completed, int Total)> progress,
-		CancellationToken cancellationToken)
+	private static async Task<int> SynchronizeDcconPackageAsync(string packageIdentifier, StickerPackage package, IProgress<(int Completed, int Total)> progress, CancellationToken cancellationToken)
 	{
 		var packageIndex = int.Parse(packageIdentifier, CultureInfo.InvariantCulture);
 		var detail = await s_dcconClient.GetPackageDetailAsync(packageIndex, cancellationToken);
@@ -1049,11 +924,7 @@ public static class ContentsManager
 		return synchronizedStickerCount;
 	}
 
-	private static async Task<int> SynchronizeArcaconPackageAsync(
-		string packageIdentifier,
-		StickerPackage package,
-		IProgress<(int Completed, int Total)> progress,
-		CancellationToken cancellationToken)
+	private static async Task<int> SynchronizeArcaconPackageAsync(string packageIdentifier, StickerPackage package, IProgress<(int Completed, int Total)> progress, CancellationToken cancellationToken)
 	{
 		var packageIndex = int.Parse(packageIdentifier, CultureInfo.InvariantCulture);
 		var detail = await App.ArcaconClient.GetPackageDetailAsync(packageIndex, cancellationToken);
@@ -1106,11 +977,7 @@ public static class ContentsManager
 		}
 	}
 
-	private static async Task<int> SynchronizeInvenStickerPackageAsync(
-		string packageIdentifier,
-		StickerPackage package,
-		IProgress<(int Completed, int Total)> progress,
-		CancellationToken cancellationToken)
+	private static async Task<int> SynchronizeInvenStickerPackageAsync(string packageIdentifier, StickerPackage package, IProgress<(int Completed, int Total)> progress, CancellationToken cancellationToken)
 	{
 		var packageIdentifierAsInteger = int.Parse(packageIdentifier, CultureInfo.InvariantCulture);
 		var detail = await s_stickerClient.GetDetailAsync(packageIdentifierAsInteger, cancellationToken);
@@ -1144,8 +1011,7 @@ public static class ContentsManager
 		return synchronizedStickerCount;
 	}
 
-	private static HashSet<string> GetExistingStickerPaths(StickerPackage package)
-		=> package.Stickers.Select(sticker => sticker.Path).ToHashSet(StringComparer.Ordinal);
+	private static HashSet<string> GetExistingStickerPaths(StickerPackage package) => package.Stickers.Select(sticker => sticker.Path).ToHashSet(StringComparer.Ordinal);
 
 	private static string EnsurePackageStickerDirectory(ContentSource source, string packageIdentifier, StickerPackage package)
 	{
@@ -1237,10 +1103,7 @@ public static class ContentsManager
 		var targetExists = Directory.Exists(targetDirectory);
 		if (targetExists) Directory.Move(targetDirectory, backupDirectory);
 
-		try
-		{
-			Directory.Move(sourceDirectory, targetDirectory);
-		}
+		try { Directory.Move(sourceDirectory, targetDirectory); }
 		catch
 		{
 			if (Directory.Exists(targetDirectory)) Directory.Delete(targetDirectory, recursive: true);
@@ -1279,11 +1142,7 @@ public static class ContentsManager
 		catch (Exception exception) { App.LogException("ArcaconPackageRebuildCleanup", exception); }
 	}
 
-	private static async Task<List<Sticker>> DownloadArcaconStickerFilesAsync(
-		IReadOnlyList<ArcaconSticker> stickers,
-		string stickerDirectory,
-		IProgress<(int Completed, int Total)> progress,
-		CancellationToken cancellationToken)
+	private static async Task<List<Sticker>> DownloadArcaconStickerFilesAsync(IReadOnlyList<ArcaconSticker> stickers, string stickerDirectory, IProgress<(int Completed, int Total)> progress, CancellationToken cancellationToken)
 	{
 		var downloadedStickers = new Sticker[stickers.Count];
 		var downloadedStickerCount = 0;
@@ -1311,31 +1170,31 @@ public static class ContentsManager
 
 	private static Sticker CreateSticker(DcconSticker sticker) => new()
 	{
-		Path = sticker.Path,
-		Title = sticker.Title,
-		Extension = sticker.Extension,
-		SortNumber = sticker.SortNumber,
-		ImageUrl = sticker.ImageUrl,
-		FileName = DcconFileNameHelper.GetStickerFileName(sticker),
+	    Path = sticker.Path,
+	    Title = sticker.Title,
+	    Extension = sticker.Extension,
+	    SortNumber = sticker.SortNumber,
+	    ImageUrl = sticker.ImageUrl,
+	    FileName = DcconFileNameHelper.GetStickerFileName(sticker),
 	};
 
 	private static Sticker CreateSticker(ArcaconSticker sticker, string fileName) => new()
 	{
-		Path = sticker.ImageUrl,
-		Title = string.IsNullOrWhiteSpace(sticker.Title) ? $"스티커 {sticker.SortNumber}" : sticker.Title,
-		Extension = Path.GetExtension(fileName).TrimStart('.'),
-		SortNumber = sticker.SortNumber,
-		ImageUrl = sticker.ImageUrl,
-		FileName = fileName,
+	    Path = sticker.ImageUrl,
+	    Title = string.IsNullOrWhiteSpace(sticker.Title) ? $"스티커 {sticker.SortNumber}" : sticker.Title,
+	    Extension = Path.GetExtension(fileName).TrimStart('.'),
+	    SortNumber = sticker.SortNumber,
+	    ImageUrl = sticker.ImageUrl,
+	    FileName = fileName,
 	};
 
 	private static Sticker CreateSticker(InvenStickerImage sticker, int index) => new()
 	{
-		Path = sticker.Url,
-		Extension = sticker.Extension,
-		SortNumber = index,
-		ImageUrl = sticker.Url,
-		FileName = InvenStickerFileNameHelper.GetStickerFileName(sticker, index),
+	    Path = sticker.Url,
+	    Extension = sticker.Extension,
+	    SortNumber = index,
+	    ImageUrl = sticker.Url,
+	    FileName = InvenStickerFileNameHelper.GetStickerFileName(sticker, index),
 	};
 
 	private static void ApplyDcconPackageMetadata(StickerPackage package, DcconPackageDetail detail)
@@ -1371,11 +1230,7 @@ public static class ContentsManager
 	/// <summary>
 	/// 메인 이미지를 다운로드하여 패키지 디렉토리에 저장합니다.
 	/// </summary>
-	private static async Task<string> DownloadMainImageAsync(
-		ContentSource source,
-		string mainImagePath,
-		string packageDirectory,
-		CancellationToken cancellationToken = default)
+	private static async Task<string> DownloadMainImageAsync(ContentSource source, string mainImagePath, string packageDirectory, CancellationToken cancellationToken = default)
 	{
 		if (string.IsNullOrEmpty(mainImagePath)) return string.Empty;
 
@@ -1409,24 +1264,13 @@ public static class ContentsManager
 	/// <summary>
 	/// 현재 다운로드된 패키지와 설정을 .yip 파일로 내보냅니다.
 	/// </summary>
-	public static Task ExportAsync(
-		string destinationFilePath,
-		bool exportFavorites = true,
-		bool exportTags = true,
-		IProgress<PackageArchiveProgress> progress = null,
-		CancellationToken cancellationToken = default)
+	public static Task ExportAsync(string destinationFilePath, bool exportFavorites = true, bool exportTags = true, IProgress<PackageArchiveProgress> progress = null, CancellationToken cancellationToken = default)
 		=> ExportAsync(destinationFilePath, selectedPackageKeys: null, exportFavorites, exportTags, progress, cancellationToken);
 
 	/// <summary>
 	/// 선택한 패키지와 관련 즐겨찾기를 .yip 파일로 내보냅니다.
 	/// </summary>
-	public static async Task ExportAsync(
-		string destinationFilePath,
-		IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> selectedPackageKeys,
-		bool exportFavorites = true,
-		bool exportTags = true,
-		IProgress<PackageArchiveProgress> progress = null,
-		CancellationToken cancellationToken = default)
+	public static async Task ExportAsync(string destinationFilePath, IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> selectedPackageKeys, bool exportFavorites = true, bool exportTags = true, IProgress<PackageArchiveProgress> progress = null, CancellationToken cancellationToken = default)
 	{
 		if (File.Exists(destinationFilePath)) File.Delete(destinationFilePath);
 
@@ -1435,28 +1279,19 @@ public static class ContentsManager
 		HashSet<(ContentSource Source, string PackageIdentifier)> selectedPackageKeySet = null;
 		lock (s_lock)
 		{
-			if (selectedPackageKeys is not null) selectedPackageKeySet = [.. selectedPackageKeys];
+			if (selectedPackageKeys is not null) selectedPackageKeySet = [..selectedPackageKeys];
 
 			var exportData = new ContentsManagerData
 			{
-				DownloadedPackages = selectedPackageKeySet is null
-					? [.. s_data.DownloadedPackages]
-					: [.. s_data.DownloadedPackages.Where(package => selectedPackageKeySet.Contains((package.Source, package.PackageIdentifier)))],
-				Favorites = exportFavorites
-					? selectedPackageKeySet is null
-						? [.. s_data.Favorites]
-						: [.. s_data.Favorites.Where(favorite => selectedPackageKeySet.Contains((favorite.Source, favorite.PackageIdentifier)))]
-					: [],
+				DownloadedPackages = selectedPackageKeySet is null ? [..s_data.DownloadedPackages] : [..s_data.DownloadedPackages.Where(package => selectedPackageKeySet.Contains((package.Source, package.PackageIdentifier)))],
+				Favorites = exportFavorites ? selectedPackageKeySet is null ? [..s_data.Favorites] : [..s_data.Favorites.Where(favorite => selectedPackageKeySet.Contains((favorite.Source, favorite.PackageIdentifier)))] : [],
 			};
 
 			if (!exportTags)
 			{
-				exportData = JsonSerializer.Deserialize(
-					JsonSerializer.Serialize(exportData, ContentsManagerJsonContext.Default.ContentsManagerData),
-					ContentsManagerJsonContext.Default.ContentsManagerData);
+				exportData = JsonSerializer.Deserialize(JsonSerializer.Serialize(exportData, ContentsManagerJsonContext.Default.ContentsManagerData), ContentsManagerJsonContext.Default.ContentsManagerData);
 				foreach (var package in exportData.DownloadedPackages)
-					foreach (var sticker in package.Stickers)
-						sticker.Tag = string.Empty;
+					foreach (var sticker in package.Stickers) sticker.Tag = string.Empty;
 			}
 
 			dataJson = JsonSerializer.Serialize(exportData, ContentsManagerJsonContext.Default.ContentsManagerData);
@@ -1467,74 +1302,24 @@ public static class ContentsManager
 		var packageArchiveFileEntries = CreatePackageArchiveFileEntries(packages);
 		var totalFileCount = packageArchiveFileEntries.Count + 1;
 		var totalByteCount = packageArchiveFileEntries.Sum(packageArchiveFileEntry => packageArchiveFileEntry.Length) + contentsJsonBytes.LongLength;
-		ReportPackageArchiveProgress(
-			progress,
-			PackageArchiveProgressStage.Preparing,
-			0,
-			totalFileCount,
-			0,
-			totalByteCount,
-			0,
-			0,
-			string.Empty);
+		ReportPackageArchiveProgress(progress, PackageArchiveProgressStage.Preparing, 0, totalFileCount, 0, totalByteCount, 0, 0, string.Empty);
 
-		await using var destinationFileStream = new FileStream(
-			destinationFilePath,
-			FileMode.Create,
-			FileAccess.Write,
-			FileShare.None,
-			StreamCopyBufferSize,
-			true);
+		await using var destinationFileStream = new FileStream(destinationFilePath, FileMode.Create, FileAccess.Write, FileShare.None, StreamCopyBufferSize, true);
 		using var exportArchive = new ZipArchive(destinationFileStream, ZipArchiveMode.Create);
 
 		var completedFileCount = 0;
 		var completedByteCount = 0L;
-		completedByteCount = await WriteArchiveEntryAsync(
-			exportArchive,
-			"contents.json",
-			contentsJsonBytes,
-			completedFileCount,
-			totalFileCount,
-			completedByteCount,
-			totalByteCount,
-			progress,
-			cancellationToken);
+		completedByteCount = await WriteArchiveEntryAsync(exportArchive, "contents.json", contentsJsonBytes, completedFileCount, totalFileCount, completedByteCount, totalByteCount, progress, cancellationToken);
 		completedFileCount++;
-		ReportPackageArchiveProgress(
-			progress,
-			PackageArchiveProgressStage.AddingToArchive,
-			completedFileCount,
-			totalFileCount,
-			completedByteCount,
-			totalByteCount,
-			0,
-			0,
-			string.Empty);
+		ReportPackageArchiveProgress(progress, PackageArchiveProgressStage.AddingToArchive, completedFileCount, totalFileCount, completedByteCount, totalByteCount, 0, 0, string.Empty);
 
 		foreach (var packageArchiveFileEntry in packageArchiveFileEntries)
 		{
 			cancellationToken.ThrowIfCancellationRequested();
 
-			completedByteCount = await WriteArchiveFileEntryAsync(
-				exportArchive,
-				packageArchiveFileEntry,
-				completedFileCount,
-				totalFileCount,
-				completedByteCount,
-				totalByteCount,
-				progress,
-				cancellationToken);
+			completedByteCount = await WriteArchiveFileEntryAsync(exportArchive, packageArchiveFileEntry, completedFileCount, totalFileCount, completedByteCount, totalByteCount, progress, cancellationToken);
 			completedFileCount++;
-			ReportPackageArchiveProgress(
-				progress,
-				PackageArchiveProgressStage.AddingToArchive,
-				completedFileCount,
-				totalFileCount,
-				completedByteCount,
-				totalByteCount,
-				0,
-				0,
-				string.Empty);
+			ReportPackageArchiveProgress(progress, PackageArchiveProgressStage.AddingToArchive, completedFileCount, totalFileCount, completedByteCount, totalByteCount, 0, 0, string.Empty);
 		}
 	}
 
@@ -1543,9 +1328,7 @@ public static class ContentsManager
 	/// </summary>
 	/// <param name="sourceFilePath">불러올 .yip 파일 경로</param>
 	/// <param name="cancellationToken">취소 토큰</param>
-	public static async Task<IReadOnlyList<StickerPackage>> ReadPackagesFromImportFileAsync(
-		string sourceFilePath,
-		CancellationToken cancellationToken = default)
+	public static async Task<IReadOnlyList<StickerPackage>> ReadPackagesFromImportFileAsync(string sourceFilePath, CancellationToken cancellationToken = default)
 	{
 		var importedData = await ReadDataFromImportFileAsync(sourceFilePath, cancellationToken);
 		return importedData.DownloadedPackages;
@@ -1556,9 +1339,7 @@ public static class ContentsManager
 	/// </summary>
 	/// <param name="sourceFilePath">불러올 .yip 파일 경로</param>
 	/// <param name="cancellationToken">취소 토큰</param>
-	public static async Task<bool> HasFavoritesInImportFileAsync(
-		string sourceFilePath,
-		CancellationToken cancellationToken = default)
+	public static async Task<bool> HasFavoritesInImportFileAsync(string sourceFilePath, CancellationToken cancellationToken = default)
 	{
 		var importedData = await ReadDataFromImportFileAsync(sourceFilePath, cancellationToken);
 		return importedData.Favorites.Count > 0;
@@ -1567,23 +1348,17 @@ public static class ContentsManager
 	/// <summary>
 	/// .yip 파일에서 특정 패키지들에 대한 즐겨찾기가 포함되어 있는지 확인합니다.
 	/// </summary>
-	public static async Task<bool> HasFavoritesForPackagesInImportFileAsync(
-		string sourceFilePath,
-		IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> packageKeys,
-		CancellationToken cancellationToken = default)
+	public static async Task<bool> HasFavoritesForPackagesInImportFileAsync(string sourceFilePath, IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> packageKeys, CancellationToken cancellationToken = default)
 	{
 		var importedData = await ReadDataFromImportFileAsync(sourceFilePath, cancellationToken);
 		var keySet = packageKeys as HashSet<(ContentSource, string)> ?? [.. packageKeys];
-		return importedData.Favorites.Any(
-			favorite => keySet.Contains((favorite.Source, favorite.PackageIdentifier)));
+		return importedData.Favorites.Any(favorite => keySet.Contains((favorite.Source, favorite.PackageIdentifier)));
 	}
 
 	/// <summary>
 	/// .yip 파일에 스티커 태그가 포함되어 있는지 확인합니다.
 	/// </summary>
-	public static async Task<bool> HasStickerTagsInImportFileAsync(
-		string sourceFilePath,
-		CancellationToken cancellationToken = default)
+	public static async Task<bool> HasStickerTagsInImportFileAsync(string sourceFilePath, CancellationToken cancellationToken = default)
 	{
 		var importedData = await ReadDataFromImportFileAsync(sourceFilePath, cancellationToken);
 		return importedData.DownloadedPackages.Any(p => p.Stickers.Any(s => !string.IsNullOrEmpty(s.Tag)));
@@ -1592,10 +1367,7 @@ public static class ContentsManager
 	/// <summary>
 	/// .yip 파일에서 특정 패키지들에 대한 스티커 태그가 포함되어 있는지 확인합니다.
 	/// </summary>
-	public static async Task<bool> HasStickerTagsForPackagesInImportFileAsync(
-		string sourceFilePath,
-		IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> packageKeys,
-		CancellationToken cancellationToken = default)
+	public static async Task<bool> HasStickerTagsForPackagesInImportFileAsync(string sourceFilePath, IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> packageKeys, CancellationToken cancellationToken = default)
 	{
 		var importedData = await ReadDataFromImportFileAsync(sourceFilePath, cancellationToken);
 		var keySet = packageKeys as HashSet<(ContentSource, string)> ?? [.. packageKeys];
@@ -1607,10 +1379,7 @@ public static class ContentsManager
 	/// <summary>
 	/// .yip 파일에서 패키지의 대표 이미지만 임시 디렉토리에 추출합니다.
 	/// </summary>
-	public static void ExtractMainImagesFromImportFile(
-		string sourceFilePath,
-		IReadOnlyList<StickerPackage> packages,
-		string targetDirectory)
+	public static void ExtractMainImagesFromImportFile(string sourceFilePath, IReadOnlyList<StickerPackage> packages, string targetDirectory)
 	{
 		using var archive = ZipFile.OpenRead(sourceFilePath);
 		foreach (var package in packages)
@@ -1630,20 +1399,15 @@ public static class ContentsManager
 	/// <summary>
 	/// .yip 파일에 포함된 전체 데이터를 읽어옵니다.
 	/// </summary>
-	private static async Task<ContentsManagerData> ReadDataFromImportFileAsync(
-		string sourceFilePath,
-		CancellationToken cancellationToken = default)
+	private static async Task<ContentsManagerData> ReadDataFromImportFileAsync(string sourceFilePath, CancellationToken cancellationToken = default)
 	{
 		using var importArchive = ZipFile.OpenRead(sourceFilePath);
 		return await ReadDataFromImportArchiveAsync(importArchive, cancellationToken);
 	}
 
-	private static async Task<ContentsManagerData> ReadDataFromImportArchiveAsync(
-		ZipArchive importArchive,
-		CancellationToken cancellationToken = default)
+	private static async Task<ContentsManagerData> ReadDataFromImportArchiveAsync(ZipArchive importArchive, CancellationToken cancellationToken = default)
 	{
-		var importedDataEntry = importArchive.GetEntry("contents.json")
-			?? throw new InvalidOperationException("유효하지 않은 .yip 파일입니다. contents.json이 존재하지 않습니다.");
+		var importedDataEntry = importArchive.GetEntry("contents.json") ?? throw new InvalidOperationException("유효하지 않은 .yip 파일입니다. contents.json이 존재하지 않습니다.");
 
 		using var importedDataStream = importedDataEntry.Open();
 		var importedData = await DeserializeImportedDataAsync(importedDataStream, cancellationToken);
@@ -1659,28 +1423,12 @@ public static class ContentsManager
 	/// <param name="importFavorites">true이면 즐겨찾기도 함께 불러옵니다.</param>
 	/// <param name="selectedPackageKeys">null이 아니면 선택한 패키지만 불러옵니다.</param>
 	/// <param name="cancellationToken">취소 토큰</param>
-	public static async Task ImportAsync(
-		string sourceFilePath,
-		bool replaceAll,
-		bool importFavorites = true,
-		bool importTags = true,
-		IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> selectedPackageKeys = null,
-		IProgress<PackageArchiveProgress> progress = null,
-		CancellationToken cancellationToken = default)
+	public static async Task ImportAsync(string sourceFilePath, bool replaceAll, bool importFavorites = true, bool importTags = true, IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> selectedPackageKeys = null, IProgress<PackageArchiveProgress> progress = null, CancellationToken cancellationToken = default)
 	{
 		var temporaryDirectory = Path.Combine(Path.GetTempPath(), $"YellowInside_Import_{Guid.NewGuid():N}");
 		try
 		{
-			ReportPackageArchiveProgress(
-				progress,
-				PackageArchiveProgressStage.Preparing,
-				0,
-				0,
-				0,
-				0,
-				0,
-				0,
-				string.Empty);
+			ReportPackageArchiveProgress(progress, PackageArchiveProgressStage.Preparing, 0, 0, 0, 0, 0, 0, string.Empty);
 
 			using var importArchive = ZipFile.OpenRead(sourceFilePath);
 			var importedData = await ReadDataFromImportArchiveAsync(importArchive, cancellationToken);
@@ -1696,8 +1444,12 @@ public static class ContentsManager
 			if (!importTags)
 			{
 				foreach (var package in importedData.DownloadedPackages)
-					foreach (var sticker in package.Stickers)
-						sticker.Tag = string.Empty;
+				{
+				    foreach (var sticker in package.Stickers)
+				    {
+				        sticker.Tag = string.Empty;
+				    }
+				}
 			}
 
 			var importedPackageKeySet = importedData.DownloadedPackages
@@ -1705,12 +1457,7 @@ public static class ContentsManager
 				.ToHashSet();
 
 			Directory.CreateDirectory(temporaryDirectory);
-			await ExtractPackageArchiveEntriesAsync(
-				importArchive,
-				temporaryDirectory,
-				importedPackageKeySet,
-				progress,
-				cancellationToken);
+			await ExtractPackageArchiveEntriesAsync(importArchive, temporaryDirectory, importedPackageKeySet, progress, cancellationToken);
 
 			if (replaceAll)
 			{
@@ -1739,11 +1486,7 @@ public static class ContentsManager
 					{
 						s_data.DownloadedPackages = [.. s_data.DownloadedPackages
 							.Where(package => !selectedPackageKeySet.Contains((package.Source, package.PackageIdentifier)))];
-						if (importFavorites)
-						{
-							s_data.Favorites = [.. s_data.Favorites
-								.Where(favorite => !selectedPackageKeySet.Contains((favorite.Source, favorite.PackageIdentifier)))];
-						}
+						if (importFavorites) s_data.Favorites = [..s_data.Favorites.Where(favorite => !selectedPackageKeySet.Contains((favorite.Source, favorite.PackageIdentifier)))];
 					}
 
 					var existingKeys = s_data.DownloadedPackages.Select(package => (package.Source, package.PackageIdentifier)).ToHashSet();
@@ -1779,63 +1522,32 @@ public static class ContentsManager
 			}
 
 			var shouldOverwriteExistingTargetDirectories = replaceAll || selectedPackageKeySet is not null;
-			var packageArchiveFileCopyEntries = CreateImportedPackageFileCopyEntries(
-				temporaryDirectory,
-				importedData.DownloadedPackages,
-				shouldOverwriteExistingTargetDirectories);
-			await CopyPackageArchiveFileEntriesAsync(
-				packageArchiveFileCopyEntries,
-				PackageArchiveProgressStage.ApplyingPackageFiles,
-				progress,
-				cancellationToken);
+			var packageArchiveFileCopyEntries = CreateImportedPackageFileCopyEntries(temporaryDirectory, importedData.DownloadedPackages, shouldOverwriteExistingTargetDirectories);
+			await CopyPackageArchiveFileEntriesAsync(packageArchiveFileCopyEntries, PackageArchiveProgressStage.ApplyingPackageFiles, progress, cancellationToken);
 
-			ReportPackageArchiveProgress(
-				progress,
-				PackageArchiveProgressStage.Saving,
-				0,
-				0,
-				0,
-				0,
-				0,
-				0,
-				string.Empty);
+			ReportPackageArchiveProgress(progress, PackageArchiveProgressStage.Saving, 0, 0, 0, 0, 0, 0, string.Empty);
 			await SaveAsync();
 
-			ReportPackageArchiveProgress(
-				progress,
-				PackageArchiveProgressStage.Refreshing,
-				0,
-				0,
-				0,
-				0,
-				0,
-				0,
-				string.Empty);
+			ReportPackageArchiveProgress(progress, PackageArchiveProgressStage.Refreshing, 0, 0, 0, 0, 0, 0, string.Empty);
 			PackagesChanged?.Invoke();
 			if (importFavorites) FavoritesChanged?.Invoke();
 
 			ManageWindow.Instance.DispatcherQueue.TryEnqueue(() =>
 			{
-				foreach (var package in importedData.DownloadedPackages)
-				{
-					WeakReferenceMessenger.Default.Send(new FavoritesOrPackagesChangedMessage(package.Source, package.PackageIdentifier));
-				}
+				foreach (var package in importedData.DownloadedPackages) WeakReferenceMessenger.Default.Send(new FavoritesOrPackagesChangedMessage(package.Source, package.PackageIdentifier));
 			});
 		}
 		finally
 		{
-			if (Directory.Exists(temporaryDirectory)) Directory.Delete(temporaryDirectory, recursive: true);
+			if (Directory.Exists(temporaryDirectory))
+			{
+			    Directory.Delete(temporaryDirectory, recursive: true);
+			}
 		}
 	}
 
-	private static async Task<ContentsManagerData> DeserializeImportedDataAsync(
-		Stream importedDataStream,
-		CancellationToken cancellationToken = default)
-		=> await JsonSerializer.DeserializeAsync(
-			importedDataStream,
-			ContentsManagerJsonContext.Default.ContentsManagerData,
-			cancellationToken)
-		?? throw new InvalidOperationException("유효하지 않은 .yip 파일입니다. contents.json을 역직렬화할 수 없습니다.");
+	private static async Task<ContentsManagerData> DeserializeImportedDataAsync(Stream importedDataStream, CancellationToken cancellationToken = default)
+		=> await JsonSerializer.DeserializeAsync(importedDataStream, ContentsManagerJsonContext.Default.ContentsManagerData, cancellationToken) ?? throw new InvalidOperationException("유효하지 않은 .yip 파일입니다. contents.json을 역직렬화할 수 없습니다.");
 
 	private static List<PackageArchiveFileEntry> CreatePackageArchiveFileEntries(IEnumerable<StickerPackage> packages)
 	{
@@ -1858,95 +1570,26 @@ public static class ContentsManager
 		return packageArchiveFileEntries;
 	}
 
-	private static async Task<long> WriteArchiveFileEntryAsync(
-		ZipArchive exportArchive,
-		PackageArchiveFileEntry packageArchiveFileEntry,
-		int completedFileCount,
-		int totalFileCount,
-		long completedByteCount,
-		long totalByteCount,
-		IProgress<PackageArchiveProgress> progress,
-		CancellationToken cancellationToken)
+	private static async Task<long> WriteArchiveFileEntryAsync(ZipArchive exportArchive, PackageArchiveFileEntry packageArchiveFileEntry, int completedFileCount, int totalFileCount, long completedByteCount, long totalByteCount, IProgress<PackageArchiveProgress> progress, CancellationToken cancellationToken)
 	{
-		await using var sourceFileStream = new FileStream(
-			packageArchiveFileEntry.SourceFilePath,
-			FileMode.Open,
-			FileAccess.Read,
-			FileShare.Read,
-			StreamCopyBufferSize,
-			true);
-		return await WriteArchiveEntryAsync(
-			exportArchive,
-			packageArchiveFileEntry.RelativePath,
-			sourceFileStream,
-			packageArchiveFileEntry.Length,
-			completedFileCount,
-			totalFileCount,
-			completedByteCount,
-			totalByteCount,
-			progress,
-			cancellationToken);
+		await using var sourceFileStream = new FileStream(packageArchiveFileEntry.SourceFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, StreamCopyBufferSize, true);
+		return await WriteArchiveEntryAsync(exportArchive, packageArchiveFileEntry.RelativePath, sourceFileStream, packageArchiveFileEntry.Length, completedFileCount, totalFileCount, completedByteCount, totalByteCount, progress, cancellationToken);
 	}
 
-	private static async Task<long> WriteArchiveEntryAsync(
-		ZipArchive exportArchive,
-		string relativePath,
-		byte[] contents,
-		int completedFileCount,
-		int totalFileCount,
-		long completedByteCount,
-		long totalByteCount,
-		IProgress<PackageArchiveProgress> progress,
-		CancellationToken cancellationToken)
+	private static async Task<long> WriteArchiveEntryAsync(ZipArchive exportArchive, string relativePath, byte[] contents, int completedFileCount, int totalFileCount, long completedByteCount, long totalByteCount, IProgress<PackageArchiveProgress> progress, CancellationToken cancellationToken)
 	{
 		using var sourceStream = new MemoryStream(contents, writable: false);
-		return await WriteArchiveEntryAsync(
-			exportArchive,
-			relativePath,
-			sourceStream,
-			contents.LongLength,
-			completedFileCount,
-			totalFileCount,
-			completedByteCount,
-			totalByteCount,
-			progress,
-			cancellationToken);
+		return await WriteArchiveEntryAsync(exportArchive, relativePath, sourceStream, contents.LongLength, completedFileCount, totalFileCount, completedByteCount, totalByteCount, progress, cancellationToken);
 	}
 
-	private static async Task<long> WriteArchiveEntryAsync(
-		ZipArchive exportArchive,
-		string relativePath,
-		Stream sourceStream,
-		long entryLength,
-		int completedFileCount,
-		int totalFileCount,
-		long completedByteCount,
-		long totalByteCount,
-		IProgress<PackageArchiveProgress> progress,
-		CancellationToken cancellationToken)
+	private static async Task<long> WriteArchiveEntryAsync(ZipArchive exportArchive, string relativePath, Stream sourceStream, long entryLength, int completedFileCount, int totalFileCount, long completedByteCount, long totalByteCount, IProgress<PackageArchiveProgress> progress, CancellationToken cancellationToken)
 	{
 		var archiveEntry = exportArchive.CreateEntry(NormalizeArchiveEntryName(relativePath), CompressionLevel.Optimal);
 		await using var archiveEntryStream = archiveEntry.Open();
-		return await CopyStreamWithPackageArchiveProgressAsync(
-			sourceStream,
-			archiveEntryStream,
-			PackageArchiveProgressStage.AddingToArchive,
-			NormalizeArchiveEntryName(relativePath),
-			completedFileCount,
-			totalFileCount,
-			completedByteCount,
-			totalByteCount,
-			entryLength,
-			progress,
-			cancellationToken);
+		return await CopyStreamWithPackageArchiveProgressAsync(sourceStream, archiveEntryStream, PackageArchiveProgressStage.AddingToArchive, NormalizeArchiveEntryName(relativePath), completedFileCount, totalFileCount, completedByteCount, totalByteCount, entryLength, progress, cancellationToken);
 	}
 
-	private static async Task ExtractPackageArchiveEntriesAsync(
-		ZipArchive importArchive,
-		string temporaryDirectory,
-		HashSet<(ContentSource Source, string PackageIdentifier)> packageKeySet,
-		IProgress<PackageArchiveProgress> progress,
-		CancellationToken cancellationToken)
+	private static async Task ExtractPackageArchiveEntriesAsync(ZipArchive importArchive, string temporaryDirectory, HashSet<(ContentSource Source, string PackageIdentifier)> packageKeySet, IProgress<PackageArchiveProgress> progress, CancellationToken cancellationToken)
 	{
 		var packageArchivePrefixes = packageKeySet
 			.Select(packageKey => $"{packageKey.Source}/{packageKey.PackageIdentifier}/")
@@ -1960,16 +1603,7 @@ public static class ContentsManager
 		var completedFileCount = 0;
 		var completedByteCount = 0L;
 
-		ReportPackageArchiveProgress(
-			progress,
-			PackageArchiveProgressStage.ExtractingArchive,
-			completedFileCount,
-			totalFileCount,
-			completedByteCount,
-			totalByteCount,
-			0,
-			0,
-			string.Empty);
+		ReportPackageArchiveProgress(progress, PackageArchiveProgressStage.ExtractingArchive, completedFileCount, totalFileCount, completedByteCount, totalByteCount, 0, 0, string.Empty);
 
 		foreach (var archiveEntry in archiveEntries)
 		{
@@ -1983,36 +1617,10 @@ public static class ContentsManager
 			if (!string.IsNullOrEmpty(destinationDirectoryPath)) Directory.CreateDirectory(destinationDirectoryPath);
 
 			await using var archiveEntryStream = archiveEntry.Open();
-			await using var destinationFileStream = new FileStream(
-				destinationFilePath,
-				FileMode.Create,
-				FileAccess.Write,
-				FileShare.None,
-				StreamCopyBufferSize,
-				true);
-			completedByteCount = await CopyStreamWithPackageArchiveProgressAsync(
-				archiveEntryStream,
-				destinationFileStream,
-				PackageArchiveProgressStage.ExtractingArchive,
-				relativeArchivePath,
-				completedFileCount,
-				totalFileCount,
-				completedByteCount,
-				totalByteCount,
-				archiveEntry.Length,
-				progress,
-				cancellationToken);
+			await using var destinationFileStream = new FileStream(destinationFilePath, FileMode.Create, FileAccess.Write, FileShare.None, StreamCopyBufferSize, true);
+			completedByteCount = await CopyStreamWithPackageArchiveProgressAsync(archiveEntryStream, destinationFileStream, PackageArchiveProgressStage.ExtractingArchive, relativeArchivePath, completedFileCount, totalFileCount, completedByteCount, totalByteCount, archiveEntry.Length, progress, cancellationToken);
 			completedFileCount++;
-			ReportPackageArchiveProgress(
-				progress,
-				PackageArchiveProgressStage.ExtractingArchive,
-				completedFileCount,
-				totalFileCount,
-				completedByteCount,
-				totalByteCount,
-				0,
-				0,
-				string.Empty);
+			ReportPackageArchiveProgress(progress, PackageArchiveProgressStage.ExtractingArchive, completedFileCount, totalFileCount, completedByteCount, totalByteCount, 0, 0, string.Empty);
 		}
 	}
 
@@ -2024,10 +1632,7 @@ public static class ContentsManager
 		return packageArchivePrefixes.Any(packageArchivePrefix => relativeArchivePath.StartsWith(packageArchivePrefix, StringComparison.Ordinal));
 	}
 
-	private static List<PackageArchiveFileCopyEntry> CreateImportedPackageFileCopyEntries(
-		string temporaryDirectory,
-		IEnumerable<StickerPackage> packages,
-		bool shouldOverwriteExistingTargetDirectories)
+	private static List<PackageArchiveFileCopyEntry> CreateImportedPackageFileCopyEntries(string temporaryDirectory, IEnumerable<StickerPackage> packages, bool shouldOverwriteExistingTargetDirectories)
 	{
 		var packageArchiveFileCopyEntries = new List<PackageArchiveFileCopyEntry>();
 		foreach (var package in packages)
@@ -2051,27 +1656,14 @@ public static class ContentsManager
 		return packageArchiveFileCopyEntries;
 	}
 
-	private static async Task CopyPackageArchiveFileEntriesAsync(
-		IReadOnlyList<PackageArchiveFileCopyEntry> packageArchiveFileCopyEntries,
-		PackageArchiveProgressStage stage,
-		IProgress<PackageArchiveProgress> progress,
-		CancellationToken cancellationToken)
+	private static async Task CopyPackageArchiveFileEntriesAsync(IReadOnlyList<PackageArchiveFileCopyEntry> packageArchiveFileCopyEntries, PackageArchiveProgressStage stage, IProgress<PackageArchiveProgress> progress, CancellationToken cancellationToken)
 	{
 		var totalFileCount = packageArchiveFileCopyEntries.Count;
 		var totalByteCount = packageArchiveFileCopyEntries.Sum(packageArchiveFileCopyEntry => packageArchiveFileCopyEntry.Length);
 		var completedFileCount = 0;
 		var completedByteCount = 0L;
 
-		ReportPackageArchiveProgress(
-			progress,
-			stage,
-			completedFileCount,
-			totalFileCount,
-			completedByteCount,
-			totalByteCount,
-			0,
-			0,
-			string.Empty);
+		ReportPackageArchiveProgress(progress, stage, completedFileCount, totalFileCount, completedByteCount, totalByteCount, 0, 0, string.Empty);
 
 		foreach (var packageArchiveFileCopyEntry in packageArchiveFileCopyEntries)
 		{
@@ -2080,71 +1672,19 @@ public static class ContentsManager
 			var destinationDirectoryPath = Path.GetDirectoryName(packageArchiveFileCopyEntry.DestinationFilePath);
 			if (!string.IsNullOrEmpty(destinationDirectoryPath)) Directory.CreateDirectory(destinationDirectoryPath);
 
-			await using var sourceFileStream = new FileStream(
-				packageArchiveFileCopyEntry.SourceFilePath,
-				FileMode.Open,
-				FileAccess.Read,
-				FileShare.Read,
-				StreamCopyBufferSize,
-				true);
-			await using var destinationFileStream = new FileStream(
-				packageArchiveFileCopyEntry.DestinationFilePath,
-				FileMode.Create,
-				FileAccess.Write,
-				FileShare.None,
-				StreamCopyBufferSize,
-				true);
-			completedByteCount = await CopyStreamWithPackageArchiveProgressAsync(
-				sourceFileStream,
-				destinationFileStream,
-				stage,
-				packageArchiveFileCopyEntry.RelativePath,
-				completedFileCount,
-				totalFileCount,
-				completedByteCount,
-				totalByteCount,
-				packageArchiveFileCopyEntry.Length,
-				progress,
-				cancellationToken);
+			await using var sourceFileStream = new FileStream(packageArchiveFileCopyEntry.SourceFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, StreamCopyBufferSize, true);
+			await using var destinationFileStream = new FileStream(packageArchiveFileCopyEntry.DestinationFilePath, FileMode.Create, FileAccess.Write, FileShare.None, StreamCopyBufferSize, true);
+			completedByteCount = await CopyStreamWithPackageArchiveProgressAsync(sourceFileStream, destinationFileStream, stage, packageArchiveFileCopyEntry.RelativePath, completedFileCount, totalFileCount, completedByteCount, totalByteCount, packageArchiveFileCopyEntry.Length, progress, cancellationToken);
 			completedFileCount++;
-			ReportPackageArchiveProgress(
-				progress,
-				stage,
-				completedFileCount,
-				totalFileCount,
-				completedByteCount,
-				totalByteCount,
-				0,
-				0,
-				string.Empty);
+			ReportPackageArchiveProgress(progress, stage, completedFileCount, totalFileCount, completedByteCount, totalByteCount, 0, 0, string.Empty);
 		}
 	}
 
-	private static async Task<long> CopyStreamWithPackageArchiveProgressAsync(
-		Stream sourceStream,
-		Stream destinationStream,
-		PackageArchiveProgressStage stage,
-		string relativePath,
-		int completedFileCount,
-		int totalFileCount,
-		long completedByteCount,
-		long totalByteCount,
-		long currentFileTotalByteCount,
-		IProgress<PackageArchiveProgress> progress,
-		CancellationToken cancellationToken)
+	private static async Task<long> CopyStreamWithPackageArchiveProgressAsync(Stream sourceStream, Stream destinationStream, PackageArchiveProgressStage stage, string relativePath, int completedFileCount, int totalFileCount, long completedByteCount, long totalByteCount, long currentFileTotalByteCount, IProgress<PackageArchiveProgress> progress, CancellationToken cancellationToken)
 	{
 		var currentFileCompletedByteCount = 0L;
 		var streamCopyBuffer = new byte[StreamCopyBufferSize];
-		ReportPackageArchiveProgress(
-			progress,
-			stage,
-			completedFileCount,
-			totalFileCount,
-			completedByteCount,
-			totalByteCount,
-			currentFileCompletedByteCount,
-			currentFileTotalByteCount,
-			relativePath);
+		ReportPackageArchiveProgress(progress, stage, completedFileCount, totalFileCount, completedByteCount, totalByteCount, currentFileCompletedByteCount, currentFileTotalByteCount, relativePath);
 
 		while (true)
 		{
@@ -2154,63 +1694,24 @@ public static class ContentsManager
 			await destinationStream.WriteAsync(streamCopyBuffer.AsMemory(0, readByteCount), cancellationToken);
 			currentFileCompletedByteCount += readByteCount;
 			completedByteCount += readByteCount;
-			ReportPackageArchiveProgress(
-				progress,
-				stage,
-				completedFileCount,
-				totalFileCount,
-				completedByteCount,
-				totalByteCount,
-				currentFileCompletedByteCount,
-				currentFileTotalByteCount,
-				relativePath);
+			ReportPackageArchiveProgress(progress, stage, completedFileCount, totalFileCount, completedByteCount, totalByteCount, currentFileCompletedByteCount, currentFileTotalByteCount, relativePath);
 		}
 
 		return completedByteCount;
 	}
 
-	private static void ReportPackageArchiveProgress(
-		IProgress<PackageArchiveProgress> progress,
-		PackageArchiveProgressStage stage,
-		int completedFileCount,
-		int totalFileCount,
-		long completedByteCount,
-		long totalByteCount,
-		long currentFileCompletedByteCount,
-		long currentFileTotalByteCount,
-		string relativePath)
-		=> progress?.Report(new PackageArchiveProgress(
-			stage,
-			completedFileCount,
-			totalFileCount,
-			completedByteCount,
-			totalByteCount,
-			currentFileCompletedByteCount,
-			currentFileTotalByteCount,
-			relativePath));
+	private static void ReportPackageArchiveProgress(IProgress<PackageArchiveProgress> progress, PackageArchiveProgressStage stage, int completedFileCount, int totalFileCount, long completedByteCount, long totalByteCount, long currentFileCompletedByteCount, long currentFileTotalByteCount, string relativePath)
+		=> progress?.Report(new PackageArchiveProgress(stage, completedFileCount, totalFileCount, completedByteCount, totalByteCount, currentFileCompletedByteCount, currentFileTotalByteCount, relativePath));
 
 	private static string NormalizeArchiveEntryName(string path) => path.Replace('\\', '/');
 
-	private static string EnsureTrailingDirectorySeparator(string directoryPath)
-		=> Path.EndsInDirectorySeparator(directoryPath) ? directoryPath : directoryPath + Path.DirectorySeparatorChar;
+	private static string EnsureTrailingDirectorySeparator(string directoryPath) => Path.EndsInDirectorySeparator(directoryPath) ? directoryPath : directoryPath + Path.DirectorySeparatorChar;
 
-	private sealed record PackageArchiveFileEntry(
-		string SourceFilePath,
-		string RelativePath,
-		long Length);
+	private sealed record PackageArchiveFileEntry(string SourceFilePath, string RelativePath, long Length);
 
-	private sealed record PackageArchiveFileCopyEntry(
-		string SourceFilePath,
-		string DestinationFilePath,
-		string RelativePath,
-		long Length);
+	private sealed record PackageArchiveFileCopyEntry(string SourceFilePath, string DestinationFilePath, string RelativePath, long Length);
 
-	private sealed record AnimatedPngStickerConversionCandidate(
-		StickerPackage Package,
-		Sticker Sticker,
-		string SourceFilePath,
-		string WebpFileName,
-		string WebpFilePath);
+	private sealed record AnimatedPngStickerConversionCandidate(StickerPackage Package, Sticker Sticker, string SourceFilePath, string WebpFileName, string WebpFilePath);
 
 	private static async Task SaveAsync()
 	{
@@ -2234,27 +1735,11 @@ public enum PackageArchiveProgressStage
 	Refreshing,
 }
 
-public sealed record PackageArchiveProgress(
-	PackageArchiveProgressStage Stage,
-	int CompletedFileCount,
-	int TotalFileCount,
-	long CompletedByteCount,
-	long TotalByteCount,
-	long CurrentFileCompletedByteCount,
-	long CurrentFileTotalByteCount,
-	string CurrentRelativePath)
+public sealed record PackageArchiveProgress(PackageArchiveProgressStage Stage, int CompletedFileCount, int TotalFileCount, long CompletedByteCount, long TotalByteCount, long CurrentFileCompletedByteCount, long CurrentFileTotalByteCount, string CurrentRelativePath)
 {
-	public double? ProgressPercentage
-		=> TotalByteCount > 0
-			? Math.Clamp(CompletedByteCount * 100d / TotalByteCount, 0d, 100d)
-			: TotalFileCount > 0
-				? Math.Clamp(CompletedFileCount * 100d / TotalFileCount, 0d, 100d)
-				: null;
+	public double? ProgressPercentage => TotalByteCount > 0 ? Math.Clamp(CompletedByteCount * 100d / TotalByteCount, 0d, 100d) : TotalFileCount > 0 ? Math.Clamp(CompletedFileCount * 100d / TotalFileCount, 0d, 100d) : null;
 
-	public double? CurrentFileProgressPercentage
-		=> CurrentFileTotalByteCount > 0
-			? Math.Clamp(CurrentFileCompletedByteCount * 100d / CurrentFileTotalByteCount, 0d, 100d)
-			: null;
+	public double? CurrentFileProgressPercentage => CurrentFileTotalByteCount > 0 ? Math.Clamp(CurrentFileCompletedByteCount * 100d / CurrentFileTotalByteCount, 0d, 100d) : null;
 }
 
 public enum AnimatedPngToWebpPackageConversionStage
@@ -2264,20 +1749,9 @@ public enum AnimatedPngToWebpPackageConversionStage
 	Saving,
 }
 
-public sealed record AnimatedPngToWebpPackageConversionProgress(
-	AnimatedPngToWebpPackageConversionStage Stage,
-	int CompletedCount,
-	int TotalCount,
-	string PackageTitle,
-	string FileName)
+public sealed record AnimatedPngToWebpPackageConversionProgress(AnimatedPngToWebpPackageConversionStage Stage, int CompletedCount, int TotalCount, string PackageTitle, string FileName)
 {
-	public double? ProgressPercentage
-		=> TotalCount > 0 ? Math.Clamp(CompletedCount * 100d / TotalCount, 0d, 100d) : null;
+	public double? ProgressPercentage => TotalCount > 0 ? Math.Clamp(CompletedCount * 100d / TotalCount, 0d, 100d) : null;
 }
 
-public sealed record AnimatedPngToWebpPackageConversionResult(
-	int TotalStickerCount,
-	int ConvertedCount,
-	int AlreadyConvertedCount,
-	int NotTargetCount,
-	int FailedCount);
+public sealed record AnimatedPngToWebpPackageConversionResult(int TotalStickerCount, int ConvertedCount, int AlreadyConvertedCount, int NotTargetCount, int FailedCount);

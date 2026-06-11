@@ -29,8 +29,7 @@ public sealed partial class ArcaconLoginPage : Page
     {
         base.OnNavigatedTo(navigationEventArgs);
 
-        _navigationArguments = navigationEventArgs.Parameter as ArcaconLoginPageNavigationArguments
-            ?? CreateDefaultNavigationArguments();
+        _navigationArguments = navigationEventArgs.Parameter as ArcaconLoginPageNavigationArguments ?? CreateDefaultNavigationArguments();
         _isLoginStartPending = true;
         TryStartLoginWhenReady();
     }
@@ -51,9 +50,7 @@ public sealed partial class ArcaconLoginPage : Page
         _loginCancellationTokenSource?.Cancel();
 
         var returnPageType = _navigationArguments.CancellationReturnPageType ?? _navigationArguments.ReturnPageType;
-        var returnPageParameter = _navigationArguments.CancellationReturnPageType is null
-            ? _navigationArguments.ReturnPageParameter
-            : _navigationArguments.CancellationReturnPageParameter;
+        var returnPageParameter = _navigationArguments.CancellationReturnPageType is null ? _navigationArguments.ReturnPageParameter : _navigationArguments.CancellationReturnPageParameter;
         ManageWindow.NavigateAndClearBackStack(returnPageType, returnPageParameter);
     }
 
@@ -108,10 +105,7 @@ public sealed partial class ArcaconLoginPage : Page
 
             ManageWindow.NavigateAndClearBackStack(_navigationArguments.ReturnPageType, _navigationArguments.ReturnPageParameter);
         }
-        catch (OperationCanceledException)
-        {
-            StatusTextBlock.Text = "로그인이 취소되었습니다.";
-        }
+        catch (OperationCanceledException) { StatusTextBlock.Text = "로그인이 취소되었습니다."; }
         catch (Exception exception)
         {
             StatusTextBlock.Text = "로그인에 실패했습니다. 다시 시도해 주세요.";
@@ -126,15 +120,7 @@ public sealed partial class ArcaconLoginPage : Page
     }
 
     private static ArcaconLoginPageNavigationArguments CreateDefaultNavigationArguments()
-        => new(
-            typeof(ManagePage),
-            new ManagePageNavigationArguments(
-                typeof(HomePage),
-                new HomePageNavigationArguments(OpenArcaconPage: true)),
-            typeof(ManagePage),
-            new ManagePageNavigationArguments(
-                typeof(HomePage),
-                new HomePageNavigationArguments(OpenArcaconPage: false)));
+        => new(typeof(ManagePage), new ManagePageNavigationArguments(typeof(HomePage), new HomePageNavigationArguments(OpenArcaconPage: true)), typeof(ManagePage), new ManagePageNavigationArguments(typeof(HomePage), new HomePageNavigationArguments(OpenArcaconPage: false)));
 
     private async void OnRetryButtonClicked(object sender, RoutedEventArgs routedEventArgs) => await StartLoginAsync();
 }
