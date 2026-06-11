@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using YellowInside.Managers;
 using YellowInside.Models;
 using Microsoft.UI.Xaml;
@@ -46,6 +46,15 @@ public partial class PopupViewModel : ObservableObject
     public const int MaxPendingCount = 30;
     public Visibility PendingBarVisibility => PendingStickers.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
     public string PendingCountText => $"{PendingStickers.Count}/{MaxPendingCount}";
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(EmptyPlaceholderVisibility))]
+    public partial bool IsEmpty { get; set; }
+
+    [ObservableProperty]
+    public partial string EmptyPlaceholderText { get; set; } = string.Empty;
+
+    public Visibility EmptyPlaceholderVisibility => IsEmpty ? Visibility.Visible : Visibility.Collapsed;
+
     public Visibility TagSearchVisibility
     {
         get => _tagSearchVisibility;
@@ -235,6 +244,8 @@ public partial class PopupViewModel : ObservableObject
         Stickers.Clear();
 
         foreach (var sticker in _categoryStickers.Where(MatchesTagSearch)) Stickers.Add(sticker);
+
+        UpdateEmptyState();
     }
 
     private bool MatchesTagSearch(PopupStickerViewModel sticker)
@@ -242,6 +253,34 @@ public partial class PopupViewModel : ObservableObject
         var searchText = TagSearchText.Trim();
         if (string.IsNullOrEmpty(searchText)) return true;
         return !string.IsNullOrWhiteSpace(sticker.Tag) && sticker.Tag.Contains(searchText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void UpdateEmptyState()
+    {
+        var hasStickers = _categoryStickers.Count > 0;
+        var hasFilteredStickers = Stickers.Count > 0;
+
+        if (!hasStickers)
+        {
+            IsEmpty = true;
+            EmptyPlaceholderText = _currentCategoryIndex switch
+            {
+                FavoriteCategoryIndex => "즐겨찾기한 스티커가 없습니다",
+                TagCategoryIndex => "태그가 지정된 스티커가 없습니다",
+                HistoryCategoryIndex => "최근 사용한 스티커가 없습니다",
+                _ => "스티커가 없습니다",
+            };
+        }
+        else if (!hasFilteredStickers)
+        {
+            IsEmpty = true;
+            EmptyPlaceholderText = "검색 결과가 없습니다";
+        }
+        else
+        {
+            IsEmpty = false;
+            EmptyPlaceholderText = string.Empty;
+        }
     }
 
     private void UpdateTagSuggestions()
@@ -368,12 +407,12 @@ public partial class PopupViewModel : ObservableObject
 
     private void OnFavoriteToggled(PopupStickerViewModel item)
     {
-        // 즐겨찾기 탭에서 즐겨찾기 해제하면 목록에서 제거
         if (_currentCategoryIndex != FavoriteCategoryIndex || item.IsFavorite) return;
 
         _categoryStickers.Remove(item);
         Stickers.Remove(item);
         RefreshTagSearchState();
+        UpdateEmptyState();
     }
 
     public void RecordPendingHistory()

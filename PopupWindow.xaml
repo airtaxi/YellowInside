@@ -233,6 +233,17 @@
             </GridView.ItemTemplate>
         </GridView>
 
+        <!--  빈 상태 안내  -->
+        <TextBlock
+            Grid.Row="4"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+            Style="{ThemeResource BodyTextBlockStyle}"
+            Text="{x:Bind ViewModel.EmptyPlaceholderText, Mode=OneWay}"
+            TextAlignment="Center"
+            Visibility="{x:Bind ViewModel.EmptyPlaceholderVisibility, Mode=OneWay}" />
+
         <!--  대기열 바  -->
         <Border
             Grid.Row="5"
