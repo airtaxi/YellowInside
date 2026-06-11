@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -46,6 +46,9 @@ public static class FileLogManager
 
     public static bool HasLogs()
     {
-        lock (s_lock) return File.Exists(s_logFilePath) && new FileInfo(s_logFilePath).Length > 0;
+        lock (s_lock)
+        {
+            return File.Exists(s_logFilePath) && new FileInfo(s_logFilePath).Length > 0;
+        }
     }
 }

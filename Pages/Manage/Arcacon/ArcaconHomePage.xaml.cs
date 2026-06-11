@@ -72,7 +72,10 @@ public sealed partial class ArcaconHomePage : Page
 
     private static void AddPackagesToTargetList(ObservableCollection<SearchResultViewModel> targetList, IEnumerable<SearchResultViewModel> viewModels)
     {
-        foreach (var viewModel in viewModels.Where(viewModel => !targetList.Any(existing => existing.PackageIdentifier == viewModel.PackageIdentifier))) targetList.Add(viewModel);
+        foreach (var viewModel in viewModels.Where(viewModel => !targetList.Any(existing => existing.PackageIdentifier == viewModel.PackageIdentifier)))
+        {
+            targetList.Add(viewModel);
+        }
     }
 
     private static async Task LoadPopularPackagesAsync(string loadingMessage, Func<CancellationToken, Task<IReadOnlyList<ArcaconPackageSummary>>> getPopularPackagesAsync, ObservableCollection<SearchResultViewModel> targetList, CancellationToken cancellationToken)

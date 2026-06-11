@@ -62,7 +62,10 @@ public static class HistoryManager
     /// </summary>
     public static IReadOnlyList<HistoryEntry> GetEntries()
     {
-        lock (s_lock) return[..s_entries];
+        lock (s_lock)
+        {
+            return [..s_entries];
+        }
     }
 
     /// <summary>

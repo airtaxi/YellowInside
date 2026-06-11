@@ -55,7 +55,10 @@ public sealed partial class DcconHomePage : Page
 
     private static void AddPackagesToTargetList(ObservableCollection<SearchResultViewModel> targetList, IEnumerable<SearchResultViewModel> viewModels)
     {
-        foreach (var viewModel in viewModels.Where(viewModel => !targetList.Any(existingViewModel => existingViewModel.PackageIdentifier == viewModel.PackageIdentifier))) targetList.Add(viewModel);
+        foreach (var viewModel in viewModels.Where(viewModel => !targetList.Any(existingViewModel => existingViewModel.PackageIdentifier == viewModel.PackageIdentifier)))
+        {
+            targetList.Add(viewModel);
+        }
     }
 
     private static async Task LoadPopularPackagesAsync(string loadingMessage, Func<Task<IEnumerable<SearchResultViewModel>>> getPopularPackageViewModelsAsync, ObservableCollection<SearchResultViewModel> targetList, CancellationToken cancellationToken)
