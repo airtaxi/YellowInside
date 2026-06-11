@@ -32,7 +32,10 @@ public partial class StickerViewModel : ObservableObject
     public partial bool IsFavorite { get; private set; }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasTag))]
     public partial string Tag { get; private set; }
+
+    public bool HasTag => !string.IsNullOrEmpty(Tag);
 
     private readonly string _packageIdentifier;
     private readonly ContentSource _source;
@@ -130,7 +133,7 @@ public partial class StickerViewModel : ObservableObject
         if (!IsSubscribed) return;
 
         var hasTag = !string.IsNullOrEmpty(Tag);
-        var (result, text) = await ((UIElement)sender).ShowInputDialogAsync("스티커 태그", hasTag ? Tag : "태그 입력...", "태그 설정", hasTag ? "태그 삭제" : null, "취소");
+        var (result, text) = await ((UIElement)sender).ShowInputDialogAsync("스티커 태그", "태그 입력...", "태그 설정", hasTag ? "태그 삭제" : null, "취소", defaultText: Tag);
 
         if (result == ContentDialogResult.Primary && !string.IsNullOrEmpty(text)) await ContentsManager.SetStickerTagAsync(_source, _packageIdentifier, _path, text);
         else if (result == ContentDialogResult.Secondary) await ContentsManager.RemoveStickerTagAsync(_source, _packageIdentifier, _path);

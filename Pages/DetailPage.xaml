@@ -26,13 +26,21 @@
                         Background="#80000000"
                         BorderThickness="0"
                         CornerRadius="0"
-                        Foreground="White"
                         Tapped="{x:Bind OnTagButtonTapped}"
                         Visibility="{x:Bind IsSubscribed, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                        <SymbolIcon
-                            Width="48"
-                            Height="48"
-                            Symbol="Tag" />
+                        <Grid>
+                            <SymbolIcon
+                                Width="48"
+                                Height="48"
+                                Foreground="LightGray"
+                                Symbol="Tag" />
+                            <SymbolIcon
+                                Width="48"
+                                Height="48"
+                                Foreground="Gold"
+                                Symbol="Tag"
+                                Visibility="{x:Bind HasTag, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                        </Grid>
                     </Button>
 
                     <Grid
