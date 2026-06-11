@@ -28,10 +28,7 @@
 		<HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
 		<AppxBundlePlatforms>x86|x64|arm64</AppxBundlePlatforms>
 	</PropertyGroup>
-	<ItemGroup>
-	  <None Remove="Pages\Manage\SubscriptionsPage.xaml" />
-	</ItemGroup>
-
+	
 	<ItemGroup>
 		<Manifest Include="$(ApplicationManifest)" />
 	</ItemGroup>
