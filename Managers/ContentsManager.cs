@@ -849,6 +849,20 @@ public static class ContentsManager
 	}
 
 	/// <summary>
+	/// 다운로드된 스티커 중 사용자 지정 태그가 있는지 확인합니다. 패키지 키를 지정하지 않으면 전체를 확인합니다.
+	/// </summary>
+	public static bool HasStickerTags(IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> packageKeys = null)
+	{
+		lock (s_lock)
+		{
+			var packages = packageKeys is null
+				? s_data.DownloadedPackages
+				: s_data.DownloadedPackages.Where(p => packageKeys.Contains((p.Source, p.PackageIdentifier)));
+			return packages.Any(p => p.Stickers.Any(s => !string.IsNullOrEmpty(s.Tag)));
+		}
+	}
+
+	/// <summary>
 	/// 즐겨찾기 목록을 반환합니다.
 	/// </summary>
 	public static IReadOnlyList<FavoriteSticker> GetFavorites(ContentSource? source = null)
@@ -1398,9 +1412,10 @@ public static class ContentsManager
 	public static Task ExportAsync(
 		string destinationFilePath,
 		bool exportFavorites = true,
+		bool exportTags = true,
 		IProgress<PackageArchiveProgress> progress = null,
 		CancellationToken cancellationToken = default)
-		=> ExportAsync(destinationFilePath, selectedPackageKeys: null, exportFavorites, progress, cancellationToken);
+		=> ExportAsync(destinationFilePath, selectedPackageKeys: null, exportFavorites, exportTags, progress, cancellationToken);
 
 	/// <summary>
 	/// 선택한 패키지와 관련 즐겨찾기를 .yip 파일로 내보냅니다.
@@ -1409,6 +1424,7 @@ public static class ContentsManager
 		string destinationFilePath,
 		IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> selectedPackageKeys,
 		bool exportFavorites = true,
+		bool exportTags = true,
 		IProgress<PackageArchiveProgress> progress = null,
 		CancellationToken cancellationToken = default)
 	{
@@ -1432,6 +1448,16 @@ public static class ContentsManager
 						: [.. s_data.Favorites.Where(favorite => selectedPackageKeySet.Contains((favorite.Source, favorite.PackageIdentifier)))]
 					: [],
 			};
+
+			if (!exportTags)
+			{
+				exportData = JsonSerializer.Deserialize(
+					JsonSerializer.Serialize(exportData, ContentsManagerJsonContext.Default.ContentsManagerData),
+					ContentsManagerJsonContext.Default.ContentsManagerData);
+				foreach (var package in exportData.DownloadedPackages)
+					foreach (var sticker in package.Stickers)
+						sticker.Tag = string.Empty;
+			}
 
 			dataJson = JsonSerializer.Serialize(exportData, ContentsManagerJsonContext.Default.ContentsManagerData);
 			packages = exportData.DownloadedPackages;
@@ -1553,6 +1579,32 @@ public static class ContentsManager
 	}
 
 	/// <summary>
+	/// .yip 파일에 스티커 태그가 포함되어 있는지 확인합니다.
+	/// </summary>
+	public static async Task<bool> HasStickerTagsInImportFileAsync(
+		string sourceFilePath,
+		CancellationToken cancellationToken = default)
+	{
+		var importedData = await ReadDataFromImportFileAsync(sourceFilePath, cancellationToken);
+		return importedData.DownloadedPackages.Any(p => p.Stickers.Any(s => !string.IsNullOrEmpty(s.Tag)));
+	}
+
+	/// <summary>
+	/// .yip 파일에서 특정 패키지들에 대한 스티커 태그가 포함되어 있는지 확인합니다.
+	/// </summary>
+	public static async Task<bool> HasStickerTagsForPackagesInImportFileAsync(
+		string sourceFilePath,
+		IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> packageKeys,
+		CancellationToken cancellationToken = default)
+	{
+		var importedData = await ReadDataFromImportFileAsync(sourceFilePath, cancellationToken);
+		var keySet = packageKeys as HashSet<(ContentSource, string)> ?? [.. packageKeys];
+		return importedData.DownloadedPackages
+			.Where(p => keySet.Contains((p.Source, p.PackageIdentifier)))
+			.Any(p => p.Stickers.Any(s => !string.IsNullOrEmpty(s.Tag)));
+	}
+
+	/// <summary>
 	/// .yip 파일에서 패키지의 대표 이미지만 임시 디렉토리에 추출합니다.
 	/// </summary>
 	public static void ExtractMainImagesFromImportFile(
@@ -1611,6 +1663,7 @@ public static class ContentsManager
 		string sourceFilePath,
 		bool replaceAll,
 		bool importFavorites = true,
+		bool importTags = true,
 		IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> selectedPackageKeys = null,
 		IProgress<PackageArchiveProgress> progress = null,
 		CancellationToken cancellationToken = default)
@@ -1638,6 +1691,13 @@ public static class ContentsManager
 				selectedPackageKeySet = [.. selectedPackageKeys];
 				importedData.DownloadedPackages = [.. importedData.DownloadedPackages.Where(package => selectedPackageKeySet.Contains((package.Source, package.PackageIdentifier)))];
 				importedData.Favorites = [.. importedData.Favorites.Where(favorite => selectedPackageKeySet.Contains((favorite.Source, favorite.PackageIdentifier)))];
+			}
+
+			if (!importTags)
+			{
+				foreach (var package in importedData.DownloadedPackages)
+					foreach (var sticker in package.Stickers)
+						sticker.Tag = string.Empty;
 			}
 
 			var importedPackageKeySet = importedData.DownloadedPackages

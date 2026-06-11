@@ -1,4 +1,4 @@
-using Arcacon.NET.Exceptions;
+﻿using Arcacon.NET.Exceptions;
 using YellowInside.Dialogs;
 using YellowInside.Helpers;
 using YellowInside.Managers;
@@ -188,10 +188,13 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         var exportFavorites = await AskExportFavoritesAsync();
         if (exportFavorites is null) return;
 
+        var exportTags = await AskExportTagsAsync();
+        if (exportTags is null) return;
+
         var file = await PickPackageExportFileAsync("YellowInside_Export");
         if (file is null) return;
 
-        await ExportPackagesAsync(file.Path, "패키지를 내보내는 중...", exportFavorites: exportFavorites.Value);
+        await ExportPackagesAsync(file.Path, "패키지를 내보내는 중...", exportFavorites: exportFavorites.Value, exportTags: exportTags.Value);
     }
 
     private async void OnImportButtonClicked(object sender, RoutedEventArgs e)
@@ -214,28 +217,11 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
 
         var replaceAll = modeResult == ContentDialogResult.Primary;
 
-        var importFavorites = false;
-        try
-        {
-            var hasFavorites = await ContentsManager.HasFavoritesInImportFileAsync(file.Path);
-            if (hasFavorites)
-            {
-                var favoriteResult = await this.ShowDialogAsync(
-                    "즐겨찾기 불러오기",
-                    "불러올 데이터에 즐겨찾기가 포함되어 있습니다.\n즐겨찾기도 함께 불러오시겠습니까?",
-                    primaryButtonText: "예",
-                    secondaryButtonText: "아니오");
+        var importFavorites = await AskImportFavoritesAsync(file.Path);
+        if (importFavorites is null) return;
 
-                if (favoriteResult == ContentDialogResult.None) return;
-
-                importFavorites = favoriteResult == ContentDialogResult.Primary;
-            }
-        }
-        catch (Exception exception)
-        {
-            await this.ShowDialogAsync("불러오기 실패", exception.Message);
-            return;
-        }
+        var importTags = await AskImportTagsAsync(file.Path);
+        if (importTags is null) return;
 
         AnimatedPngToWebpPackageConversionResult animatedPngToWebpPackageConversionResult = null;
         try
@@ -244,7 +230,7 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
 
             ManageWindow.ShowLoading("패키지를 불러오는 중...");
             var progress = CreatePackageArchiveProgress();
-            await Task.Run(() => ContentsManager.ImportAsync(file.Path, replaceAll, importFavorites: importFavorites, progress: progress));
+            await Task.Run(() => ContentsManager.ImportAsync(file.Path, replaceAll, importFavorites: importFavorites.Value, importTags: importTags.Value, progress: progress));
         }
         catch (Exception exception)
         {
@@ -287,10 +273,13 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         var exportFavorites = await AskExportFavoritesAsync(selectedPackageKeys);
         if (exportFavorites is null) return;
 
+        var exportTags = await AskExportTagsAsync(selectedPackageKeys);
+        if (exportTags is null) return;
+
         var file = await PickPackageExportFileAsync("YellowInside_PartialExport");
         if (file is null) return;
 
-        await ExportPackagesAsync(file.Path, "선택한 패키지를 내보내는 중...", selectedPackageKeys, exportFavorites.Value);
+        await ExportPackagesAsync(file.Path, "선택한 패키지를 내보내는 중...", selectedPackageKeys, exportFavorites.Value, exportTags.Value);
     }
 
     private async void OnPartialImportButtonClicked(object sender, RoutedEventArgs e)
@@ -347,28 +336,11 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         var selectedPackageKeys = packageSelectionDialog.SelectedPackageKeys;
         if (selectedPackageKeys.Count == 0) return;
 
-        var importFavorites = false;
-        try
-        {
-            var hasFavorites = await ContentsManager.HasFavoritesForPackagesInImportFileAsync(file.Path, selectedPackageKeys);
-            if (hasFavorites)
-            {
-                var favoriteResult = await this.ShowDialogAsync(
-                    "즐겨찾기 불러오기",
-                    "선택한 패키지에 즐겨찾기가 포함되어 있습니다.\n즐겨찾기도 함께 불러오시겠습니까?",
-                    primaryButtonText: "예",
-                    secondaryButtonText: "아니오");
+        var importFavorites = await AskImportFavoritesAsync(file.Path, selectedPackageKeys);
+        if (importFavorites is null) return;
 
-                if (favoriteResult == ContentDialogResult.None) return;
-
-                importFavorites = favoriteResult == ContentDialogResult.Primary;
-            }
-        }
-        catch (Exception exception)
-        {
-            await this.ShowDialogAsync("불러오기 실패", exception.Message);
-            return;
-        }
+        var importTags = await AskImportTagsAsync(file.Path, selectedPackageKeys);
+        if (importTags is null) return;
 
         AnimatedPngToWebpPackageConversionResult animatedPngToWebpPackageConversionResult = null;
         try
@@ -378,7 +350,8 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
             await Task.Run(() => ContentsManager.ImportAsync(
                 file.Path,
                 replaceAll: false,
-                importFavorites: importFavorites,
+                importFavorites: importFavorites.Value,
+                importTags: importTags.Value,
                 selectedPackageKeys: selectedPackageKeys,
                 progress: progress));
         }
@@ -864,6 +837,76 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         return result == ContentDialogResult.Primary;
     }
 
+    private async Task<bool?> AskImportFavoritesAsync(string filePath, IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> selectedPackageKeys = null)
+    {
+        bool hasFavorites;
+        try
+        {
+            hasFavorites = selectedPackageKeys is null
+                ? await ContentsManager.HasFavoritesInImportFileAsync(filePath)
+                : await ContentsManager.HasFavoritesForPackagesInImportFileAsync(filePath, selectedPackageKeys);
+        }
+        catch { return false; }
+
+        if (!hasFavorites) return false;
+
+        var message = selectedPackageKeys is null
+            ? "불러올 데이터에 즐겨찾기가 포함되어 있습니다.\n즐겨찾기도 함께 불러오시겠습니까?"
+            : "선택한 패키지에 즐겨찾기가 포함되어 있습니다.\n즐겨찾기도 함께 불러오시겠습니까?";
+        var result = await this.ShowDialogAsync(
+            "즐겨찾기 불러오기",
+            message,
+            primaryButtonText: "예",
+            secondaryButtonText: "아니오");
+
+        if (result == ContentDialogResult.None) return null;
+
+        return result == ContentDialogResult.Primary;
+    }
+
+    private async Task<bool?> AskExportTagsAsync(
+        IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> selectedPackageKeys = null)
+    {
+        if (!ContentsManager.HasStickerTags(selectedPackageKeys)) return true;
+
+        var result = await this.ShowDialogAsync(
+            "스티커 태그 내보내기",
+            "스티커에 지정된 태그가 존재합니다.\n태그도 함께 내보내시겠습니까?",
+            primaryButtonText: "예",
+            secondaryButtonText: "아니오");
+
+        if (result == ContentDialogResult.None) return null;
+
+        return result == ContentDialogResult.Primary;
+    }
+
+    private async Task<bool?> AskImportTagsAsync(string filePath, IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> selectedPackageKeys = null)
+    {
+        bool hasTags;
+        try
+        {
+            hasTags = selectedPackageKeys is null
+                ? await ContentsManager.HasStickerTagsInImportFileAsync(filePath)
+                : await ContentsManager.HasStickerTagsForPackagesInImportFileAsync(filePath, selectedPackageKeys);
+        }
+        catch { return true; }
+
+        if (!hasTags) return true;
+
+        var message = selectedPackageKeys is null
+            ? "불러올 데이터에 스티커 태그가 포함되어 있습니다.\n태그도 함께 불러오시겠습니까?"
+            : "선택한 패키지에 스티커 태그가 포함되어 있습니다.\n태그도 함께 불러오시겠습니까?";
+        var result = await this.ShowDialogAsync(
+            "스티커 태그 불러오기",
+            message,
+            primaryButtonText: "예",
+            secondaryButtonText: "아니오");
+
+        if (result == ContentDialogResult.None) return null;
+
+        return result == ContentDialogResult.Primary;
+    }
+
     private async Task<bool> EnsureArcaconSynchronizationAvailableAsync(bool? includeInactiveArcacons)
     {
         if (!App.ArcaconClient.IsLoggedIn)
@@ -957,14 +1000,15 @@ public sealed partial class SettingsPage : Page, IRecipient<LaunchOnStartupChang
         string destinationFilePath,
         string loadingMessage,
         IReadOnlyCollection<(ContentSource Source, string PackageIdentifier)> selectedPackageKeys = null,
-        bool exportFavorites = true)
+        bool exportFavorites = true,
+        bool exportTags = true)
     {
         try
         {
             ManageWindow.ShowLoading(loadingMessage);
             var progress = CreatePackageArchiveProgress();
-            if (selectedPackageKeys is null) await Task.Run(() => ContentsManager.ExportAsync(destinationFilePath, exportFavorites, progress: progress));
-            else await Task.Run(() => ContentsManager.ExportAsync(destinationFilePath, selectedPackageKeys, exportFavorites, progress: progress));
+            if (selectedPackageKeys is null) await Task.Run(() => ContentsManager.ExportAsync(destinationFilePath, exportFavorites, exportTags, progress: progress));
+            else await Task.Run(() => ContentsManager.ExportAsync(destinationFilePath, selectedPackageKeys, exportFavorites, exportTags, progress: progress));
             ManageWindow.HideLoading();
 
             await this.ShowDialogAsync("내보내기 완료", "패키지를 성공적으로 내보냈습니다.");
