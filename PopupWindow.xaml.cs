@@ -168,7 +168,12 @@ public sealed partial class PopupWindow : WindowEx
         if (hwnd == 0) return false;
 
         GetWindowThreadProcessId(hwnd, out var processId);
-        try { return string.Equals(Process.GetProcessById((int)processId).ProcessName, "KakaoTalk", StringComparison.OrdinalIgnoreCase); }
+        try
+        {
+            // KakaoTalk: MFC 클라이언트, KakaoTalkUI: Qt 클라이언트
+            var processName = Process.GetProcessById((int)processId).ProcessName;
+            return string.Equals(processName, "KakaoTalk", StringComparison.OrdinalIgnoreCase) || string.Equals(processName, "KakaoTalkUI", StringComparison.OrdinalIgnoreCase);
+        }
         catch { return false; }
     }
 
