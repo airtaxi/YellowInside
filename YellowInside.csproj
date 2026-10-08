@@ -51,7 +51,7 @@
 		<PackageReference Include="DevWinUI.Controls" Version="9.9.4" />
 		<PackageReference Include="H.NotifyIcon.WinUI" Version="2.4.1" />
 		<PackageReference Include="InvenSticker.NET" Version="0.4.1" />
-		<PackageReference Include="Magick.NET-Q16-AnyCPU" Version="14.17.1" />
+		<PackageReference Include="Magick.NET-Q16-AnyCPU" Version="14.17.2" />
 		<PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.2705" />
 		<PackageReference Include="Microsoft.WindowsAppSDK" Version="2.5.1" />
 		<PackageReference Include="WinUIEx" Version="2.9.3" />
